@@ -1,0 +1,17 @@
+{
+  "name": "howdy",
+  "version": "0.1.0",
+  "description": "Pick Locki or Cappl, two cowboy-hat pals who grow with your Claude Code work: passing tests, commits and merged PRs earn rep and gold for hats, shades and banjos.",
+  "license": "MIT",
+  "keywords": ["mod", "pet", "gamification", "pixel-art", "productivity"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "auto follows Claude Code's language setting",
+      "default": "auto",
+      "options": ["auto", "en", "ko"]
+    }
+  }
+}

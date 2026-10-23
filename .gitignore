@@ -1,0 +1,5 @@
+# Events pulled from your own Claude Code history (tools/extract_events.py)
+.data/
+# Local Claude Code settings for this folder
+.claude/
+__pycache__/

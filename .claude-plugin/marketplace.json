@@ -1,0 +1,13 @@
+{
+  "name": "howdy",
+  "owner": { "name": "howdy contributors" },
+  "description": "howdy: cowboy-hat pals who grow with your Claude Code work",
+  "plugins": [
+    {
+      "name": "howdy",
+      "source": "./mod",
+      "description": "Pick Locki or Cappl, two cowboy-hat pals who grow with your Claude Code work: passing tests, commits and merged PRs earn rep and gold for hats, shades and banjos.",
+      "version": "0.1.0"
+    }
+  ]
+}
