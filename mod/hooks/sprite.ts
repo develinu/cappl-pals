@@ -227,18 +227,69 @@ function base64(bytes: Uint8Array): string {
   return out
 }
 
-// Desktop and VS Code: the same grid as <rect>s.
-export function svgOf(rows: readonly string[]): string {
-  const rects = rows.flatMap((line, y) =>
-    [...line].flatMap((pixel, x) => {
-      const color = PALETTE[pixel]
+// Desktop, VS Code and mobile: the grid as SVG paths, one per colour, each a list
+// of horizontal runs (much shorter than a <rect> per pixel).
+function pathsOf(rows: readonly string[]): string {
+  const runs = new Map<string, string[]>()
+  rows.forEach((line, y) => {
+    let x = 0
+    while (x < line.length) {
+      const key = line[x]!
+      let end = x + 1
+      while (end < line.length && line[end] === key) end += 1
+      if (PALETTE[key] !== undefined) {
+        const list = runs.get(key) ?? []
+        list.push(`M${x} ${y}h${end - x}v1h-${end - x}z`)
+        runs.set(key, list)
+      }
+      x = end
+    }
+  })
 
-      return color === undefined
-        ? []
-        : [`<rect x="${x}" y="${y}" width="1" height="1" fill="#${color.toString(16).padStart(6, '0')}"/>`]
-    }),
-  )
-  const width = rows[0]?.length ?? 0
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${rows.length}" shape-rendering="crispEdges">${rects.join('')}</svg>`
+  return [...runs].map(([key, d]) => `<path fill="#${PALETTE[key]!.toString(16).padStart(6, '0')}" d="${d.join('')}"/>`).join('')
 }
+
+function svgFrame(width: number, height: number, body: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges">${body}</svg>`
+}
+
+export function svgOf(rows: readonly string[]): string {
+  return svgFrame(rows[0]?.length ?? 0, rows.length, pathsOf(rows))
+}
+
+// The SVG Svg element's 131,072-character limit, with room to spare.
+const SVG_LIMIT = 120_000
+
+// A looping animation of frames shown `tickMs` apart, as SMIL inside the SVG: each
+// distinct frame is a group whose visibility steps in turn. The desktop draws an
+// interactive Svg in a sandboxed frame, where SMIL runs without any redraws.
+export function animatedSvgOf(frames: readonly (readonly string[])[], tickMs: number): string {
+  const first = frames[0] ?? []
+  const distinct: string[] = []
+  const order = frames.map(rows => {
+    const signature = rows.join('\n')
+    let index = distinct.indexOf(signature)
+    if (index < 0) index = distinct.push(signature) - 1
+    return index
+  })
+  if (distinct.length < 2) return svgOf(first)
+  const duration = `${(frames.length * tickMs) / 1000}s`
+  const groups = distinct.map((signature, index) => {
+    const values = order.map(shown => (shown === index ? 'visible' : 'hidden')).join(';')
+    const start = order[0] === index ? 'visible' : 'hidden'
+    const animate = `<animate attributeName="visibility" values="${values}" dur="${duration}" calcMode="discrete" repeatCount="indefinite"/>`
+
+    return `<g visibility="${start}">${pathsOf(signature.split('\n'))}${animate}</g>`
+  })
+  const svg = svgFrame(first[0]?.length ?? 0, first.length, groups.join(''))
+
+  // Too long for the element: fall back to every other frame, then to a still.
+  if (svg.length <= SVG_LIMIT) return svg
+  if (frames.length >= 4) return animatedSvgOf(frames.filter((_, i) => i % 2 === 0), tickMs * 2)
+
+  return svgOf(first)
+}
+
+// How many 250 ms ticks one loop of each mood takes: idle covers two blinks and an
+// ear twitch, working the eyes' left-right sweep, happy the hop and the hat tip.
+export const LOOP_TICKS: Readonly<Record<Mood, number>> = { idle: 48, working: 16, happy: 8 }

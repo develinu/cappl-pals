@@ -401,26 +401,32 @@ test('when the session id stays the same, as after /compact, the ledger stays pu
   expect([...store.keys()].filter(key => key.startsWith('ledger:'))).toEqual(['ledger:s1'])
 })
 
-test('on the desktop the sprite moves too: blinks, ears and sparkles redraw the SVG', async ($, on) => {
+test('on the desktop the pal is an animated SVG: blinks while idle, taps while working, sparkles at a reward', async ($, on) => {
   engine(on, { 'pytest -q': '12 passed in 0.3s' })
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
   mock.store(on, LOCKI)
-  const clock = mock.clock(on, { now: NOW })
+  mock.clock(on, { now: NOW })
 
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
-  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  const seen = new Set<string>()
-  for (let i = 0; i < 30; i += 1) {
-    seen.add(String((await ui.find({ type: 'Svg' }))?.props.source))
-    await clock.advance(250)
+  const source = async () => {
+    const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+    const svg = await ui.find({ type: 'Svg' })
+    await ui.unmount()
+    expect(svg?.props.isInteractive).toBe(true)
+    return String(svg?.props.source)
   }
-  // Idle: the open eyes, a blink and an ear twitch at least.
-  expect(seen.size).toBeGreaterThan(1)
+  const idle = await source()
+  // SMIL steps between frames on its own, with no redraw from the mod.
+  expect(idle).toMatch(/<animate attributeName="visibility"[^>]*repeatCount="indefinite"/)
+  expect(idle.length).toBeLessThan(131_072)
+  expect((idle.match(/<g /g) ?? []).length).toBeGreaterThan(1)
 
-  // A reward sparkles around the pal on the desktop as well.
-  const before = String((await ui.find({ type: 'Svg' }))?.props.source)
+  await $.turn.start({ text: 'go', turnId: 't1' })
+  const working = await source()
+  expect(working).not.toBe(idle)
+  expect(working).toMatch(/dur="4s"/)
+
   await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
   await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
-  await clock.advance(250)
-  expect(String((await ui.find({ type: 'Svg' }))?.props.source)).not.toBe(before)
-  await ui.unmount()
+  expect(await source()).not.toBe(working)
 })

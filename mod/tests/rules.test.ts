@@ -28,7 +28,7 @@ import {
   type Signal,
   type Work,
 } from '../hooks/rules'
-import { encode, frame } from '../hooks/sprite'
+import { LOOP_TICKS, animatedSvgOf, encode, frame } from '../hooks/sprite'
 
 test('a test run is judged by its summary line, not its exit code', async () => {
   expect(testOutcome('pytest -q', '12 passed in 0.31s', false)).toBe(true)
@@ -211,4 +211,20 @@ test('both languages have every word, and auto follows the Claude Code language 
   expect(languageOf('auto', undefined)).toBe('en')
   expect(languageOf('en', 'Korean')).toBe('en')
   expect(languageOf('ko', undefined)).toBe('ko')
+})
+
+test('animated SVGs stay under the element limit with the busiest wardrobe', async () => {
+  for (const [character, equipped] of [
+    ['locki', ['heart-shades', 'gold-star', 'lasso', 'sunset', 'galaxy-hat']],
+    ['cappl', ['round-specs', 'bandana', 'golden-banjo', 'sparrow', 'starry-night', 'black-hat']],
+  ] as const) {
+    for (const mood of ['idle', 'working', 'happy'] as const) {
+      for (const fx of [undefined, 'stage'] as const) {
+        const ticks = fx === undefined ? LOOP_TICKS[mood] : 24
+        const frames = Array.from({ length: ticks }, (_, tick) => frame({ character, mood, tick, equipped, size: 32, fx }))
+        const svg = animatedSvgOf(frames, 250)
+        expect([character, mood, fx, svg.length < 131_072]).toEqual([character, mood, fx, true])
+      }
+    }
+  }
 })
