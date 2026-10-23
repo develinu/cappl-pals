@@ -1,6 +1,6 @@
 # cappl-pals
 
-**CAPPL 앱의 카우보이모자 단짝 LOCKI와 CAPPL이 Claude Code 작업과 함께 자랍니다.** 둘 중 하나를 고르면 됩니다. 둘은 프롬프트 위로 고개를 내밀고, Claude가 일하는 동안 앞발을 톡톡 두드리고, 테스트가 통과하거나 커밋이 들어가거나 PR이 병합되면 기뻐합니다. 결과마다 명성과 골드가 쌓입니다. 명성이 오르면 계급이 새내기에서 서부의 전설까지 오르고, 골드로는 모자·선글라스·밴조·배경을 삽니다.
+**[CAPPL 앱](#cappl-앱)의 카우보이모자 단짝 LOCKI와 CAPPL이 Claude Code 작업과 함께 자랍니다.** 둘 중 하나를 고르면 됩니다. 둘은 프롬프트 위로 고개를 내밀고, Claude가 일하는 동안 앞발을 톡톡 두드리고, 테스트가 통과하거나 커밋이 들어가거나 PR이 병합되면 기뻐합니다. 결과마다 명성과 골드가 쌓입니다. 명성이 오르면 계급이 새내기에서 서부의 전설까지 오르고, 골드로는 모자·선글라스·밴조·배경을 삽니다.
 
 [![CAPPL 고르기, 새 계급, 밴조 구입, LOCKI로 바꾸기(12초 하이라이트)](docs/cappl-pals-demo.ko.gif)](docs/cappl-pals-demo.ko.mp4)
 
@@ -22,7 +22,25 @@ cappl-pals는 Claude Code mod(훅 모듈이 든 플러그인)이고 Claude Code 
 
 마켓플레이스를 추가할지 물으면 `y`를 누르고 범위는 user를 그대로 둡니다. 설치한 세션에는 창이 바로 뜹니다. 이미 열려 있던 세션에서는 `/reload-plugins`를 입력하세요. 셸에서는 `claude plugin install cappl-pals --marketplace develinu/cappl-pals`로 설치합니다.
 
-업데이트: `/plugin` → **Marketplaces** → `cappl-pals` → **Enable auto-update**를 켜 두면 알아서 받습니다. 켜지 않았다면 `claude plugin update cappl-pals@cappl-pals`를 실행한 뒤 `/reload-plugins`를 입력합니다.
+### 자동 업데이트 켜기(권장)
+
+직접 추가한 마켓플레이스는 자동 업데이트가 꺼져 있습니다. 한 번만 켜 두면 새 버전이 나올 때마다 알아서 받습니다.
+
+- Claude Code에서: `/plugin` → **Marketplaces** → `cappl-pals` → **Enable auto-update**
+- 또는 `~/.claude/settings.json`의 마켓플레이스 항목에 `autoUpdate`를 넣습니다.
+
+```json
+"extraKnownMarketplaces": {
+  "cappl-pals": {
+    "source": { "source": "github", "repo": "develinu/cappl-pals" },
+    "autoUpdate": true
+  }
+}
+```
+
+세션에서 첫 메시지를 보낸 뒤 10분 안에 백그라운드에서 새 버전을 받습니다. 이미 열려 있던 세션은 이전 버전을 계속 씁니다. 대신 `Plugin updated: cappl-pals · Run /reload-plugins to apply`가 뜹니다. 그 세션에서 `/reload-plugins`를 입력하거나 새 세션을 열면 새 버전이 켜집니다.
+
+자동 업데이트를 켜지 않았다면 `claude plugin update cappl-pals@cappl-pals`로 직접 받습니다. 그다음 `/reload-plugins`를 입력합니다. 지우려면 `claude plugin uninstall cappl-pals@cappl-pals`입니다.
 
 ## 쓰는 법
 
@@ -50,6 +68,12 @@ cappl-pals는 Claude Code mod(훅 모듈이 든 플러그인)이고 Claude Code 
 | 옷장 | 보안관 선글라스, 분홍 깃털, 하모니카, 하트 선글라스, 올가미 밧줄, 금빛 보안관 별, 한낮의 사막, 하얀 카우보이모자, 사막의 노을, 별밤 모자 | 동그란 안경, 밀짚 한 가닥, 양철 커피잔, 무법자 두건, 밴조, 참새 친구, 모닥불, 검은 카우보이모자, 별이 빛나는 밤, 황금 밴조 |
 
 옷장은 캐릭터마다 따로 있고 골드는 함께 씁니다. 모든 소품은 큰 그림과 작은 그림 둘 다 있습니다([스프라이트 시트](docs/cappl-pals-sheet.png)).
+
+## CAPPL 앱
+
+LOCKI와 CAPPL은 계획·회고 앱 **CAPPL**의 캐릭터입니다. CAPPL은 내 계획 스타일과 실행 방식, 하루 에너지 흐름을 살펴 나에게 맞는 일정 관리 템플릿을 추천해 줍니다. cappl-pals가 끝낸 일을 함께 기뻐해 준다면, CAPPL은 그 일을 계획하고 돌아보게 도와줍니다.
+
+[App Store](https://apps.apple.com/kr/app/cappl/id6761328898)나 [Google Play](https://play.google.com/store/apps/details?id=com.ksh.cappl&hl=ko)에서 받을 수 있습니다. 이 프로젝트에서는 앱의 허가를 받아 캐릭터를 사용합니다.
 
 ## 무엇에 보상하나
 
@@ -85,10 +109,6 @@ bun tools/sim.ts .data/events.jsonl
 ## 개발
 
 명령과 폴더 구성은 [영문 README](README.md#develop)에 있습니다. 캐릭터를 더하는 방법은 [docs/characters.md](docs/characters.md)를 보세요.
-
-## 캐릭터
-
-LOCKI와 CAPPL은 CAPPL 앱의 캐릭터이고, 허가를 받아 사용합니다.
 
 ## 라이선스
 

@@ -1,6 +1,6 @@
 # cappl-pals
 
-**LOCKI and CAPPL, the cowboy-hat pals of the [CAPPL](#characters) app, grow with your Claude Code work.** Pick one. They peek over your prompt, tap their paws while Claude works, and cheer when a test passes, a commit lands or a pull request merges. Results earn rep and gold. Rep raises your rank from Greenhorn to Legend of the West; gold buys hats, shades, banjos and backdrops.
+**LOCKI and CAPPL, the cowboy-hat pals of the [CAPPL](#the-cappl-app) app, grow with your Claude Code work.** Pick one. They peek over your prompt, tap their paws while Claude works, and cheer when a test passes, a commit lands or a pull request merges. Results earn rep and gold. Rep raises your rank from Greenhorn to Legend of the West; gold buys hats, shades, banjos and backdrops.
 
 [![Picking CAPPL, a new rank, a banjo bought, switching to LOCKI (12-second highlight)](docs/cappl-pals-demo.gif)](docs/cappl-pals-demo.mp4)
 
@@ -22,7 +22,25 @@ cappl-pals is a Claude Code mod (a plugin with a hooks module). It needs Claude 
 
 Answer `y` to add the marketplace and keep the user scope. The pane opens in the session where you install it. For sessions that were already open, run `/reload-plugins`. To install from a shell, run `claude plugin install cappl-pals --marketplace develinu/cappl-pals`.
 
-Updates: run `/plugin`, open **Marketplaces**, select `cappl-pals` and turn on **Enable auto-update**. Without auto-update, run `claude plugin update cappl-pals@cappl-pals` and then `/reload-plugins`.
+### Turn on auto-update (recommended)
+
+Marketplaces you add yourself don't update on their own. Turn it on once and every new version arrives by itself:
+
+- In Claude Code: `/plugin` → **Marketplaces** → `cappl-pals` → **Enable auto-update**
+- Or in `~/.claude/settings.json`, set `autoUpdate` on the marketplace entry:
+
+```json
+"extraKnownMarketplaces": {
+  "cappl-pals": {
+    "source": { "source": "github", "repo": "develinu/cappl-pals" },
+    "autoUpdate": true
+  }
+}
+```
+
+A new version downloads in the background within about ten minutes of the first message in a session. Sessions that are already open keep the old version and show `Plugin updated: cappl-pals · Run /reload-plugins to apply`; run `/reload-plugins` there, or start a new session.
+
+Without auto-update, update by hand with `claude plugin update cappl-pals@cappl-pals`, then `/reload-plugins`. To remove it: `claude plugin uninstall cappl-pals@cappl-pals`.
 
 ## Use
 
@@ -50,6 +68,12 @@ The language follows Claude Code's `language` setting (Korean or English). To pi
 | Wardrobe | Aviator shades, pink feather, harmonica, heart shades, lasso, gold sheriff star, desert noon, white ten-gallon hat, desert sunset, starry night hat | Round specs, wheat straw, tin cup of coffee, outlaw bandana, banjo, sparrow friend, campfire, black hat, starry night, golden banjo |
 
 Each character keeps their own wardrobe; gold is shared. Every item has art at both sprite sizes ([sprite sheet](docs/cappl-pals-sheet.png)).
+
+## The CAPPL app
+
+LOCKI and CAPPL come from **CAPPL**, a planning and reflection app. It looks at how you like to plan, how you get things done and how your energy runs through the day, then suggests a schedule template that fits you. cappl-pals cheers for the work you finish; CAPPL helps you plan it and look back on it.
+
+Get CAPPL on the [App Store](https://apps.apple.com/app/id6761328898) or [Google Play](https://play.google.com/store/apps/details?id=com.ksh.cappl). The characters appear here with the app's permission.
 
 ## What earns rewards
 
@@ -107,9 +131,7 @@ bun tools/preview.ts docs/cappl-pals-sheet.png
 
 To add a character, see [docs/characters.md](docs/characters.md).
 
-## Characters
-
-LOCKI and CAPPL are characters of the CAPPL app, used here with permission.
+To release, raise `version` in both `mod/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`: auto-update only fetches a new version number.
 
 ## License
 
