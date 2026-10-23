@@ -43,7 +43,7 @@ export type Fx = { kind: FxKind; label: string; at: number }
 
 declare module 'claude-code' {
   interface PluginState {
-    howdy: {
+    'cappl-pals': {
       totals: Totals
       wallet: Wallet
       log: Reward[]

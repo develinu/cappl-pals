@@ -1,10 +1,12 @@
 # Character art
 
-The MIT License in `LICENSE` covers the code. It does not cover the Locki and Cappl
-characters: their names, their designs, and the pixel art, icon and sounds made from
-them (`mod/hooks/characters/art.ts`, `mod/.claude-plugin/icon.png`, `mod/assets/`,
-`docs/*.png`, and the drawing code in `tools/draw_art.py`).
+LOCKI and CAPPL are characters of the CAPPL app, used here with permission.
 
-Until the character owner publishes a license here, all rights to the characters are
-reserved. You may install and run howdy as distributed. To reuse the characters
-elsewhere, ask the owner first.
+The MIT License in `LICENSE` covers the code. It does not cover the characters: their
+names and designs, and the pixel art, icon and images made from them
+(`mod/hooks/characters/art.ts`, the drawing code in `tools/draw_art.py`,
+`mod/.claude-plugin/icon.png`, and the images and video in `docs/`).
+
+You may use, copy, modify and redistribute the character art as part of cappl-pals
+and of forks of it. Any other use of LOCKI or CAPPL, including in other projects,
+products or merchandise, needs permission from the CAPPL app.

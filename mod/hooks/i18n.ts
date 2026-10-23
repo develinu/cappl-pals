@@ -32,7 +32,7 @@ type Words = {
   bigToast: (label: string, fame: number, dust: number) => string
   bought: (name: string) => string
   broke: string
-  commands: { howdy: string; pick: string; status: string; rules: string; sound: string }
+  commands: { toggle: string; pick: string; status: string; rules: string; sound: string }
   opened: string
   closed: string
   waiting: string
@@ -76,7 +76,7 @@ const EN: Words = {
   wear: 'put on',
   takeOff: 'take off',
   next: (level, name) => `Next: Lv${level} ${name}`,
-  close: 'Close (/howdy)',
+  close: 'Close (/cappl)',
   switchCharacter: 'Switch character',
   scrollHint: '▾ Shop below: click the pane and scroll',
   pickTitle: 'Pick your partner',
@@ -93,21 +93,21 @@ const EN: Words = {
   bought: name => `✦ ${name} on!`,
   broke: 'Not enough gold yet.',
   commands: {
-    howdy: 'Open or close the howdy pane',
+    toggle: 'Open or close the CAPPL pals pane',
     pick: 'Pick your character (locki or cappl)',
     status: 'Level, rank, rep and gold in one line',
     rules: 'What earns rewards, and how many you got today',
     sound: 'Sound effects: normal → quiet → off',
   },
-  opened: 'Opened the howdy pane. /howdy closes it.',
-  closed: 'Closed the howdy pane. /howdy opens it again.',
+  opened: 'Opened the CAPPL pals pane. /cappl closes it.',
+  closed: 'Closed the CAPPL pals pane. /cappl opens it again.',
   waiting: 'The pane is waiting for room (make the terminal wider).',
   picked: name => `${name} is riding with you now.`,
   unknownCharacter: names => `No such character. Pick one of: ${names}`,
   status: p =>
     `${p.name} Lv${p.level} ${p.rank} · Rep ${p.fame} (${p.progress}) · Gold $${p.dust} · ${p.fans} · Items ${p.owned}/${p.total}`,
   sound: { normal: 'normal', quiet: 'quiet', off: 'off' },
-  soundSet: (now, next) => `Sound effects: ${now}. Run /howdy-sound again for ${next}.`,
+  soundSet: (now, next) => `Sound effects: ${now}. Run /cappl-sound again for ${next}.`,
   rules: {
     intro: 'Rewards go to results a person can check. Prompts, tokens and tool calls earn nothing.',
     line: (label, fame, dust, limit, today, rate) => `- ${label}: rep ${fame}, gold $${dust} (${limit}) · today ${today}, now ×${rate}`,
@@ -143,7 +143,7 @@ const KO: Words = {
   wear: '쓰기',
   takeOff: '벗기',
   next: (level, name) => `다음 소품: Lv${level} ${name}`,
-  close: '창 닫기 (/howdy)',
+  close: '창 닫기 (/cappl)',
   switchCharacter: '캐릭터 바꾸기',
   scrollHint: '▾ 상점은 창을 누르고 아래로',
   pickTitle: '함께할 친구를 고르세요',
@@ -160,21 +160,21 @@ const KO: Words = {
   bought: name => `✦ ${name} 착용!`,
   broke: '골드가 아직 모자라요.',
   commands: {
-    howdy: '하우디 창 열기·닫기',
+    toggle: 'CAPPL 창 열기·닫기',
     pick: '캐릭터 고르기(locki 또는 cappl)',
     status: '레벨·계급·명성·골드 한 줄 요약',
     rules: '보상표와 오늘 받은 횟수',
     sound: '효과음 크기: 보통 → 작게 → 끔',
   },
-  opened: '하우디 창을 열었어요. 닫으려면 /howdy',
-  closed: '하우디 창을 닫았어요. 다시 열려면 /howdy',
+  opened: 'CAPPL 창을 열었어요. 닫으려면 /cappl',
+  closed: 'CAPPL 창을 닫았어요. 다시 열려면 /cappl',
   waiting: '창이 열릴 자리를 기다려요(터미널을 넓혀 주세요).',
   picked: name => `이제 함께하는 친구: ${name}`,
   unknownCharacter: names => `그런 캐릭터는 없어요. 고를 수 있는 이름: ${names}`,
   status: p =>
     `${p.name} Lv${p.level} ${p.rank} · 명성 ${p.fame} (${p.progress}) · 골드 $${p.dust} · ${p.fans} · 소품 ${p.owned}/${p.total}`,
   sound: { normal: '보통', quiet: '작게', off: '끔' },
-  soundSet: (now, next) => `효과음: ${now}. /howdy-sound를 한 번 더 입력하면 ${next}`,
+  soundSet: (now, next) => `효과음: ${now}. /cappl-sound를 한 번 더 입력하면 ${next}`,
   rules: {
     intro: '보상은 사람이 확인한 결과에만 줘요. 프롬프트·토큰·도구 호출 수에는 주지 않아요.',
     line: (label, fame, dust, limit, today, rate) => `- ${label}: 명성 ${fame}, 골드 $${dust} (${limit}) · 오늘 ${today}번, 지금 ×${rate}`,

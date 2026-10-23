@@ -1,6 +1,6 @@
 # Reward design
 
-howdy pays for results a person can check, not for how much Claude did, and it is paced so that a steady user reaches level 50 in about 1,000 active hours. The numbers below come from replaying 27 days of one heavy user's Claude Code history (185 active hours, 216 sessions) through the same rule code the mod runs (`tools/sim.ts`).
+cappl-pals pays for results a person can check, not for how much Claude did, and it is paced so that a steady user reaches level 50 in about 1,000 active hours. The numbers below come from replaying 27 days of one heavy user's Claude Code history (185 active hours, 216 sessions) through the same rule code the mod runs (`tools/sim.ts`).
 
 ## Principles
 
@@ -12,7 +12,7 @@ howdy pays for results a person can check, not for how much Claude did, and it i
 | No streaks, no penalties, no decay | A broken streak lowers later engagement (Silverman & Barasch, 2023). The pals never get sick or leave, like Finch or Neko Atsume. |
 | Rest is rewarded | An hour of work followed by a 20-minute break earns "Campfire rest". |
 | Currency buys cosmetics only; no loot boxes, no trading | No gambling mechanics, no power race between people. |
-| The rules are visible | `/howdy-rules` shows the table, today's counts and the current multiplier. |
+| The rules are visible | `/cappl-rules` shows the table, today's counts and the current multiplier. |
 
 ## What the history showed
 
@@ -24,7 +24,7 @@ howdy pays for results a person can check, not for how much Claude did, and it i
 
 Four findings shaped the rules:
 
-1. **93% of failed test runs exited with code 0.** Agents pipe test output (`pytest | tail -5`), so the exit code says success. howdy reads the runner's summary line instead (`3 failed, 9 passed`, `Some tests failed`, `--- FAIL`, `ℹ fail 1`).
+1. **93% of failed test runs exited with code 0.** Agents pipe test output (`pytest | tail -5`), so the exit code says success. cappl-pals reads the runner's summary line instead (`3 failed, 9 passed`, `Some tests failed`, `--- FAIL`, `ℹ fail 1`).
 2. **Almost every commit used `git commit -q`,** which prints no line counts. A commit's size is estimated from the number of file edits since the previous commit.
 3. **Turns end without a person.** Background agents keep finishing turns, so presence (for breaks and the daily reward) counts only prompts a person sent.
 4. **Plan mode was barely used.** "Trail mapped" stays for people who do use it; it hardly moves the curve.
@@ -79,7 +79,7 @@ At the slowest quarter of days (18.6 rep/h) level 50 takes about 1,410 hours; at
 
 Each character has ten items in six slots (eyes, mouth, head, hat, hand, stage), one item per slot. Prices are set so that each item is affordable soon after it unlocks. Both wardrobes together cost $18,920, about what the replay earns in 970 hours (19.6 gold per active hour). So dressing up one pal fully comes well before level 50, and finishing both comes near the end.
 
-| Unlock | Locki | Cappl | Price | Unlocks at |
+| Unlock | LOCKI | CAPPL | Price | Unlocks at |
 |---|---|---|---|---|
 | Lv1 | Aviator shades | Round specs | $50 | 0 h |
 | Lv3 | Pink feather | Wheat straw | $60 | 3 h |

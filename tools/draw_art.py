@@ -121,7 +121,7 @@ def cowboy_hat(W, H, main, dark, light, band, top=1, wide=0):
     return hat
 
 
-# ── Locki: cream pup, big ears, navy hat with a pink band and a pink star ─────────
+# ── LOCKI: cream pup, big ears, navy hat with a pink band and a pink star ─────────
 
 
 def locki32():
@@ -155,7 +155,7 @@ def locki32():
     }
 
 
-# ── Cappl: teal head with a cream face, round ears over a wide brown hat ──────────
+# ── CAPPL: teal head with a cream face, round ears over a wide brown hat ──────────
 
 
 def cappl32():
@@ -495,9 +495,9 @@ def cappl_items16(W=16, H=14):
 
 
 PALETTE = {
-    # Locki
+    # LOCKI
     "N": "#2B4A8B", "n": "#1B2C57", "H": "#4568B0", "P": "#F2728F", "p": "#C8526F", "i": "#F6CFCF",
-    # Cappl
+    # CAPPL
     "B": "#9C6B42", "b": "#6E4A2C", "R": "#C08E5E", "T": "#2F7A7E", "t": "#1D5257", "Q": "#4A979B",
     # shared fur and features
     "C": "#FFF3DC", "c": "#EEDDBD", "o": "#C4A57E", "K": "#1F1D24", "w": "#FFFFFF",
@@ -649,7 +649,7 @@ def emit(arts, items):
 
 
 def icon(path, arts, size=1024):
-    """The plugin icon: both characters peeking over the edge of a pastel squircle."""
+    """The plugin icon: LOCKI and CAPPL peeking over a plank in a pastel squircle."""
     from PIL import Image, ImageDraw
 
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))

@@ -29,13 +29,13 @@ export type Character = {
 export const CHARACTERS: readonly Character[] = [
   {
     id: 'locki',
-    name: 'Locki',
+    name: 'LOCKI',
     color: '#F2728F',
     blurb: {
       en: 'Wants to be sheriff. Bright, bouncy, never without the pink star.',
       ko: '보안관이 꿈인 씩씩한 친구. 모자의 분홍 별이 자랑이에요.',
     },
-    hello: { en: "Howdy! Locki's on duty.", ko: '하우디! Locki 근무 시작!' },
+    hello: { en: "Howdy! LOCKI's on duty.", ko: '하우디! LOCKI 근무 시작!' },
     sparkle: 'twinkle',
     fxColors: {
       reward: ['P', 'y', 'w'],
@@ -61,13 +61,13 @@ export const CHARACTERS: readonly Character[] = [
   },
   {
     id: 'cappl',
-    name: 'Cappl',
+    name: 'CAPPL',
     color: '#4A979B',
     blurb: {
       en: 'A drifter in a wide brown hat. Slow, steady, always humming a tune.',
       ko: '넓은 갈색 모자를 쓴 떠돌이. 느긋하고 꾸준하며 늘 콧노래를 불러요.',
     },
-    hello: { en: "Howdy, partner. Cappl's here.", ko: '반가워, 파트너. Cappl 왔어.' },
+    hello: { en: "Howdy, partner. CAPPL's here.", ko: '반가워, 파트너. CAPPL 왔어.' },
     sparkle: 'note',
     fxColors: {
       reward: ['Q', 'l', 'w'],

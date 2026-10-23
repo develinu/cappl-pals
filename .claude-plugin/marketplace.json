@@ -1,12 +1,13 @@
 {
-  "name": "howdy",
-  "owner": { "name": "howdy contributors" },
-  "description": "howdy: cowboy-hat pals who grow with your Claude Code work",
+  "name": "cappl-pals",
+  "owner": { "name": "develinu" },
+  "description": "cappl-pals: LOCKI and CAPPL, cowboy-hat pals who grow with your Claude Code work",
   "plugins": [
     {
-      "name": "howdy",
+      "name": "cappl-pals",
       "source": "./mod",
-      "description": "Pick Locki or Cappl, two cowboy-hat pals who grow with your Claude Code work: passing tests, commits and merged PRs earn rep and gold for hats, shades and banjos.",
+      "description": "LOCKI and CAPPL from the CAPPL app peek over your Claude Code prompt and grow with your work: passing tests, commits and merged PRs earn rep and gold for hats, shades and banjos.",
+      "author": { "name": "develinu" },
       "version": "0.1.0"
     }
   ]

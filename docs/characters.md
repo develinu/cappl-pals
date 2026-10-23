@@ -1,6 +1,6 @@
 # Adding a character
 
-A character is four things: pixels, a definition, a voice and a type entry. Nothing else in the mod names Locki or Cappl.
+A character is four things: pixels, a definition, a voice and a type entry. Nothing else in the mod names LOCKI or CAPPL.
 
 ## 1. Pixels: `tools/draw_art.py`
 

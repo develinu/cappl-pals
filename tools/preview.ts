@@ -1,5 +1,5 @@
 // Renders a sprite sheet (moods, every item, every effect, both sizes) to a PNG
-// through the mod's own composer. Usage: bun tools/preview.ts docs/howdy-sheet.png
+// through the mod's own composer. Usage: bun tools/preview.ts docs/cappl-pals-sheet.png
 import { writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 

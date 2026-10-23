@@ -37,7 +37,7 @@ import {
 import { SOUND_LEVELS, play, soundLevel, type Sfx, type SoundLevel } from './sound'
 import { encode, frame, svgOf, type Size } from './sprite'
 
-const PANE = 'howdy'
+const PANE = 'cappl-pals'
 const SPRITE = 'sprite'
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 const STALE_MS = 2 * 24 * 60 * 60_000
@@ -47,7 +47,7 @@ const HEADER_ROWS = 4
 const HEADER_COLUMNS = 16
 // The big sprite (14 rows) only when the header and a few rows below it fit too.
 const BIG_ROWS = 14 + HEADER_ROWS + 6
-// The height asked for when /howdy opens the pane above the prompt (the terminal may give less).
+// The height asked for when /cappl opens the pane above the prompt (the terminal may give less).
 const INLINE_ROWS = 24
 // How often other sessions' rewards and purchases are read back; the store sends no change events.
 const SYNC_MS = 1500
@@ -58,14 +58,14 @@ const FX_COLOR: Record<FxKind, string> = {
   reward: '#FCD34D', comeback: '#F472B6', merge: '#60A5FA', level: '#F59E0B', stage: '#F59E0B', buy: '#86EFAC',
 }
 
-const totalsAtom = atom({ plugin: 'howdy', key: 'totals' } as const, { fame: 0, dust: 0 })
-const walletAtom = atom({ plugin: 'howdy', key: 'wallet' } as const, emptyWallet())
-const logAtom = atom({ plugin: 'howdy', key: 'log' } as const, [])
-const moodAtom = atom({ plugin: 'howdy', key: 'mood' } as const, 'idle')
-const turnFameAtom = atom({ plugin: 'howdy', key: 'turnFame' } as const, 0)
-const fxAtom = atom({ plugin: 'howdy', key: 'fx' } as const, null as Fx | null)
-const characterAtom = atom({ plugin: 'howdy', key: 'character' } as const, null as CharacterId | null)
-const pickingAtom = atom({ plugin: 'howdy', key: 'picking' } as const, false)
+const totalsAtom = atom({ plugin: 'cappl-pals', key: 'totals' } as const, { fame: 0, dust: 0 })
+const walletAtom = atom({ plugin: 'cappl-pals', key: 'wallet' } as const, emptyWallet())
+const logAtom = atom({ plugin: 'cappl-pals', key: 'log' } as const, [])
+const moodAtom = atom({ plugin: 'cappl-pals', key: 'mood' } as const, 'idle')
+const turnFameAtom = atom({ plugin: 'cappl-pals', key: 'turnFame' } as const, 0)
+const fxAtom = atom({ plugin: 'cappl-pals', key: 'fx' } as const, null as Fx | null)
+const characterAtom = atom({ plugin: 'cappl-pals', key: 'character' } as const, null as CharacterId | null)
+const pickingAtom = atom({ plugin: 'cappl-pals', key: 'picking' } as const, false)
 
 // Module variables start over on a hot reload: what the pane reads lives in $.state,
 // what must last lives in $.store.
@@ -289,13 +289,13 @@ async function currentCharacter($: EngineInterface): Promise<Character> {
   return characterOf(await read($, characterAtom))
 }
 
-// A person who closes the pane keeps it closed in later sessions; /howdy opens it again.
+// A person who closes the pane keeps it closed in later sessions; /cappl opens it again.
 async function showPane($: EngineInterface) {
   await $.store.set('hidden', false)
   void play($, 'open', (await currentCharacter($)).id)
   void sync($)
 
-  return $.ui.open({ id: PANE, title: 'howdy', rows: INLINE_ROWS })
+  return $.ui.open({ id: PANE, title: 'CAPPL', rows: INLINE_ROWS })
 }
 
 async function hidePane($: EngineInterface) {
@@ -319,7 +319,7 @@ async function pick($: EngineInterface, id: CharacterId) {
   await play($, 'hello', id)
 }
 
-// /howdy-sound: normal → quiet → off → normal.
+// /cappl-sound: normal → quiet → off → normal.
 async function cycleSound($: EngineInterface): Promise<string> {
   const w = words()
   const now = await soundLevel($)
@@ -418,15 +418,15 @@ export const register: Register = (on, options) => {
     runtime.offset = -new Date().getTimezoneOffset()
     runtime.language = languageOf(options.language, await $.settings.read({ key: 'language' }).catch(() => undefined))
     const w = words()
-    await $.command.register({ name: 'howdy', description: w.commands.howdy, immediate: true })
-    await $.command.register({ name: 'howdy-pick', description: w.commands.pick, argumentHint: 'locki | cappl', immediate: true })
-    await $.command.register({ name: 'howdy-status', description: w.commands.status })
-    await $.command.register({ name: 'howdy-rules', description: w.commands.rules })
-    await $.command.register({ name: 'howdy-sound', description: w.commands.sound, immediate: true })
+    await $.command.register({ name: 'cappl', description: w.commands.toggle, immediate: true })
+    await $.command.register({ name: 'cappl-pick', description: w.commands.pick, argumentHint: 'locki | cappl', immediate: true })
+    await $.command.register({ name: 'cappl-status', description: w.commands.status })
+    await $.command.register({ name: 'cappl-rules', description: w.commands.rules })
+    await $.command.register({ name: 'cappl-sound', description: w.commands.sound, immediate: true })
     await publish($, await loadWorld($))
     $.clock.every(250, () => void animate($))
     $.clock.every(SYNC_MS, () => void sync($))
-    if ((await $.store.get('hidden')) !== true) void $.ui.open({ id: PANE, title: 'howdy' })
+    if ((await $.store.get('hidden')) !== true) void $.ui.open({ id: PANE, title: 'CAPPL' })
     void compact($).catch(() => undefined)
 
     return next(e)
@@ -439,7 +439,7 @@ export const register: Register = (on, options) => {
     return started
   })
 
-  on('command.run', { command: 'howdy' }, async $ => {
+  on('command.run', { command: 'cappl' }, async $ => {
     const w = words()
     if (await isPaneOpen($)) {
       await hidePane($)
@@ -451,8 +451,8 @@ export const register: Register = (on, options) => {
     return { text: opened.isPlaced ? w.opened : w.waiting }
   })
 
-  // /howdy-pick cappl picks at once; /howdy-pick alone opens the picker in the pane.
-  on('command.run', { command: 'howdy-pick' }, async ($, e) => {
+  // /cappl-pick cappl picks at once; /cappl-pick alone opens the picker in the pane.
+  on('command.run', { command: 'cappl-pick' }, async ($, e) => {
     const w = words()
     const wanted = e.args.trim().toLowerCase()
     if (wanted !== '') {
@@ -476,11 +476,11 @@ export const register: Register = (on, options) => {
     return closed
   })
 
-  on('command.run', { command: 'howdy-status' }, async $ => ({ text: await statusText($) }))
+  on('command.run', { command: 'cappl-status' }, async $ => ({ text: await statusText($) }))
 
-  on('command.run', { command: 'howdy-rules' }, async $ => ({ text: await rulesText($) }))
+  on('command.run', { command: 'cappl-rules' }, async $ => ({ text: await rulesText($) }))
 
-  on('command.run', { command: 'howdy-sound' }, async $ => ({ text: await cycleSound($) }))
+  on('command.run', { command: 'cappl-sound' }, async $ => ({ text: await cycleSound($) }))
 
   on('prompt.submit', async ($, e, next) => {
     await arrive($)

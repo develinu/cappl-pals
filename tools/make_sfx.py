@@ -3,8 +3,8 @@
 
 Usage: python3 tools/make_sfx.py   (needs numpy)
 
-Each character has a voice of its own: Locki is bright square-wave chiptune with a
-harmonica and little yips; Cappl is a plucked banjo (Karplus-Strong), a soft hum
+Each character has a voice of its own: LOCKI is bright square-wave chiptune with a
+harmonica and little yips; CAPPL is a plucked banjo (Karplus-Strong), a soft hum
 and hoof clops. All sounds are 22.05 kHz mono 16-bit, levelled by their loudest
 50 ms window: "normal" near a chat notification, "quiet" near the Windows Ding.
 """
@@ -67,7 +67,7 @@ def seq(notes, step, voice, tail=0.25, **kw):
     return mix(*parts)
 
 
-# ── Locki: square waves, harmonica, yips ─────────────────────────────────────
+# ── LOCKI: square waves, harmonica, yips ─────────────────────────────────────
 
 
 def square(freq, dur, duty=0.5):
@@ -146,7 +146,7 @@ def locki():
     }
 
 
-# ── Cappl: banjo, hum, hooves ────────────────────────────────────────────────
+# ── CAPPL: banjo, hum, hooves ────────────────────────────────────────────────
 
 
 def pluck(note, dur, last=False, bright=0.5, gain=1.0):

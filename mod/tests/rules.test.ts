@@ -143,7 +143,7 @@ test('shop: level and gold gate a purchase; one item per slot per character', as
   const two = buy(one, rich, 10, 'locki/heart-shades')!
   expect(two.equipped).toEqual(['locki/heart-shades'])
   expect(wear(two, 'locki/aviators').equipped).toEqual(['locki/aviators'])
-  // Cappl's eyes slot is Cappl's own: Locki keeps the heart shades on.
+  // CAPPL's eyes slot is CAPPL's own: LOCKI keeps the heart shades on.
   const three = buy(two, rich, 10, 'cappl/round-specs')!
   expect(three.equipped).toEqual(['locki/heart-shades', 'cappl/round-specs'])
   expect(wornBy(three, 'locki')).toEqual(['heart-shades'])

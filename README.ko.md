@@ -1,49 +1,53 @@
-# howdy
+# cappl-pals
 
-**Claude Code 작업과 함께 자라는 카우보이모자 단짝.** Locki나 Cappl 중 하나를 고르면 됩니다. 둘은 프롬프트 위로 고개를 내밀고, Claude가 일하는 동안 앞발을 톡톡 두드리고, 테스트가 통과하거나 커밋이 들어가거나 PR이 병합되면 기뻐합니다. 결과마다 명성과 골드가 쌓입니다. 명성이 오르면 계급이 새내기에서 서부의 전설까지 오르고, 골드로는 모자·선글라스·밴조·배경을 삽니다.
+**CAPPL 앱의 카우보이모자 단짝 LOCKI와 CAPPL이 Claude Code 작업과 함께 자랍니다.** 둘 중 하나를 고르면 됩니다. 둘은 프롬프트 위로 고개를 내밀고, Claude가 일하는 동안 앞발을 톡톡 두드리고, 테스트가 통과하거나 커밋이 들어가거나 PR이 병합되면 기뻐합니다. 결과마다 명성과 골드가 쌓입니다. 명성이 오르면 계급이 새내기에서 서부의 전설까지 오르고, 골드로는 모자·선글라스·밴조·배경을 삽니다.
 
-![기본·신남·축하·꾸민 모습의 Locki와 Cappl](docs/howdy-hero.png)
+[![데모 영상: 친구 고르기, 테스트 통과, 병합, 상점](docs/cappl-pals-demo-poster.png)](docs/cappl-pals-demo.mp4)
+
+데모 영상(약 1분): [`docs/cappl-pals-demo.mp4`](docs/cappl-pals-demo.mp4)
+
+![기본·신남·축하·꾸민 모습의 LOCKI와 CAPPL](docs/cappl-pals-hero.png)
 
 [English README](README.md)
 
 ## 설치
 
-howdy는 Claude Code mod(훅 모듈이 든 플러그인)이고 Claude Code 2.1.287 이상에서 돌아갑니다.
+cappl-pals는 Claude Code mod(훅 모듈이 든 플러그인)이고 Claude Code 2.1.287 이상에서 돌아갑니다.
 
 ```
-/plugin install howdy --marketplace <owner>/howdy
+/plugin install cappl-pals --marketplace develinu/cappl-pals
 ```
 
-마켓플레이스를 추가할지 물으면 `y`를 누르고 범위는 user를 그대로 둡니다. 설치한 세션에는 창이 바로 뜹니다. 이미 열려 있던 세션에서는 `/reload-plugins`를 입력하세요. 셸에서는 `claude plugin install howdy --marketplace <owner>/howdy`로 설치합니다.
+마켓플레이스를 추가할지 물으면 `y`를 누르고 범위는 user를 그대로 둡니다. 설치한 세션에는 창이 바로 뜹니다. 이미 열려 있던 세션에서는 `/reload-plugins`를 입력하세요. 셸에서는 `claude plugin install cappl-pals --marketplace develinu/cappl-pals`로 설치합니다.
 
-업데이트: `/plugin` → **Marketplaces** → `howdy` → **Enable auto-update**를 켜 두면 알아서 받습니다. 켜지 않았다면 `claude plugin update howdy@howdy`를 실행한 뒤 `/reload-plugins`를 입력합니다.
+업데이트: `/plugin` → **Marketplaces** → `cappl-pals` → **Enable auto-update**를 켜 두면 알아서 받습니다. 켜지 않았다면 `claude plugin update cappl-pals@cappl-pals`를 실행한 뒤 `/reload-plugins`를 입력합니다.
 
 ## 쓰는 법
 
 | | |
 |---|---|
-| `/howdy` | 창 열기·닫기. Claude가 일하는 중에도 됩니다. 닫아 두면 다음 세션에도 닫힌 채로 시작합니다. |
-| `/howdy-pick` | 함께할 친구 고르기. `/howdy-pick cappl`은 바로 바꾸고, 그냥 `/howdy-pick`은 창에 고르기 화면을 띄웁니다. |
-| `/howdy-status` | 레벨·계급·명성·골드 한 줄 요약 |
-| `/howdy-rules` | 보상표와 오늘 받은 횟수 |
-| `/howdy-sound` | 효과음 크기: 보통 → 작게 → 끔 |
+| `/cappl` | 창 열기·닫기. Claude가 일하는 중에도 됩니다. 닫아 두면 다음 세션에도 닫힌 채로 시작합니다. |
+| `/cappl-pick` | 함께할 친구 고르기. `/cappl-pick cappl`은 바로 바꾸고, 그냥 `/cappl-pick`은 창에 고르기 화면을 띄웁니다. |
+| `/cappl-status` | 레벨·계급·명성·골드 한 줄 요약 |
+| `/cappl-rules` | 보상표와 오늘 받은 횟수 |
+| `/cappl-sound` | 효과음 크기: 보통 → 작게 → 끔 |
 
 창을 클릭하거나 `ctrl+x` 다음 `Tab`으로 창에 포커스를 줍니다. 그다음 `1`~`0`은 소품을 사거나 쓰고 벗고, `c`는 캐릭터를 바꾸고, `q`는 창을 닫습니다. 110열 이상의 넓은 fullscreen 터미널에서는 창이 오른쪽에 붙고, 그 밖에는 프롬프트 위에 뜹니다. 창이 낮으면 작은 캐릭터 옆에 레벨과 명성을 두고, 상점은 아래로 내려 보라고 안내합니다.
 
 여러 세션이 기록 하나를 함께 씁니다. 명성·골드·최근 보상·산 소품·고른 캐릭터는 2초 안에 열린 창 모두에 반영됩니다.
 
-언어는 Claude Code의 `language` 설정(한국어·영어)을 따릅니다. 고정하려면 `/config`에서 **howdy › Language**를 바꿉니다.
+언어는 Claude Code의 `language` 설정(한국어·영어)을 따릅니다. 고정하려면 `/config`에서 **cappl-pals › Language**를 바꿉니다.
 
 ## 두 친구
 
-| | Locki | Cappl |
+| | LOCKI | CAPPL |
 |---|---|---|
 | 성격 | 보안관이 꿈인 씩씩한 친구. 모자의 분홍 별이 자랑이에요. | 넓은 갈색 모자를 쓴 떠돌이. 느긋하고 꾸준하며 늘 콧노래를 불러요. |
 | 소리 | 사각파 칩튠, 하모니카, 짧게 튀는 소리, 박차 방울 | 밴조 튕기는 소리, 낮은 콧노래, 말발굽 |
 | 축하할 때 | 분홍·금빛 별이 반짝이고 귀가 쫑긋 | 음표가 떠오르고 모자를 살짝 들어 올림 |
 | 옷장 | 보안관 선글라스, 분홍 깃털, 하모니카, 하트 선글라스, 올가미 밧줄, 금빛 보안관 별, 한낮의 사막, 하얀 카우보이모자, 사막의 노을, 별밤 모자 | 동그란 안경, 밀짚 한 가닥, 양철 커피잔, 무법자 두건, 밴조, 참새 친구, 모닥불, 검은 카우보이모자, 별이 빛나는 밤, 황금 밴조 |
 
-옷장은 캐릭터마다 따로 있고 골드는 함께 씁니다. 모든 소품은 큰 그림과 작은 그림 둘 다 있습니다([스프라이트 시트](docs/howdy-sheet.png)).
+옷장은 캐릭터마다 따로 있고 골드는 함께 씁니다. 모든 소품은 큰 그림과 작은 그림 둘 다 있습니다([스프라이트 시트](docs/cappl-pals-sheet.png)).
 
 ## 무엇에 보상하나
 
@@ -63,7 +67,7 @@ howdy는 Claude Code mod(훅 모듈이 든 플러그인)이고 Claude Code 2.1.2
 
 ## 개인정보
 
-서버와 네트워크 호출이 없고 파일도 읽지 않습니다. `claude plugin validate ./mod` 결과에 `$.http`와 `$.fs`가 없습니다. 외부 프로세스는 효과음을 틀 때만 씁니다(`uname`, `wslpath`, `powershell.exe`, `paplay`, `pw-play`, `aplay`). 읽는 설정은 `language` 하나입니다. 진행 기록은 내 컴퓨터의 `~/.claude/plugins/store/howdy_*.json`에만 남고, 순위표는 없습니다.
+서버와 네트워크 호출이 없고 파일도 읽지 않습니다. `claude plugin validate ./mod` 결과에 `$.http`와 `$.fs`가 없습니다. 외부 프로세스는 효과음을 틀 때만 씁니다(`uname`, `wslpath`, `powershell.exe`, `paplay`, `pw-play`, `aplay`). 읽는 설정은 `language` 하나입니다. 진행 기록은 내 컴퓨터의 `~/.claude/plugins/store/cappl-pals_*.json`에만 남고, 순위표는 없습니다.
 
 ## 내 기록으로 속도 재기
 
@@ -80,6 +84,10 @@ bun tools/sim.ts .data/events.jsonl
 
 명령과 폴더 구성은 [영문 README](README.md#develop)에 있습니다. 캐릭터를 더하는 방법은 [docs/characters.md](docs/characters.md)를 보세요.
 
+## 캐릭터
+
+LOCKI와 CAPPL은 CAPPL 앱의 캐릭터이고, 허가를 받아 사용합니다.
+
 ## 라이선스
 
-코드는 [MIT 라이선스](LICENSE)입니다. Locki와 Cappl의 캐릭터 디자인과 픽셀 그림은 [ART-LICENSE.md](ART-LICENSE.md)를 따릅니다.
+코드는 [MIT 라이선스](LICENSE)입니다. LOCKI·CAPPL 캐릭터와 그림은 cappl-pals와 그 포크 안에서만 쓸 수 있고, 그 밖의 용도는 CAPPL 앱의 허락이 필요합니다. 자세한 내용은 [ART-LICENSE.md](ART-LICENSE.md)에 있습니다.

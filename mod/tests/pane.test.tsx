@@ -2,11 +2,11 @@ import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 
 const PANE = {
-  plugin: 'howdy',
+  plugin: 'cappl-pals',
   component: 'Pane',
-  requestId: 'howdy',
+  requestId: 'cappl-pals',
   props: {
-    title: 'howdy',
+    title: 'CAPPL',
     isFocused: false,
     bodyColumns: 40,
     placement: 'dock',
@@ -58,32 +58,32 @@ test('the first time, the pane asks who to ride with; picking shows that charact
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     expect(await text(ui, /^Pick your partner/)).toBe('Pick your partner')
-    expect((await ui.find({ key: 'pick-locki' }))?.text).toMatch(/Ride with Locki/)
-    expect((await ui.find({ key: 'pick-cappl' }))?.text).toMatch(/Ride with Cappl/)
+    expect((await ui.find({ key: 'pick-locki' }))?.text).toMatch(/Ride with LOCKI/)
+    expect((await ui.find({ key: 'pick-cappl' }))?.text).toMatch(/Ride with CAPPL/)
     await ui.unmount()
   }
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'pick-cappl' })
-  expect(await text(ui, /Lv1/)).toBe('Cappl Lv1 Greenhorn')
+  expect(await text(ui, /Lv1/)).toBe('CAPPL Lv1 Greenhorn')
   expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs \$50/)
   // "Switch character" brings the picker back, marking who rides now.
   await ui.press({ key: 'switch' })
-  expect(await text(ui, /riding now/)).toBe('Cappl (riding now)')
+  expect(await text(ui, /riding now/)).toBe('CAPPL (riding now)')
   await ui.press({ key: 'pick-locki' })
-  expect(await text(ui, /Lv1/)).toBe('Locki Lv1 Greenhorn')
+  expect(await text(ui, /Lv1/)).toBe('LOCKI Lv1 Greenhorn')
   await ui.unmount()
 })
 
-test('/howdy-pick picks by name, and says which names exist', async ($, on) => {
+test('/cappl-pick picks by name, and says which names exist', async ($, on) => {
   engine(on)
   mock.store(on)
   mock.clock(on, { now: NOW })
 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  expect((await $.command.run({ command: 'howdy-pick', ...RUN, args: 'Cappl' })).text).toBe('Cappl is riding with you now.')
-  expect((await $.command.run({ command: 'howdy-status', ...RUN })).text).toMatch(/^Cappl Lv1 Greenhorn/)
-  expect((await $.command.run({ command: 'howdy-pick', ...RUN, args: 'bob' })).text).toMatch(/locki, cappl/)
+  expect((await $.command.run({ command: 'cappl-pick', ...RUN, args: 'CAPPL' })).text).toBe('CAPPL is riding with you now.')
+  expect((await $.command.run({ command: 'cappl-status', ...RUN })).text).toMatch(/^CAPPL Lv1 Greenhorn/)
+  expect((await $.command.run({ command: 'cappl-pick', ...RUN, args: 'bob' })).text).toMatch(/locki, cappl/)
 })
 
 test('editing, passing a test and committing shows rep and gold in the pane', async ($, on) => {
@@ -101,7 +101,7 @@ test('editing, passing a test and committing shows rep and gold in the pane', as
     // Bullseye (5, $3) + claim staked (3, $2; tested 5, $3; small 2) = 15 rep, $8
     expect(await text(ui, /^Rep/)).toMatch(/15\/\d+$/)
     expect(await text(ui, /^Gold/)).toMatch(/^Gold \$8/)
-    expect(await text(ui, /Lv/)).toBe('Locki Lv1 Greenhorn')
+    expect(await text(ui, /Lv/)).toBe('LOCKI Lv1 Greenhorn')
     expect(await text(ui, /^Claim staked/)).toBe('Claim staked +10 $5')
     await ui.unmount()
   }
@@ -131,7 +131,7 @@ test('other sessions add up; buying spends gold and each character keeps its own
 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect(await text(ui, /Lv/)).toMatch(/^Locki Lv6 Stable Hand$/)
+  expect(await text(ui, /Lv/)).toMatch(/^LOCKI Lv6 Stable Hand$/)
   await ui.press({ key: 'shop-aviators' })
   expect(await text(ui, /^Gold/)).toMatch(/^Gold \$70/)
   expect((await ui.find({ key: 'shop-aviators' }))?.text).toMatch(/Aviator shades take off/)
@@ -193,7 +193,7 @@ test("another session's rewards, purchases and character show up in an open pane
 
   file.set('character', 'cappl')
   await clock.advance(2_000)
-  expect(await text(ui, /Lv/)).toMatch(/^Cappl Lv/)
+  expect(await text(ui, /Lv/)).toMatch(/^CAPPL Lv/)
   await ui.unmount()
 })
 
@@ -213,11 +213,11 @@ function paneEngine(on: On, state: { isOpen: boolean; opens: number; closes: str
     return { value: undefined }
   })
   on('ui.panes', () => ({
-    value: state.isOpen ? [{ id: 'howdy', title: 'howdy', isShown: true, isFocused: false, isPlaced: true }] : [],
+    value: state.isOpen ? [{ id: 'cappl-pals', title: 'CAPPL', isShown: true, isFocused: false, isPlaced: true }] : [],
   }))
 }
 
-test('/howdy opens and closes the pane, and a closed pane stays closed next session', async ($, on) => {
+test('/cappl opens and closes the pane, and a closed pane stays closed next session', async ($, on) => {
   const state: { isOpen: boolean; opens: number; closes: string[]; rows?: number } = { isOpen: false, opens: 0, closes: [] }
   paneEngine(on, state)
   mock.store(on, LOCKI)
@@ -225,13 +225,13 @@ test('/howdy opens and closes the pane, and a closed pane stays closed next sess
 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   expect(state.isOpen).toBe(true)
-  expect((await $.command.run({ command: 'howdy', ...RUN })).text).toMatch(/^Closed/)
+  expect((await $.command.run({ command: 'cappl', ...RUN })).text).toMatch(/^Closed/)
   expect(state.isOpen).toBe(false)
-  expect((await $.command.run({ command: 'howdy', ...RUN })).text).toMatch(/^Opened/)
+  expect((await $.command.run({ command: 'cappl', ...RUN })).text).toMatch(/^Opened/)
   expect(state.isOpen).toBe(true)
-  // Opened by /howdy above the prompt, the pane asks for room for the shop too.
+  // Opened by /cappl above the prompt, the pane asks for room for the shop too.
   expect(state.rows).toBe(24)
-  await $.command.run({ command: 'howdy', ...RUN })
+  await $.command.run({ command: 'cappl', ...RUN })
 
   const opensBefore = state.opens
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
@@ -265,7 +265,7 @@ test('a low pane above the prompt puts the header beside the small sprite', asyn
     const beside = await ui.find({ key: 'beside' })
     expect(beside?.props.flexDirection).toBe('row')
     expect(JSON.stringify(beside?.children)).toMatch(/"Raster"/)
-    expect(beside?.text).toMatch(/Locki Lv1 Greenhorn/)
+    expect(beside?.text).toMatch(/LOCKI Lv1 Greenhorn/)
     expect(beside?.text).toMatch(/Rep [▰▱]/)
     expect(beside?.text).toMatch(/Gold \$0/)
     expect(beside?.text).toMatch(/▾ Shop below/)
@@ -286,7 +286,7 @@ test('a low pane above the prompt puts the header beside the small sprite', asyn
   await ui.unmount()
 })
 
-test('a reward flashes a line in the pane, and /howdy-sound cycles normal → quiet → off', async ($, on) => {
+test('a reward flashes a line in the pane, and /cappl-sound cycles normal → quiet → off', async ($, on) => {
   engine(on, { 'pytest -q': '12 passed in 0.3s' })
   mock.store(on, LOCKI)
   mock.clock(on, { now: NOW })
@@ -298,9 +298,9 @@ test('a reward flashes a line in the pane, and /howdy-sound cycles normal → qu
   expect(await text(ui, /^✦ Bullseye/)).toBe('✦ Bullseye +5 rep')
   await ui.unmount()
 
-  expect((await $.command.run({ command: 'howdy-sound', ...RUN })).text).toMatch(/^Sound effects: quiet/)
-  expect((await $.command.run({ command: 'howdy-sound', ...RUN })).text).toMatch(/^Sound effects: off/)
-  expect((await $.command.run({ command: 'howdy-sound', ...RUN })).text).toMatch(/^Sound effects: normal/)
+  expect((await $.command.run({ command: 'cappl-sound', ...RUN })).text).toMatch(/^Sound effects: quiet/)
+  expect((await $.command.run({ command: 'cappl-sound', ...RUN })).text).toMatch(/^Sound effects: off/)
+  expect((await $.command.run({ command: 'cappl-sound', ...RUN })).text).toMatch(/^Sound effects: normal/)
 })
 
 test('Korean, from the language option or from the Claude Code setting', { options: { language: 'ko' } }, async ($, on) => {
@@ -312,12 +312,12 @@ test('Korean, from the language option or from the Claude Code setting', { optio
   await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
   await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect(await text(ui, /Lv/)).toBe('Locki Lv1 새내기')
+  expect(await text(ui, /Lv/)).toBe('LOCKI Lv1 새내기')
   expect(await text(ui, /^골드/)).toMatch(/^골드 \$3/)
   expect((await ui.find({ key: 'shop-aviators' }))?.text).toMatch(/보안관 선글라스 \$50/)
   expect(await text(ui, /^✦ 과녁 명중/)).toBe('✦ 과녁 명중 +5 명성')
   await ui.unmount()
-  expect((await $.command.run({ command: 'howdy-rules', ...RUN })).text).toMatch(/UTC/)
+  expect((await $.command.run({ command: 'cappl-rules', ...RUN })).text).toMatch(/UTC/)
 })
 
 test('auto language follows Claude Code’s language setting', async ($, on) => {
@@ -327,7 +327,7 @@ test('auto language follows Claude Code’s language setting', async ($, on) => 
   mock.clock(on, { now: NOW })
 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  expect((await $.command.run({ command: 'howdy-status', ...RUN })).text).toMatch(/^Locki Lv1 새내기 · 명성 0/)
+  expect((await $.command.run({ command: 'cappl-status', ...RUN })).text).toMatch(/^LOCKI Lv1 새내기 · 명성 0/)
 })
 
 // $.state kept per session: after /clear the new session id starts with empty values.
@@ -379,7 +379,7 @@ test('after /clear the pane keeps rep, gold, items and the character; new reward
   await $.classic.SessionStart({ source: 'clear' })
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect(await text(ui, /Lv/)).toBe('Cappl Lv6 Stable Hand')
+  expect(await text(ui, /Lv/)).toBe('CAPPL Lv6 Stable Hand')
   expect(await text(ui, /^Gold/)).toMatch(/^Gold \$70/)
   expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs take off/)
   await ui.unmount()
