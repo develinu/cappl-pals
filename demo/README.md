@@ -31,4 +31,12 @@ $FF -i out/video-en.mp4 -i out/audio-en.wav -map 0:v -map 1:a -c:v copy -c:a aac
 $FF -i out/video-ko.mp4 -i out/audio-ko.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest -movflags +faststart ../docs/cappl-pals-demo.ko.mp4
 ```
 
+The README highlight GIFs are cut from the finished videos (12 fps, 960 px, a shared palette):
+
+```sh
+$FF -i ../docs/cappl-pals-demo.mp4 -filter_complex "[0:v]trim=0.6:4.8,setpts=PTS-STARTPTS[a];[0:v]trim=15.4:18.2,setpts=PTS-STARTPTS[b];[0:v]trim=28.4:30.4,setpts=PTS-STARTPTS[c];[0:v]trim=34.8:36.4,setpts=PTS-STARTPTS[d];[0:v]trim=39.6:41.0,setpts=PTS-STARTPTS[e];[a][b][c][d][e]concat=n=5:v=1:a=0,fps=12,scale=960:-1:flags=lanczos,split[x][y];[x]palettegen=max_colors=160:stats_mode=diff[p];[y][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" ../docs/cappl-pals-demo.gif
+```
+
+`docs/cappl-pals-demo-poster*.png` are stills for the repository's social preview.
+
 A new take changes what Claude does and when, so retime that language's entry in `TAKES` in `compose.py` (segments, typing, popups, keys) against the new `marks.json` and frames. On-screen words live in `TEXT`.

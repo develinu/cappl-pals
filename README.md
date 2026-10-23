@@ -2,9 +2,9 @@
 
 **LOCKI and CAPPL, the cowboy-hat pals of the [CAPPL](#characters) app, grow with your Claude Code work.** Pick one. They peek over your prompt, tap their paws while Claude works, and cheer when a test passes, a commit lands or a pull request merges. Results earn rep and gold. Rep raises your rank from Greenhorn to Legend of the West; gold buys hats, shades, banjos and backdrops.
 
-[![Demo video: picking a pal, a passing test, a commit, the shop](docs/cappl-pals-demo-poster.png)](docs/cappl-pals-demo.mp4)
+[![Picking CAPPL, a new rank, a banjo bought, switching to LOCKI (12-second highlight)](docs/cappl-pals-demo.gif)](docs/cappl-pals-demo.mp4)
 
-Demo video (78 s): [`docs/cappl-pals-demo.mp4`](docs/cappl-pals-demo.mp4) · Korean cut: [`docs/cappl-pals-demo.ko.mp4`](docs/cappl-pals-demo.ko.mp4)
+▶ Full demo with sound (78 s): [English](docs/cappl-pals-demo.mp4) · [한국어](docs/cappl-pals-demo.ko.mp4)
 
 The pane, toasts and commands speak English and Korean.
 
