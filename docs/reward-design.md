@@ -1,6 +1,6 @@
 # Reward design
 
-cappl-pals pays for results a person can check, not for how much Claude did. Rep comes only from results; gold comes from results and from three bonuses on top of them (level chests, the day's bounties and lucky nuggets). A steady user reaches level 50 in about 850 active hours. The numbers below come from replaying 28 days of one heavy user's Claude Code history (189 active hours) through the same rule code the mod runs (`tools/sim.ts`).
+cappl-pals pays for results a person can check, not for how much Claude did. Rep comes only from results; gold comes from results and from three bonuses on top of them (level chests, the day's bounties and lucky nuggets). A steady user reaches level 50 in about 830 active hours. The numbers below come from replaying 28 days of one heavy user's Claude Code history (189 active hours) through the same rule code the mod runs (`tools/sim.ts`).
 
 ## Principles
 
@@ -68,7 +68,7 @@ The day's bounties are the same in every session and are picked from the date, w
 | Action | Cost | What happens |
 |---|---|---|
 | Pet (`p`) | Free | Heart eyes and floating hearts; three pets in a row start a wiggle. |
-| Trick (`t`) | Free | The next learned trick. Each pal learns ten, at Lv2, 4, 7, 12, 17, 23, 29, 35, 42 and 50. |
+| Trick (`t`) | Free | The newest learned trick, then the others in turn. Each pal learns ten, at Lv2, 4, 7, 12, 17, 23, 29, 35, 42 and 50. |
 | Treat (`f`) | $6 | The pal eats a star cookie or a maple biscuit, then blushes for 10 minutes and plays idle tricks twice as often. |
 
 None of these earn rep. They count toward the pal's daily bounty, and learned tricks also turn up as idle actions.

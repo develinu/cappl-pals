@@ -1,4 +1,4 @@
-"""Render record.py's ANSI frames to PNG (the weekly-limit notice is blanked out).
+"""Render record.py's ANSI frames to PNG (the weekly-limit notice and prompt suggestions are blanked out).
 
 Usage: .venv/bin/python render_frames.py /tmp/cappl-demo/take2 /tmp/cappl-demo/render
 """
@@ -23,6 +23,11 @@ def mask(grid):
         line = "".join(cell[0] for cell in row)
         if "weekly limit" in line:
             for x in range(min(divider, len(row))):
+                row[x] = (" ", None, None, False, False)
+        # A dimmed prompt suggestion ("push it") would read as typed text.
+        typed = row[2:min(divider, len(row))]
+        if line.startswith("❯") and any(cell[4] for cell in typed) and all(cell[4] or cell[0] in (" ", "\xa0", "") for cell in typed):
+            for x in range(1, min(divider, len(row))):
                 row[x] = (" ", None, None, False, False)
         at = line.find("· ← ")
         if at >= 0:

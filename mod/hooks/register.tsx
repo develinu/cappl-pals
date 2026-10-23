@@ -418,7 +418,7 @@ async function pet($: EngineInterface) {
   await enqueue($, () => count($, 'pet'))
 }
 
-// Shows one of the learned tricks, in turn.
+// Shows the learned tricks in turn, the newest first.
 async function trick($: EngineInterface) {
   const character = await currentCharacter($)
   const known = learned(character, await read($, totalsAtom))
@@ -429,7 +429,7 @@ async function trick($: EngineInterface) {
     await enqueue($, () => count($, 'trick'))
     return
   }
-  const act = known[runtime.tricks % known.length]!
+  const act = known[known.length - 1 - (runtime.tricks % known.length)]!
   runtime.tricks += 1
   await wake($)
   await playAct($, act)

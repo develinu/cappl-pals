@@ -2,9 +2,9 @@
 
 **LOCKI and CAPPL, the cowboy-hat pals of the [CAPPL](#the-cappl-app) app, grow with your Claude Code work.** Pick one. They peek over your prompt and follow your session: a thought bubble while Claude thinks, a busy tongue while it edits, a nervous sweat while tests run, a nap when you step away. They cheer when a test passes, a commit lands or a pull request merges. Pet them, ask for a trick, or buy them a treat. Results earn rep and gold, and level chests, daily bounties and lucky nuggets add more gold. Rep raises your rank from Greenhorn to Legend of the West and teaches new tricks; gold buys hats, shades, banjos and backdrops.
 
-[![Picking CAPPL, a new rank, a banjo bought, switching to LOCKI (12-second highlight)](docs/cappl-pals-demo.gif)](docs/cappl-pals-demo.mp4)
+[![Moods, a failing test, a level-up, petting, a treat and a new hat (12-second highlight)](docs/cappl-pals-demo.gif)](docs/cappl-pals-demo.mp4)
 
-▶ Full demo with sound (78 s): [English](docs/cappl-pals-demo.mp4) · [한국어](docs/cappl-pals-demo.ko.mp4)
+▶ Full demo with sound (1.5 min): [English](docs/cappl-pals-demo.mp4) · [한국어](docs/cappl-pals-demo.ko.mp4)
 
 The pane, toasts and commands speak English and Korean.
 
@@ -83,7 +83,7 @@ The pal changes with what the session is doing.
 | Button | Cost | What happens |
 |---|---|---|
 | Pet `p` | Free | Heart eyes and hearts. Pet three times quickly for a happy wiggle. |
-| Trick `t` | Free | The next trick your pal knows. Each pal learns ten, from a wave at Lv2 to a big finale at Lv50. |
+| Trick `t` | Free | Your pal's newest trick, then the others in turn. Each pal learns ten, from a wave at Lv2 to a big finale at Lv50. |
 | Treat `f` | $6 | LOCKI eats a star cookie, CAPPL a maple biscuit. Then they blush for 10 minutes and show off tricks twice as often. |
 
 Petting and tricks never earn rep. On the desktop app the pal plays the same moves, and waves when you hover over it.
@@ -129,7 +129,7 @@ Gold also comes from:
 | Bounties | Three a day in the pane: one with your pal, two from your work | $5–$15 each, $15 more for all three |
 | Lucky nugget | About one result in sixteen | $5–$15 |
 
-If you earn many rewards of one kind in a day, each new one is worth half, then a fifth. There are no streaks and no penalties, and a day off costs nothing. A day starts at 05:00 on your computer's clock. Level 50 takes about 850 active hours at a steady pace. The numbers and their reasoning are in [docs/reward-design.md](docs/reward-design.md).
+If you earn many rewards of one kind in a day, each new one is worth half, then a fifth. There are no streaks and no penalties, and a day off costs nothing. A day starts at 05:00 on your computer's clock. Level 50 takes about 830 active hours at a steady pace. The numbers and their reasoning are in [docs/reward-design.md](docs/reward-design.md).
 
 ## Privacy
 

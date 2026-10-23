@@ -15,11 +15,16 @@ p = 'types/index.d.ts'; s = open(p).read().replace("    'cappl-pals': {", "    '
 p = 'hooks/register.tsx'; s = open(p).read().replace("{ plugin: 'cappl-pals', key:", "{ plugin: 'cappl-pals-demo', key:")
 anchor = "    runtime.key = `ledger:${await $.session.id()}`"
 seed = anchor + """
-    // Demo only: start at Lv14, 12 rep short of Lv15, with $642 ($8 short of the banjo).
+    // Demo only: start at Lv34, 12 rep short of Lv35 (Sheriff, and CAPPL's two-step),
+    // with $1,872: $28 short of the black hat. No glasses or bandanas, so faces show.
     if ((await $.store.get('seeded')) === undefined) {
-      await $.store.set('archive', { fame: 2526, dust: 1262, days: {}, lastAt: 0, activeSince: 0 })
-      const owned = ['locki/aviators', 'locki/feather', 'locki/harmonica', 'cappl/round-specs', 'cappl/straw', 'cappl/coffee']
-      await $.store.set('wallet', { spent: 620, owned, equipped: owned })
+      await $.store.set('archive', { fame: 13177, dust: 12092, days: {}, lastAt: 0, activeSince: 0 })
+      const owned = ['locki/aviators', 'locki/feather', 'locki/harmonica', 'locki/heart-shades', 'locki/lasso', 'locki/gold-star',
+        'locki/desert', 'locki/white-hat', 'cappl/round-specs', 'cappl/straw', 'cappl/coffee', 'cappl/bandana', 'cappl/banjo',
+        'cappl/sparrow', 'cappl/campfire']
+      const equipped = ['locki/gold-star', 'locki/lasso', 'locki/white-hat', 'cappl/sparrow', 'cappl/banjo']
+      await $.store.set('wallet', { spent: 10220, owned, equipped })
+      await $.store.set('chestLevel', 34)
       await $.store.set('seeded', true)
     }"""
 assert anchor in s
