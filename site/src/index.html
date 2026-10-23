@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cappl-pals · Cowboy-hat pals for Claude Code</title>
+  <meta name="description" content="LOCKI and CAPPL peek over your Claude Code prompt, react to every moment of your session, and grow with the results you ship. Free, open source and private.">
+  <meta name="theme-color" content="#120f2e">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://develinu.github.io/cappl-pals/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="cappl-pals · Cowboy-hat pals for Claude Code">
+  <meta property="og:description" content="LOCKI and CAPPL follow your Claude Code session and grow with the results you ship.">
+  <meta property="og:image" content="https://develinu.github.io/cappl-pals/og.png">
+  <meta property="og:url" content="https://develinu.github.io/cappl-pals/">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+  <link rel="stylesheet" href="./%CSS%">
+  <script type="module" src="./%APP%"></script>
+</head>
+<body>
+  <a class="skip" href="#main" data-t="skip">Skip to content</a>
+  <canvas class="stars" aria-hidden="true"></canvas>
+
+  <header class="nav" id="top">
+    <div class="nav-inner">
+      <a class="brand" href="#top" aria-label="cappl-pals">
+        <canvas class="pal" data-pal="brand" data-size="16" aria-hidden="true"></canvas>
+        <span class="brand-word"><span class="pink">cappl</span>-<span class="teal">pals</span></span>
+      </a>
+      <nav class="nav-links" aria-label="Sections">
+        <a href="#moods" data-t="nav.moods">Moods</a>
+        <a href="#play" data-t="nav.play">Play</a>
+        <a href="#rewards" data-t="nav.rewards">Rewards</a>
+        <a href="#trail" data-t="nav.trail">The trail</a>
+        <a href="#install" data-t="nav.install">Install</a>
+      </nav>
+      <div class="nav-tools">
+        <button class="icon-btn" type="button" data-action="sound" aria-pressed="true">
+          <svg class="ico on" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+          <svg class="ico off" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>
+          <span class="sr" data-t="nav.soundOn">Sound on</span>
+        </button>
+        <button class="lang-btn" type="button" data-action="lang" data-t="nav.lang">한국어</button>
+        <a class="btn btn-small btn-pink nav-cta" href="#install" data-t="nav.cta">Install</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-sky" aria-hidden="true">
+        <svg class="mesas mesas-back" viewBox="0 0 1440 220" preserveAspectRatio="none"><path d="M0 220V150h90l40-62h150l38 62h140l30-40h120l36 40h210l46-86h190l40 86h100l34-52h110l30 52h36v70z"/></svg>
+        <svg class="mesas mesas-front" viewBox="0 0 1440 200" preserveAspectRatio="none"><path d="M0 200v-58h160l50-70h210l46 70h220l34-36h150l30 36h170l56-84h170l52 84h92v58z"/></svg>
+      </div>
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <p class="kicker" data-t="hero.kicker">A Claude Code mod · free and open source</p>
+          <h1 id="hero-title" data-t-html="hero.title">Cowboy-hat pals<br>for Claude Code</h1>
+          <p class="lead" data-t="hero.lead"></p>
+          <div class="cta-row">
+            <a class="btn btn-pink" href="#install" data-t="hero.install">Install the mod</a>
+            <a class="btn btn-ghost" href="#demo">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>
+              <span data-t="hero.demo">Watch the demo</span>
+            </a>
+          </div>
+          <ul class="badges" data-list="hero.badges"></ul>
+        </div>
+        <div class="hero-stage">
+          <div class="pal-slot" data-slot="locki">
+            <div class="toast" aria-live="polite"></div>
+            <button class="pal-button" type="button" data-pet="hero-locki">
+              <canvas class="pal" data-pal="hero-locki" data-size="32"></canvas>
+            </button>
+            <span class="name-tag pink">LOCKI</span>
+          </div>
+          <div class="pal-slot" data-slot="cappl">
+            <div class="toast" aria-live="polite"></div>
+            <button class="pal-button" type="button" data-pet="hero-cappl">
+              <canvas class="pal" data-pal="hero-cappl" data-size="32"></canvas>
+            </button>
+            <span class="name-tag teal">CAPPL</span>
+          </div>
+          <div class="plank" aria-hidden="true"></div>
+          <p class="hint" data-t="hero.hint">Click a pal to pet it</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="moods" aria-labelledby="moods-title">
+      <div class="wrap">
+        <header class="section-head">
+          <p class="eyebrow" data-t="moods.eyebrow">Moods</p>
+          <h2 id="moods-title" data-t="moods.title">A new face for every moment</h2>
+          <p class="lead" data-t="moods.lead"></p>
+        </header>
+        <div class="moods">
+          <div class="term px-box">
+            <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>claude — ~/trail</span></div>
+            <ol class="term-steps" data-list="moods.steps"></ol>
+          </div>
+          <div class="mood-stage px-box">
+            <div class="mood-top">
+              <div class="seg" role="group" data-t-label="moods.who">
+                <button type="button" data-mood-pal="cappl" aria-pressed="true">CAPPL</button>
+                <button type="button" data-mood-pal="locki" aria-pressed="false">LOCKI</button>
+              </div>
+              <button class="icon-btn small" type="button" data-action="mood-auto" aria-pressed="true">
+                <svg class="ico on" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14"/><path d="M16 5v14"/></svg>
+                <svg class="ico off" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>
+                <span class="sr" data-t="moods.pause">Pause</span>
+              </button>
+            </div>
+            <div class="mood-pal">
+              <canvas class="pal" data-pal="mood" data-size="32" role="img"></canvas>
+              <div class="plank small" aria-hidden="true"></div>
+            </div>
+            <p class="mood-label" aria-live="polite"><strong></strong><span></span></p>
+            <div class="progress" aria-hidden="true"><i></i></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="play" aria-labelledby="play-title">
+      <div class="wrap">
+        <header class="section-head">
+          <p class="eyebrow" data-t="play.eyebrow">Play</p>
+          <h2 id="play-title" data-t="play.title"></h2>
+          <p class="lead" data-t="play.lead"></p>
+        </header>
+        <div class="play">
+          <div class="play-stage px-box">
+            <div class="seg" role="tablist" aria-label="LOCKI / CAPPL">
+              <button type="button" role="tab" data-play-pal="locki" aria-selected="true">LOCKI</button>
+              <button type="button" role="tab" data-play-pal="cappl" aria-selected="false">CAPPL</button>
+            </div>
+            <p class="blurb"></p>
+            <div class="stage-floor">
+              <div class="toast big" aria-live="polite"></div>
+              <canvas class="pal" data-pal="play" data-size="32" role="img"></canvas>
+              <div class="plank small" aria-hidden="true"></div>
+            </div>
+            <div class="actions">
+              <button class="act-btn pink" type="button" data-play="pet"><span class="act-name" data-t="play.pet">Pet</span><kbd>P</kbd><small data-t="play.petHint"></small></button>
+              <button class="act-btn gold" type="button" data-play="trick"><span class="act-name" data-t="play.trick">Trick</span><kbd>T</kbd><small data-t="play.trickHint"></small></button>
+              <button class="act-btn teal" type="button" data-play="treat"><span class="act-name" data-t="play.treat">Treat</span><kbd>F</kbd><small data-t="play.treatHint"></small></button>
+            </div>
+          </div>
+          <div class="wardrobe px-box">
+            <h3 data-t="play.wardrobe">Try on the wardrobe</h3>
+            <p class="note" data-t="play.wardrobeNote"></p>
+            <ul class="items" data-list="wardrobe"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="rewards" aria-labelledby="rewards-title">
+      <div class="wrap">
+        <header class="section-head">
+          <p class="eyebrow" data-t="rewards.eyebrow">Rewards</p>
+          <h2 id="rewards-title" data-t="rewards.title"></h2>
+          <p class="lead" data-t="rewards.lead"></p>
+        </header>
+        <div class="rewards">
+          <div class="none px-box">
+            <h3><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span data-t="rewards.none">No reward</span></h3>
+            <ul data-list="rewards.noneItems"></ul>
+          </div>
+          <div class="table-card px-box">
+            <table>
+              <thead><tr><th scope="col" data-t="rewards.head.reward"></th><th scope="col" data-t="rewards.head.when"></th><th scope="col" class="num" data-t="rewards.head.rep"></th><th scope="col" class="num" data-t="rewards.head.gold"></th></tr></thead>
+              <tbody data-list="rewards.rows"></tbody>
+            </table>
+            <p class="note" data-t="rewards.commitNote"></p>
+            <p class="note" data-t="rewards.taper"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section gold-section" id="gold" aria-labelledby="gold-title">
+      <div class="wrap">
+        <header class="section-head">
+          <p class="eyebrow" data-t="gold.eyebrow">Gold</p>
+          <h2 id="gold-title" data-t="gold.title"></h2>
+          <p class="lead" data-t="gold.lead"></p>
+        </header>
+        <ul class="gold-cards" data-list="gold.cards"></ul>
+        <div class="bounties px-box">
+          <h3 data-t="gold.today"></h3>
+          <ul data-list="gold.today"></ul>
+          <p class="note" data-t="gold.todayNote"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="trail" aria-labelledby="trail-title">
+      <div class="wrap">
+        <header class="section-head">
+          <p class="eyebrow" data-t="trail.eyebrow">The trail</p>
+          <h2 id="trail-title" data-t="trail.title"></h2>
+          <p class="lead" data-t="trail.lead"></p>
+        </header>
+        <div class="trail px-box">
+          <div class="trail-pals">
+            <canvas class="pal" data-pal="trail-locki" data-size="32" aria-hidden="true"></canvas>
+            <canvas class="pal" data-pal="trail-cappl" data-size="32" aria-hidden="true"></canvas>
+            <div class="plank small" aria-hidden="true"></div>
+          </div>
+          <div class="trail-info">
+            <p class="trail-level"><span class="lv"></span> <span class="rank"></span></p>
+            <p class="trail-hours"></p>
+            <label class="slider">
+              <span class="sr" data-t="trail.level">Level</span>
+              <input type="range" min="1" max="50" value="35" step="1" data-trail>
+            </label>
+            <div class="ticks" aria-hidden="true" data-list="trail.ticks"></div>
+            <h3 data-t="trail.tricks"></h3>
+            <ul class="chips" data-list="trail.tricks"></ul>
+            <h3 data-t="trail.items"></h3>
+            <ul class="chips" data-list="trail.items"></ul>
+            <p class="note" data-t="trail.median"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="demo" aria-labelledby="demo-title">
+      <div class="wrap narrow">
+        <header class="section-head">
+          <p class="eyebrow" data-t="demo.eyebrow">Demo</p>
+          <h2 id="demo-title" data-t="demo.title"></h2>
+          <p class="lead" data-t="demo.lead"></p>
+        </header>
+        <div class="video px-box">
+          <video controls preload="none" playsinline width="1920" height="1080" poster="./media/poster-en.png">
+            <source src="./media/demo-en.mp4" type="video/mp4">
+            <p data-t="demo.fallback"></p>
+          </video>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="fair" aria-labelledby="fair-title">
+      <div class="wrap">
+        <header class="section-head">
+          <p class="eyebrow" data-t="fair.eyebrow">Fair play</p>
+          <h2 id="fair-title" data-t="fair.title"></h2>
+        </header>
+        <ul class="fair" data-list="fair.cards"></ul>
+      </div>
+    </section>
+
+    <section class="section" id="install" aria-labelledby="install-title">
+      <div class="wrap narrow">
+        <header class="section-head">
+          <p class="eyebrow" data-t="install.eyebrow">Install</p>
+          <h2 id="install-title" data-t="install.title"></h2>
+          <p class="lead" data-t="install.lead"></p>
+        </header>
+        <div class="install px-box">
+          <div class="seg tabs" role="tablist">
+            <button type="button" role="tab" id="tab-terminal" aria-controls="panel-terminal" aria-selected="true" data-tab="terminal" data-t="install.terminal">Terminal</button>
+            <button type="button" role="tab" id="tab-desktop" aria-controls="panel-desktop" aria-selected="false" data-tab="desktop" data-t="install.desktop">Desktop app</button>
+          </div>
+          <div class="panel" role="tabpanel" id="panel-terminal" aria-labelledby="tab-terminal">
+            <ol class="steps">
+              <li><span data-t-html="install.terminalSteps.0"></span>
+                <div class="code"><code>/plugin install cappl-pals --marketplace develinu/cappl-pals</code><button type="button" class="copy" data-copy data-t="install.copy">Copy</button></div>
+              </li>
+              <li data-t-html="install.terminalSteps.1"></li>
+              <li data-t-html="install.terminalSteps.2"></li>
+            </ol>
+            <p class="small-label" data-t="install.shell"></p>
+            <div class="code"><code>claude plugin install cappl-pals --marketplace develinu/cappl-pals</code><button type="button" class="copy" data-copy data-t="install.copy">Copy</button></div>
+          </div>
+          <div class="panel" role="tabpanel" id="panel-desktop" aria-labelledby="tab-desktop" hidden>
+            <ol class="steps" data-list="install.desktopSteps"></ol>
+          </div>
+          <p class="tip" data-t-html="install.update"></p>
+          <p class="note" data-t-html="install.commands"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section cappl-app" id="cappl" aria-labelledby="cappl-title">
+      <div class="wrap">
+        <div class="app-card px-box">
+          <div class="app-pals" aria-hidden="true">
+            <canvas class="pal" data-pal="app-locki" data-size="32"></canvas>
+            <canvas class="pal" data-pal="app-cappl" data-size="32"></canvas>
+          </div>
+          <div class="app-copy">
+            <p class="eyebrow" data-t="cappl.eyebrow">The CAPPL app</p>
+            <h2 id="cappl-title" data-t="cappl.title"></h2>
+            <p class="lead" data-t="cappl.lead"></p>
+            <div class="cta-row">
+              <a class="btn btn-cream" data-store="ios" href="https://apps.apple.com/app/id6761328898" rel="noopener" target="_blank">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
+                <span data-t="cappl.appStore">App Store</span>
+              </a>
+              <a class="btn btn-cream" data-store="android" href="https://play.google.com/store/apps/details?id=com.ksh.cappl" rel="noopener" target="_blank">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18l13-9z"/></svg>
+                <span data-t="cappl.googlePlay">Google Play</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <div>
+        <p class="brand-word"><span class="pink">cappl</span>-<span class="teal">pals</span></p>
+        <p data-t="footer.unofficial"></p>
+      </div>
+      <div class="footer-notes">
+        <p data-t="footer.code"></p>
+        <p data-t="footer.art"></p>
+        <p><a href="https://github.com/develinu/cappl-pals" rel="noopener">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4 1.5-4-2-6-2.5m12 5v-3.5a3 3 0 0 0-.9-2.4c3-.3 6.1-1.5 6.1-6.6a5.2 5.2 0 0 0-1.4-3.6 4.8 4.8 0 0 0-.1-3.6s-1.1-.4-3.7 1.4a12.6 12.6 0 0 0-6.6 0C5.8 1.6 4.7 2 4.7 2a4.8 4.8 0 0 0-.1 3.6 5.2 5.2 0 0 0-1.4 3.6c0 5.1 3.1 6.3 6.1 6.6a3 3 0 0 0-.9 2.3V22"/></svg>
+          <span data-t="footer.source">Source on GitHub</span></a></p>
+      </div>
+    </div>
+  </footer>
+  <noscript><p class="noscript">cappl-pals needs JavaScript to draw the pals. See <a href="https://github.com/develinu/cappl-pals">the README</a>.</p></noscript>
+</body>
+</html>

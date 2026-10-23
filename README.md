@@ -6,6 +6,8 @@
 
 ▶ Full demo with sound (1.5 min): [English](docs/cappl-pals-demo.mp4) · [한국어](docs/cappl-pals-demo.ko.mp4)
 
+**Website:** [develinu.github.io/cappl-pals](https://develinu.github.io/cappl-pals/). Pet the pals, try on the wardrobe and walk the trail to Lv50 in your browser.
+
 The pane, toasts and commands speak English and Korean.
 
 ![LOCKI and CAPPL: idle, petted, thinking, eating a treat, celebrating, asleep and dressed up](docs/cappl-pals-hero.png)
@@ -156,18 +158,21 @@ npx -p typescript@5.9 tsc -p ./mod     # after one run with --plugin-dir lays th
 python3 tools/draw_art.py --png /tmp/draft.png   # redraw the pixel art (writes mod/hooks/characters/art.ts)
 python3 tools/make_sfx.py              # resynthesize the sounds (needs numpy)
 bun tools/preview.ts docs/cappl-pals-sheet.png
+bun site/build.ts                      # the website, into site/dist (deployed by .github/workflows/pages.yml)
 ```
 
 | Path | What |
 |---|---|
 | `mod/hooks/register.tsx` | Hooks, commands, the pane |
 | `mod/hooks/rules.ts` | Rewards, levels, the shop |
-| `mod/hooks/sprite.ts` | Frame composer: moods, items, sparkles |
+| `mod/hooks/sprite.ts` | Frame composer: faces, poses, items, sparkles |
+| `mod/hooks/animations.ts` | Session moods, acts and tricks |
 | `mod/hooks/characters/` | Who the characters are (`index.ts`) and their pixels (`art.ts`, generated) |
 | `mod/hooks/i18n.ts` | English and Korean |
 | `mod/hooks/sound.ts` | Sound playback per platform |
 | `tools/` | Art, sound, preview, history replay |
 | `demo/` | How the demo video is made ([`demo/README.md`](demo/README.md)) |
+| `site/` | The website: the page, its words in both languages and the build. The pals on it are drawn by `mod/hooks` |
 
 To add a character, see [docs/characters.md](docs/characters.md).
 

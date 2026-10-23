@@ -6,6 +6,8 @@
 
 ▶ 소리까지 있는 전체 데모(1분 30초): [한국어](docs/cappl-pals-demo.ko.mp4) · [English](docs/cappl-pals-demo.mp4)
 
+**웹사이트:** [develinu.github.io/cappl-pals](https://develinu.github.io/cappl-pals/?lang=ko). 브라우저에서 친구를 쓰다듬고, 옷장을 입혀 보고, Lv50까지의 여정을 미리 볼 수 있습니다.
+
 창·알림·명령은 영어와 한국어를 모두 지원합니다.
 
 ![기본·쓰다듬받음·생각 중·간식·축하·낮잠·꾸민 모습의 LOCKI와 CAPPL](docs/cappl-pals-hero.png)

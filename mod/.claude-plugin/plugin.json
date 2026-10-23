@@ -1,7 +1,7 @@
 {
   "name": "cappl-pals",
   "author": { "name": "develinu", "url": "https://github.com/develinu" },
-  "homepage": "https://github.com/develinu/cappl-pals",
+  "homepage": "https://develinu.github.io/cappl-pals/",
   "repository": "https://github.com/develinu/cappl-pals",
   "version": "0.2.1",
   "description": "LOCKI and CAPPL from the CAPPL app peek over your Claude Code prompt, react to what your session is doing and grow with your work: passing tests, commits and merged PRs earn rep, tricks and gold for treats, hats, shades and banjos.",

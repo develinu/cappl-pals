@@ -9,3 +9,5 @@ demo/out/
 demo/assets/poses.json
 demo/assets/fonts/*.ttf
 demo/assets/fonts/*.otf
+# The service page build (site/build.ts)
+site/dist/
