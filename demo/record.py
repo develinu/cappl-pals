@@ -1,6 +1,6 @@
 """Drive a real Claude Code session in tmux for the demo and save the screen as ANSI, 15 times a second.
 
-Usage: python3 -I record.py <output dir>
+Usage: python3 -I record.py <output dir> [en|ko]
 Run ./setup_demo.sh first: it makes a renamed copy of the mod (cappl-pals-demo) and a
 repository with one failing test under /tmp/cappl-demo/.
 """
@@ -16,15 +16,33 @@ import threading
 import time
 
 OUT = sys.argv[1]
+LANG = sys.argv[2] if len(sys.argv) > 2 else "en"
 SOCK = ["tmux", "-L", "cappldemo"]
 FPS = 15
 COLS, ROWS = 150, 42
 REPO = "/tmp/cappl-demo/repo"
 PLUGIN = "/tmp/cappl-demo/cappl-pals-demo"
-PROMPT = (
-    "Run npm test. If it fails, fix src/trail.js and run the tests again. "
-    "When they pass, commit with git commit -qam 'Pad minutes in ride time' and answer in one line."
-)
+# What the take types and waits for, in each language. The mod follows Claude Code's
+# `language` setting, so the Korean take also sets it.
+TAKE = {
+    "en": {
+        "language": "English",
+        "prompt": "Run npm test. If it fails, fix src/trail.js and run the tests again. "
+                  "When they pass, commit with git commit -qam 'Pad minutes in ride time' and answer in one line.",
+        "picker": r"Pick your partner",
+        "commit": r"Claim staked",
+        "done": r"for \d+(m \d+)?s",
+    },
+    "ko": {
+        "language": "Korean",
+        "prompt": "npm test 돌려 보고 실패하면 src/trail.js 고친 다음 다시 테스트해 줘. "
+                  "통과하면 git commit -qam '이동 시간의 분을 두 자리로' 로 커밋하고 한 줄로만 답해.",
+        "picker": r"함께할 친구를 고르세요",
+        "commit": r"말뚝 박기",
+        "done": r"for \d+(m \d+)?s",
+    },
+}[LANG]
+PROMPT = TAKE["prompt"]
 
 
 def sh(*args: str, check: bool = False) -> str:
@@ -76,7 +94,7 @@ def main() -> None:
     command = (
         f"cd {REPO} && env -i HOME={home} PATH={shlex.quote(os.environ['PATH'])} USER={os.environ.get('USER', '')} "
         f"SHELL=/bin/bash LANG=C.UTF-8 TERM=xterm-256color COLORTERM=truecolor "
-        f"claude --setting-sources project --settings '{{\"tui\":\"fullscreen\",\"viewMode\":\"default\"}}' "
+        f"claude --setting-sources project --settings '{{\"tui\":\"fullscreen\",\"viewMode\":\"default\",\"language\":\"{TAKE['language']}\"}}' "
         f"--plugin-dir {PLUGIN} --model haiku"
     )
     sh(*SOCK, "-f", "/tmp/cappl-demo/tmux.conf", "new-session", "-d", "-s", "demo",
@@ -101,7 +119,7 @@ def main() -> None:
             tick += 1
             time.sleep(max(0.0, start + tick / FPS - time.time()))
 
-    if not wait_for(r"Pick your partner", 60):
+    if not wait_for(TAKE["picker"], 60):
         raise SystemExit("the picker did not show up")
     thread = threading.Thread(target=loop, daemon=True)
     thread.start()
@@ -125,9 +143,9 @@ def main() -> None:
     keys("Enter")
     mark("submit")
 
-    if not wait_for(r"Claim staked", 180):
+    if not wait_for(TAKE["commit"], 180):
         mark("no-commit")
-    wait_for(r"for \d+(m \d+)?s", 60)
+    wait_for(TAKE["done"], 60)
     mark("turn-done")
     time.sleep(3.0)
 

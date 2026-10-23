@@ -4,11 +4,12 @@ The backing track is a country-flavoured chiptune: boom-chick bass, a banjo roll
 with Karplus-Strong plucks, and a square-wave lead. In-session moments use the mod's
 own character sounds from mod/assets/sfx/.
 
-Usage: .venv/bin/python audio.py   # reads out/events.json, writes out/audio.wav
+Usage: .venv/bin/python audio.py en   # reads out/events-en.json, writes out/audio-en.wav
 """
 
 import json
 import os
+import sys
 import wave
 from functools import lru_cache
 
@@ -21,7 +22,8 @@ SFX_DIR = os.path.join(HERE, "..", "mod", "assets", "sfx")
 SR = 48000
 RNG = np.random.default_rng(5)
 
-spec = json.load(open(os.path.join(OUT, "events.json")))
+LANG = sys.argv[1] if len(sys.argv) > 1 else "en"
+spec = json.load(open(os.path.join(OUT, f"events-{LANG}.json")))
 TOTAL = spec["total"]
 N = int((TOTAL + 1.5) * SR)
 music = np.zeros((N, 2))
@@ -266,7 +268,7 @@ mix *= fade[:, None]
 
 os.makedirs(OUT, exist_ok=True)
 pcm = (mix * 32767).astype(np.int16)
-with wave.open(os.path.join(OUT, "audio.wav"), "wb") as w:
+with wave.open(os.path.join(OUT, f"audio-{LANG}.wav"), "wb") as w:
     w.setnchannels(2)
     w.setsampwidth(2)
     w.setframerate(SR)

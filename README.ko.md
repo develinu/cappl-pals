@@ -2,9 +2,11 @@
 
 **CAPPL 앱의 카우보이모자 단짝 LOCKI와 CAPPL이 Claude Code 작업과 함께 자랍니다.** 둘 중 하나를 고르면 됩니다. 둘은 프롬프트 위로 고개를 내밀고, Claude가 일하는 동안 앞발을 톡톡 두드리고, 테스트가 통과하거나 커밋이 들어가거나 PR이 병합되면 기뻐합니다. 결과마다 명성과 골드가 쌓입니다. 명성이 오르면 계급이 새내기에서 서부의 전설까지 오르고, 골드로는 모자·선글라스·밴조·배경을 삽니다.
 
-[![데모 영상: 친구 고르기, 테스트 통과, 병합, 상점](docs/cappl-pals-demo-poster.png)](docs/cappl-pals-demo.mp4)
+[![데모 영상: 친구 고르기, 테스트 통과, 커밋, 상점](docs/cappl-pals-demo-poster.ko.png)](docs/cappl-pals-demo.ko.mp4)
 
-데모 영상(약 1분): [`docs/cappl-pals-demo.mp4`](docs/cappl-pals-demo.mp4)
+데모 영상(78초): [`docs/cappl-pals-demo.ko.mp4`](docs/cappl-pals-demo.ko.mp4) · 영어판: [`docs/cappl-pals-demo.mp4`](docs/cappl-pals-demo.mp4)
+
+창·알림·명령은 영어와 한국어를 모두 지원합니다.
 
 ![기본·신남·축하·꾸민 모습의 LOCKI와 CAPPL](docs/cappl-pals-hero.png)
 

@@ -1,8 +1,9 @@
 """cappl-pals demo video: a real Claude Code session (frames from record.py) plus motion graphics.
 
 Usage:
-  .venv/bin/python compose.py video                # out/video.mp4 (no sound) + out/events.json
-  .venv/bin/python compose.py stills 3.0 27.8 50   # PNGs of those moments
+  .venv/bin/python compose.py video en                # out/video-en.mp4 (no sound) + out/events-en.json
+  .venv/bin/python compose.py video ko                # the Korean cut, from the Korean take
+  .venv/bin/python compose.py stills ko 3.0 27.8 50   # PNGs of those moments
 """
 
 import json
@@ -19,7 +20,8 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
-RENDER = "/tmp/cappl-demo/render"
+LANG = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] in ("en", "ko") else "en"
+RENDER = f"/tmp/cappl-demo/render-{LANG}"
 W, H, FPS = 1920, 1080, 30
 TOTAL = 78.0
 
@@ -253,6 +255,62 @@ def burst(canvas, cx, cy, p, n=18, radius=420, color=GOLD, seed=3):
 
 DUSK = ((22, 18, 52), (112, 52, 92))
 
+# Every word on screen, per language.
+TEXT = {
+    "en": {
+        "tagline_title": "LOCKI & CAPPL  ·  a Claude Code mod",
+        "tagline": "Cowboy-hat pals that grow with your checked results",
+        "premise": "Rewards for results, not tokens",
+        "premise_sub": "Passing tests, fixes, commits and merges pay. Busywork doesn't.",
+        "no_reward": "No reward",
+        "reward": "Rewards",
+        "no_items": ["Prompts", "Tokens", "Tool calls", "Lines of code"],
+        "items": [("Bullseye", "first pass after edits", "+5"), ("Showdown won", "fail → fix → pass", "+8"),
+                  ("Claim staked · Gold strike", "commit · merged PR", "+3–15"), ("Campfire rest", "work, then rest", "+2")],
+        "live": "LIVE  real Claude Code session · Haiku 5.5",
+        "prompt": "Prompt",
+        "sent": "Enter ⏎ sent",
+        "level_sub": "Lv15 · new rank: Wrangler",
+        "journey": "About 1,000 hours on the trail",
+        "journey_sub": "Growth curve tuned on 27 days (185 active hours) of real Claude Code history",
+        "journey_stats": lambda h, n: f"≈ {h:,} active hours  ·  {n:,} fans",
+        "features": "What's in cappl-pals",
+        "feature_items": [("⇄", "Two pals, your pick", "Ten items, sounds and sparkles each"),
+                          ("✓", "Results only", "Tests, fixes, commits and merges"),
+                          ("½", "No grind, no guilt", "Repeats taper ½ → ⅕ · no streaks"),
+                          ("∑", "Every session in sync", "Totals add up live · English & 한국어")],
+        "outro_line": "LOCKI & CAPPL grow with your Claude Code work",
+        "outro_repo": "github.com/develinu/cappl-pals  ·  open source (MIT)",
+        "outro_credit": "LOCKI and CAPPL are characters of the CAPPL app, used with permission",
+    },
+    "ko": {
+        "tagline_title": "LOCKI & CAPPL  ·  Claude Code mod",
+        "tagline": "확인된 작업 결과로 함께 자라는 카우보이모자 단짝",
+        "premise": "토큰이 아니라, 결과에 보상합니다",
+        "premise_sub": "테스트 통과·수정·커밋·병합에만 보상하고, 활동량에는 주지 않아요",
+        "no_reward": "보상 없음",
+        "reward": "보상",
+        "no_items": ["프롬프트 수", "토큰 사용량", "도구 호출 수", "코드 줄 수"],
+        "items": [("과녁 명중", "고친 뒤 첫 테스트 통과", "+5"), ("결투 승리", "실패 → 수정 → 통과", "+8"),
+                  ("말뚝 박기 · 금맥 발견", "커밋 · PR 병합", "+3–15"), ("모닥불 휴식", "오래 일하고 쉬고 오기", "+2")],
+        "live": "LIVE  실제 Claude Code 세션 · Haiku 5.5",
+        "prompt": "프롬프트",
+        "sent": "Enter ⏎ 보냄",
+        "level_sub": "Lv15 · 새 계급: 카우보이",
+        "journey": "약 1,000시간의 여정",
+        "journey_sub": "실제 Claude Code 기록 27일(활동 185시간)로 맞춘 성장 곡선",
+        "journey_stats": lambda h, n: f"활동 ≈ {h:,}시간  ·  팬 {n:,}명",
+        "features": "cappl-pals 핵심",
+        "feature_items": [("⇄", "두 친구 중 골라 쓰기", "캐릭터마다 옷장 10개 · 효과음 · 반짝임"),
+                          ("✓", "결과에만 보상", "테스트 통과 · 역전 · 커밋 · 병합"),
+                          ("½", "몰아치기 체감 · 벌칙 없음", "같은 날 반복은 ½ → ⅕ · 연속 출석 없음"),
+                          ("∑", "여러 세션 즉시 합산", "세션마다 장부 · English & 한국어")],
+        "outro_line": "Claude Code 작업과 함께 자라는 LOCKI & CAPPL",
+        "outro_repo": "github.com/develinu/cappl-pals  ·  오픈소스(MIT)",
+        "outro_credit": "LOCKI와 CAPPL은 CAPPL 앱의 캐릭터로, 허가를 받아 사용합니다",
+    },
+}[LANG]
+
 
 # ── Scene 1: intro ─────────────────────────────────────────────────────────
 
@@ -292,19 +350,18 @@ def scene_intro(t):
         x += f.getlength(ch) + 6
     p = prog(t, 2.1, 0.5)
     if p > 0:
-        place(c, text_layer("LOCKI & CAPPL  ·  a Claude Code mod", font("bold", 50), WHITE, stroke=4), W / 2, 950, 0.92 + 0.08 * ease_out_back(p), p)
+        place(c, text_layer(TEXT["tagline_title"], font("bold", 50), WHITE, stroke=4), W / 2, 950, 0.92 + 0.08 * ease_out_back(p), p)
     p = prog(t, 2.7, 0.6)
     if p > 0:
-        place(c, text_layer("Your cowboy-hat pals grow with checked results  ·  확인된 작업 결과로 함께 자라는 단짝", font("semi", 32), SAND),
+        place(c, text_layer(TEXT["tagline"], font("semi", 34), SAND),
               W / 2, 1022 + 16 * (1 - ease_out_cubic(p)), 1.0, p)
     return c
 
 
 # ── Scene 2: the premise ───────────────────────────────────────────────────
 
-NO_REWARD = ["Prompts", "Tokens", "Tool calls", "Lines of code"]
-REWARD = [("Bullseye", "first pass after edits", "+5"), ("Showdown won", "fail → fix → pass", "+8"),
-          ("Claim staked · Gold strike", "commit · merged PR", "+3–15"), ("Campfire rest", "work, then rest", "+2")]
+NO_REWARD = TEXT["no_items"]
+REWARD = TEXT["items"]
 
 
 def scene_premise(t):
@@ -312,9 +369,9 @@ def scene_premise(t):
     c = gradient((20, 18, 46), (60, 40, 82)).copy()
     starfield(c, t + 6, density=0.5)
     p = prog(lt, 0.15, 0.5)
-    place(c, text_layer("Rewards for results, not tokens", font("xbold", 72), WHITE), W / 2, 120 - 30 * (1 - ease_out_cubic(p)), 1, p)
-    place(c, text_layer("토큰이 아니라 결과에 보상합니다", font("semi", 36), SAND), W / 2, 196, 1, p)
-    for col, (title, items, x0, accent) in enumerate([("No reward", NO_REWARD, 160, GRAY), ("Rewards", REWARD, 1000, GOLD)]):
+    place(c, text_layer(TEXT["premise"], font("xbold", 72), WHITE), W / 2, 120 - 30 * (1 - ease_out_cubic(p)), 1, p)
+    place(c, text_layer(TEXT["premise_sub"], font("semi", 34), SAND), W / 2, 196, 1, p)
+    for col, (title, items, x0, accent) in enumerate([(TEXT["no_reward"], NO_REWARD, 160, GRAY), (TEXT["reward"], REWARD, 1000, GOLD)]):
         p = prog(lt, 0.5 + col * 0.25, 0.45)
         if p <= 0:
             continue
@@ -358,21 +415,59 @@ BAR = 44
 CAPTION_Y = 1006
 D0, D1 = 12.0, 49.0
 
-# (video start, video end, source start, source end); the source is take3's clock.
-SEGMENTS = [
-    (12.0, 14.0, 1.3, 1.3),
-    (14.0, 15.6, 3.5, 5.4),
-    (15.6, 18.6, 5.4, 8.4),
-    (18.6, 22.6, 9.5, 18.3),
-    (22.6, 23.6, 18.3, 19.3),
-    (23.6, 27.4, 19.3, 24.9),
-    (27.4, 30.4, 24.9, 26.4),
-    (30.4, 33.2, 26.4, 31.9),
-    (33.2, 37.0, 33.0, 36.4),
-    (37.0, 41.6, 37.6, 41.4),
-    (41.6, 43.0, 44.2, 45.7),
-    (43.0, D1, 45.7, 45.7),
-]
+# Each take has its own clock: (video start, video end, source start, source end).
+TAKES = {
+    "en": {
+        "segments": [
+            (12.0, 14.0, 1.3, 1.3), (14.0, 15.6, 3.5, 5.4), (15.6, 18.6, 5.4, 8.4), (18.6, 22.6, 9.5, 18.3),
+            (22.6, 23.6, 18.3, 19.3), (23.6, 27.4, 19.3, 24.9), (27.4, 30.4, 24.9, 26.4), (30.4, 33.2, 26.4, 31.9),
+            (33.2, 37.0, 33.0, 36.4), (37.0, 41.6, 37.6, 41.4), (41.6, 43.0, 44.2, 45.7), (43.0, D1, 45.7, 45.7),
+        ],
+        "typing": (9.6, 18.0, 18.37),
+        "prompt": "Run npm test. If it fails, fix src/trail.js and run the tests again. "
+                  "When they pass, commit with git commit -qam 'Pad minutes in ride time' and answer in one line.",
+        "level_up": 25.53,
+        "popups": [(5.6, "Howdy, partner!"), (18.55, "+$10 Saddled up"), (25.55, "+5 Bullseye"), (25.85, "+8 Showdown won"),
+                   (30.0, "+10 Claim staked"), (34.67, "−$650 Banjo!"), (40.07, "Howdy! LOCKI's on duty")],
+        "keys": [5.0, 34.55, 37.75, 40.0],
+        "captions": [
+            ("Pick your pal: LOCKI or CAPPL", "Each has their own wardrobe, sounds and sparkles"),
+            ("CAPPL rides in: Lv14 Trail Rider, $642", "Just $8 short of the banjo ($650)"),
+            ("Ask Claude as usual", "Test → fix → commit"),
+            ("npm test → 1 failing, then a fix", "Even when a pipe turns the exit code into 0, the summary line counts"),
+            ("A commit stakes a claim", "+5 for a tested commit · +2 for a small one"),
+            ("Gold buys gear, worn right away", "Cosmetics only · no loot boxes, no trading"),
+            ("Switch pals any time", "Each keeps their own wardrobe · gold is shared"),
+            ("The rules are out in the open: /cappl-rules", "Prompts and tokens pay 0 · repeats taper ½ → ⅕ · days start at 5 a.m."),
+        ],
+    },
+    "ko": {
+        "segments": [
+            (12.0, 14.0, 1.3, 1.3), (14.0, 15.6, 3.5, 5.4), (15.6, 18.6, 5.4, 8.4), (18.6, 22.6, 9.5, 15.5),
+            (22.6, 23.6, 15.5, 16.5), (23.6, 27.4, 16.5, 24.3), (27.4, 30.4, 24.3, 25.8), (30.4, 33.2, 25.8, 30.4),
+            (33.2, 37.0, 31.6, 35.0), (37.0, 41.6, 36.2, 40.0), (41.6, 43.0, 42.8, 44.3), (43.0, D1, 44.3, 44.3),
+        ],
+        "typing": (9.6, 15.3, 15.6),
+        "prompt": "npm test 돌려 보고 실패하면 src/trail.js 고친 다음 다시 테스트해 줘. "
+                  "통과하면 git commit -qam '이동 시간의 분을 두 자리로' 로 커밋하고 한 줄로만 답해.",
+        "level_up": 24.87,
+        "popups": [(5.6, "반가워, 파트너!"), (15.75, "+$10 안장 얹기"), (24.9, "+5 과녁 명중"), (25.2, "+8 결투 승리"),
+                   (28.53, "+10 말뚝 박기"), (33.27, "−$650 밴조!"), (38.67, "하우디! LOCKI 근무 시작")],
+        "keys": [5.0, 33.2, 36.35, 38.6],
+        "captions": [
+            ("함께할 친구 고르기: LOCKI 또는 CAPPL", "캐릭터마다 옷장 · 효과음 · 반짝임이 따로 있어요"),
+            ("CAPPL 등장: Lv14 길잡이 기수 · 골드 $642", "밴조($650)까지 딱 $8 모자란 상태"),
+            ("평소처럼 Claude에게 일을 시킵니다", "테스트 돌리고 → 고치고 → 커밋"),
+            ("npm test → 1건 실패, 그리고 수정", "파이프로 종료 코드가 0이어도 요약 줄로 실패를 잡아냅니다"),
+            ("커밋 = 말뚝 박기", "테스트로 확인한 커밋 +5 · 작은 커밋 +2 덧보상"),
+            ("모은 골드로 소품을 사서 바로 착용", "꾸밈 전용 · 뽑기와 거래는 없습니다"),
+            ("언제든 친구 바꾸기", "옷장은 캐릭터마다 따로, 골드는 함께"),
+            ("규칙은 숨기지 않습니다: /cappl-rules", "프롬프트·토큰엔 0 · 같은 날 반복은 ½ → ⅕ · 하루는 새벽 5시에"),
+        ],
+    },
+}
+TAKE = TAKES[LANG]
+SEGMENTS = TAKE["segments"]
 
 
 def src_time(t):
@@ -429,7 +524,7 @@ CAMERA = [
     (27.2, "sprite"), (30.4, "pane"), (37.0, "picker"), (39.6, "sprite"), (41.6, "rules"), (47.6, "full"),
 ]
 MOVE = 0.75
-LEVEL_UP = video_time(25.53)
+LEVEL_UP = video_time(TAKE["level_up"])
 
 
 def camera(t):
@@ -465,27 +560,15 @@ def window_shadow():
     return img.filter(ImageFilter.GaussianBlur(28))
 
 
-CAPTIONS = [
-    (14.2, 15.5, "Pick your pal: LOCKI or CAPPL", "함께할 친구를 고릅니다"),
-    (15.7, 18.4, "CAPPL rides in: Lv14 Trail Rider, $642", "밴조($650)까지 딱 $8 모자란 상태"),
-    (18.8, 22.4, "Ask Claude as usual", "평소처럼 일을 시킵니다: 테스트 → 수정 → 커밋"),
-    (23.8, 27.2, "npm test → 1 failing, then a fix", "파이프로 종료 코드가 0이어도 요약 줄로 실패를 잡아냅니다"),
-    (31.0, 33.0, "A commit stakes a claim", "테스트로 확인한 커밋 +5 · 작은 커밋 +2 덧보상"),
-    (33.4, 36.8, "Gold buys gear, worn right away", "모은 골드로 밴조 구입 · 꾸밈 전용, 뽑기와 거래 없음"),
-    (37.2, 41.4, "Switch pals any time", "캐릭터마다 옷장·효과음·반짝임이 따로 · 골드는 함께"),
-    (43.0, 48.4, "The rules are out in the open: /cappl-rules", "프롬프트·토큰엔 0 · 같은 날 반복은 ½ → ⅕ · 하루는 새벽 5시에"),
-]
+CAPTION_TIMES = [(14.2, 15.5), (15.7, 18.4), (18.8, 22.4), (23.8, 27.2), (31.0, 33.0), (33.4, 36.8), (37.2, 41.4), (43.0, 48.4)]
+CAPTIONS = [(a, b, title, sub) for (a, b), (title, sub) in zip(CAPTION_TIMES, TAKE["captions"])]
 
 # Reward text that pops from a spot on the source screen (pixels).
-POPUPS = [
-    (video_time(5.6), "Howdy, partner!", PANE_X + 400, 15 * CH, TEAL, "hello_cappl"),
-    (video_time(18.55), "+$10 Saddled up", PANE_X + 330, 20.5 * CH, GOLD, "coin_cappl"),
-    (video_time(25.55), "+5 Bullseye", PANE_X + 300, 21.5 * CH, GOLD, None),
-    (video_time(25.55) + 0.3, "+8 Showdown won", PANE_X + 330, 22.5 * CH, GOLD, None),
-    (video_time(30.0), "+10 Claim staked", PANE_X + 330, 23.5 * CH, GOLD, "coin_cappl"),
-    (video_time(34.67), "−$650 Banjo!", PANE_X + 330, 18.5 * CH, (252, 165, 165), "buy_cappl"),
-    (video_time(40.07), "Howdy! LOCKI's on duty", PANE_X + 400, 15 * CH, PINK, "hello_locki"),
-]
+_SPOTS = [(PANE_X + 400, 15 * CH, TEAL, "hello_cappl"), (PANE_X + 330, 20.5 * CH, GOLD, "coin_cappl"),
+          (PANE_X + 300, 21.5 * CH, GOLD, None), (PANE_X + 330, 22.5 * CH, GOLD, None),
+          (PANE_X + 330, 23.5 * CH, GOLD, "coin_cappl"), (PANE_X + 330, 18.5 * CH, (252, 165, 165), "buy_cappl"),
+          (PANE_X + 400, 15 * CH, PINK, "hello_locki")]
+POPUPS = [(video_time(st), label, sx, sy, color, sound) for (st, label), (sx, sy, color, sound) in zip(TAKE["popups"], _SPOTS)]
 
 
 def caption(canvas, t, start, end, title, sub):
@@ -512,6 +595,8 @@ def popup(canvas, t, start, label, sx, sy, color, box):
         return
     x, y = to_screen(sx, sy, box)
     x = clamp(x, 260, W - 260)
+    # A spot outside the current camera view pops at the window's edge instead.
+    y = clamp(y, WIN_Y + BAR + 150, WIN_Y + BAR + WIN_H - 60)
     scale = ease_out_back(clamp(p * 4))
     alpha = 1 - clamp((p - 0.7) / 0.3)
     place(canvas, text_layer(label, font("pixel", 52), color, stroke=7), x, y - 90 * ease_out_cubic(p), scale, alpha)
@@ -528,7 +613,7 @@ def level_up(canvas, t):
     burst(canvas, W / 2, cy - 40, clamp(p * 1.6), n=22, radius=760, color=TEAL)
     burst(canvas, W / 2, cy - 40, clamp(p * 1.4), n=16, radius=640, color=GOLD, seed=8)
     place(canvas, text_layer("LEVEL UP!", font("pixel", 128), GOLD, stroke=10), W / 2, cy - 64, ease_out_back(clamp(p * 3.5)), a)
-    place(canvas, text_layer("Lv15 · new rank: Wrangler  ·  새 계급: 카우보이", font("bold", 50), WHITE, stroke=4), W / 2, cy + 64,
+    place(canvas, text_layer(TEXT["level_sub"], font("bold", 50), WHITE, stroke=4), W / 2, cy + 64,
           ease_out_back(clamp(p * 6 - 0.4)), a)
 
 
@@ -554,14 +639,12 @@ def keycaps(canvas, t, start, keys, x, y):
             rtext(canvas, (cx - 13, y), "→", font("bold", 40), (226, 232, 240, int(255 * a)), anchor="mm", pad=4)
 
 
-KEYS = [(video_time(5.0) - 0.85, ["ctrl+x", "Tab", "2"]), (video_time(34.55) - 0.85, ["ctrl+x", "Tab", "5"]),
-        (video_time(37.75) - 0.25, ["c"]), (video_time(40.0) - 0.25, ["1"])]
+_K = TAKE["keys"]
+KEYS = [(video_time(_K[0]) - 0.85, ["ctrl+x", "Tab", "2"]), (video_time(_K[1]) - 0.85, ["ctrl+x", "Tab", "5"]),
+        (video_time(_K[2]) - 0.25, ["c"]), (video_time(_K[3]) - 0.25, ["1"])]
 
-PROMPT = (
-    "Run npm test. If it fails, fix src/trail.js and run the tests again. "
-    "When they pass, commit with git commit -qam 'Pad minutes in ride time' and answer in one line."
-)
-TYPE_START, TYPE_END, SUBMIT = 9.6, 18.0, 18.37
+PROMPT = TAKE["prompt"]
+TYPE_START, TYPE_END, SUBMIT = TAKE["typing"]
 
 
 def wrap(s, f, width):
@@ -589,10 +672,10 @@ def typing_bubble(canvas, t):
     layer = Image.new("RGBA", (1280, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     rounded(d, [0, 0, 1279, h - 1], 26, (16, 14, 36, 242), outline=PINK + (220,), width=3)
-    rtext(layer, (44, 30), "Prompt", font("bold", 26), PINK, pad=4)
+    rtext(layer, (44, 30), TEXT["prompt"], font("bold", 26), PINK, pad=4)
     sent = st >= SUBMIT
     if sent:
-        rtext(layer, (1236, 30), "Enter ⏎ sent", font("bold", 26), (134, 239, 172), anchor="ra", pad=4)
+        rtext(layer, (1236, 30), TEXT["sent"], font("bold", 26), (134, 239, 172), anchor="ra", pad=4)
     y = 78
     for i, line in enumerate(lines):
         rtext(layer, (44, y), ("❯ " if i == 0 else "   ") + line, f, WHITE, pad=4)
@@ -609,7 +692,7 @@ def live_badge(chrome, t):
     rounded(d, [x, 9, x + 470, 35], 13, (16, 14, 36, 255), outline=RED + (255,), width=2)
     if int(t * 2) % 2 == 0:
         d.ellipse([x + 12, 16, x + 24, 28], fill=RED)
-    rtext(chrome, (x + 34, 22), "LIVE  real Claude Code session · Haiku 5.5", font("semi", 21), WHITE, anchor="lm", pad=4)
+    rtext(chrome, (x + 34, 22), TEXT["live"], font("semi", 21), WHITE, anchor="lm", pad=4)
 
 
 def scene_demo(t):
@@ -720,8 +803,8 @@ def scene_journey(t):
     if lt < J_HEAD + 0.2:
         p = prog(lt, 0.0, 0.5)
         a = 1 - prog(lt, J_HEAD - 0.3, 0.4)
-        place(c, text_layer("About 1,000 hours on the trail", font("xbold", 86), WHITE), W / 2, 450 - 30 * (1 - ease_out_cubic(p)), 1, p * a)
-        place(c, text_layer("약 1,000시간의 여정 · 실제 Claude Code 기록 27일(활동 185시간)로 맞춘 성장 곡선", font("medium", 36), SAND), W / 2, 560, 1, p * a)
+        place(c, text_layer(TEXT["journey"], font("xbold", 86), WHITE), W / 2, 450 - 30 * (1 - ease_out_cubic(p)), 1, p * a)
+        place(c, text_layer(TEXT["journey_sub"], font("medium", 36), SAND), W / 2, 560, 1, p * a)
         return c
     pop = ease_out_back(clamp(since / 0.4)) if since < 0.4 else 1.0
     happy = since < 0.6
@@ -730,11 +813,10 @@ def scene_journey(t):
     tx = 1060
     p = ease_out_cubic(clamp(since / 0.35))
     place_left(c, text_layer(f"Lv{level}", font("pixel", 74), GOLD, stroke=6), tx - 40 * (1 - p), 300, p)
-    place_left(c, text_layer(name, font("xbold", 84), WHITE, stroke=3), tx - 60 * (1 - p), 410, p)
-    place_left(c, text_layer(name_ko, font("semi", 44), SAND, stroke=2), tx - 60 * (1 - p), 496, p)
+    place_left(c, text_layer(name if LANG == "en" else name_ko, font("xbold", 84), WHITE, stroke=3), tx - 60 * (1 - p), 430, p)
     fans = fans_of(FAME[level])
     shown = int(lerp(fans_of(FAME[RANKS[idx - 1][0]]) if idx else 0, fans, ease_out_cubic(clamp(since / 0.8))))
-    place_left(c, text_layer(f"≈ {hours:,} active hours  ·  {shown:,} fans", font("semi", 40), (226, 232, 240)), tx, 580, p)
+    place_left(c, text_layer(TEXT["journey_stats"](hours, shown), font("semi", 40), (226, 232, 240)), tx, 550, p)
     bar_x0, bar_x1, bar_y = 160, 1760, 860 if level < 35 else 820
     d = ImageDraw.Draw(c)
     rounded(d, [bar_x0, bar_y - 8, bar_x1, bar_y + 8], 8, (255, 255, 255, 60))
@@ -755,12 +837,7 @@ def scene_journey(t):
 
 # ── Scene 5: what you get ──────────────────────────────────────────────────
 
-FEATURES = [
-    ("⇄", "Two pals, your pick", "캐릭터마다 옷장 10벌 · 효과음 · 반짝임"),
-    ("✓", "Results only", "테스트 통과 · 역전 · 커밋 · 병합에만 보상"),
-    ("½", "No grind, no guilt", "같은 날 반복은 ½ → ⅕ · 연속 출석 없음"),
-    ("∑", "Every session in sync", "여러 세션 합산·즉시 반영 · English & 한국어"),
-]
+FEATURES = TEXT["feature_items"]
 F0 = 64.5
 
 
@@ -769,7 +846,7 @@ def scene_features(t):
     c = gradient((22, 18, 48), (60, 40, 86)).copy()
     starfield(c, t, density=0.5)
     p = prog(lt, 0.1, 0.5)
-    place(c, text_layer("What's in cappl-pals", font("xbold", 72), WHITE), W / 2, 140, 1, p)
+    place(c, text_layer(TEXT["features"], font("xbold", 72), WHITE), W / 2, 140, 1, p)
     for i, (icon, title, sub) in enumerate(FEATURES):
         pi = prog(lt, 0.4 + i * 0.18, 0.45)
         if pi <= 0:
@@ -811,7 +888,7 @@ def scene_outro(t):
     p = prog(lt, 0.6, 0.5)
     place(c, text_layer("cappl-pals", font("pixel", 104), CREAM, stroke=8), W / 2, 640, ease_out_back(p), clamp(p * 2))
     p = prog(lt, 1.0, 0.5)
-    place(c, text_layer("LOCKI & CAPPL grow with your Claude Code work", font("bold", 44), WHITE), W / 2, 735, 1, p)
+    place(c, text_layer(TEXT["outro_line"], font("bold", 44), WHITE), W / 2, 735, 1, p)
     p = prog(lt, 1.5, 0.5)
     if p > 0:
         cmd = "/plugin install cappl-pals --marketplace develinu/cappl-pals"
@@ -824,9 +901,9 @@ def scene_outro(t):
         cd.text((80, 42), cmd, font=f, fill=WHITE, anchor="lm")
         place(c, chip, W / 2, 850, 1, p)
     p = prog(lt, 2.0, 0.5)
-    place(c, text_layer("github.com/develinu/cappl-pals  ·  open source (MIT)", font("semi", 32), SAND), W / 2, 950, 1, p * 0.95)
+    place(c, text_layer(TEXT["outro_repo"], font("semi", 32), SAND), W / 2, 950, 1, p * 0.95)
     p = prog(lt, 2.4, 0.5)
-    place(c, text_layer("LOCKI and CAPPL are characters of the CAPPL app, used with permission", font("medium", 24), (226, 214, 200)),
+    place(c, text_layer(TEXT["outro_credit"], font("medium", 24), (226, 214, 200)),
           W / 2, 1010, 1, p * 0.75)
     fade = prog(lt, 6.4, 0.6)
     if fade > 0:
@@ -914,16 +991,16 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     mode = sys.argv[1]
     if mode == "stills":
-        for s in sys.argv[2:]:
+        for s in sys.argv[3:]:
             t = float(s)
-            render_frame(t).convert("RGB").save(os.path.join(OUT, f"still-{t:05.1f}.png"))
+            render_frame(t).convert("RGB").save(os.path.join(OUT, f"still-{LANG}-{t:05.1f}.png"))
         return
-    json.dump({"events": events(), "sections": SECTIONS, "total": TOTAL}, open(os.path.join(OUT, "events.json"), "w"), indent=1)
+    json.dump({"events": events(), "sections": SECTIONS, "total": TOTAL}, open(os.path.join(OUT, f"events-{LANG}.json"), "w"), indent=1)
     ff = subprocess.run([os.path.join(HERE, ".venv/bin/python"), "-c", "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())"],
                         capture_output=True, text=True).stdout.strip()
     proc = subprocess.Popen([ff, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
                              "-i", "-", "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p",
-                             os.path.join(OUT, "video.mp4")], stdin=subprocess.PIPE)
+                             os.path.join(OUT, f"video-{LANG}.mp4")], stdin=subprocess.PIPE)
     n = int(TOTAL * FPS)
     for k in range(n):
         proc.stdin.write(render_frame(k / FPS).convert("RGB").tobytes())
@@ -931,7 +1008,7 @@ def main():
             print(f"{k}/{n}", flush=True)
     proc.stdin.close()
     proc.wait()
-    print("done", os.path.join(OUT, "video.mp4"))
+    print("done", os.path.join(OUT, f"video-{LANG}.mp4"))
 
 
 if __name__ == "__main__":
