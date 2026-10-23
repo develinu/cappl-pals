@@ -65,6 +65,8 @@ declare module 'claude-code' {
       picking: boolean
       // What the pane shows besides the picker: the pal, the rules or my progress.
       view: PaneView
+      // Keys typed into the pane's key field so far; each one redraws it empty.
+      typed: number
     }
   }
 }

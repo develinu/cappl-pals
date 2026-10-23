@@ -58,6 +58,10 @@ type Words = {
   soundSet: (now: string, next: string) => string
   // How to drive the pane from the keyboard: before and after it takes the focus.
   hint: { idle: string; focused: string; scroll: string }
+  // The key field's label and its Enter word, and a control's label with its key.
+  keyLabel: string
+  keySubmit: string
+  withKey: (label: string, key: string) => string
   // The keys at a glance, for a pane too low to show the buttons.
   keys: string
   bountyHeader: (done: number, total: number) => string
@@ -124,7 +128,7 @@ const EN: Words = {
   next: (level, name) => `Next: Lv${level} ${name}`,
   close: 'Close (/cappl)',
   switchCharacter: 'Switch character',
-  scrollHint: '▾ More below: the shop and the menu',
+  scrollHint: '▾ More below ∙ Esc: leave',
   pickTitle: 'Pick your partner',
   pick: name => `Pick ${name}`,
   current: ' (riding now)',
@@ -175,7 +179,10 @@ const EN: Words = {
   bonusToast: gold => `All of today's bounties done! +$${gold}`,
   sound: { normal: 'normal', quiet: 'quiet', off: 'off' },
   soundSet: (now, next) => `Sound effects: ${now}. Run /cappl-sound again for ${next}.`,
-  hint: { idle: 'ctrl+x Tab, then press a key', focused: '⇅ move ∙ Enter press ∙ Esc leave', scroll: 'Tab next ∙ ⇅ scroll ∙ Esc leave' },
+  hint: { idle: 'ctrl+x Tab, then a key', focused: 'a key ∙ Tab: buttons ∙ Esc', scroll: 'a key ∙ Tab ∙ ⇅ scroll' },
+  keyLabel: 'Key',
+  keySubmit: 'go',
+  withKey: (label, key) => `${label} (${key})`,
   keys: 'p pet ∙ t trick ∙ f treat ∙ r rules ∙ s progress',
   bountyHeader: (done, total) => `▸ Today's bounties ${done}/${total} (r: rules)`,
   menu: { rules: 'Rules and bounties', status: 'My progress', back: 'Back' },
@@ -251,7 +258,7 @@ const KO: Words = {
   next: (level, name) => `다음 소품: Lv${level} ${name}`,
   close: '창 닫기 (/cappl)',
   switchCharacter: '캐릭터 바꾸기',
-  scrollHint: '▾ 아래에 상점과 메뉴가 있어요',
+  scrollHint: '▾ 아래에 더 있어요 ∙ Esc 나가기',
   pickTitle: '함께할 친구를 고르세요',
   pick: name => `${name} 고르기`,
   current: ' (지금 함께하는 중)',
@@ -301,7 +308,10 @@ const KO: Words = {
   bonusToast: gold => `오늘 현상금을 모두 마쳤어요! +$${gold}`,
   sound: { normal: '보통', quiet: '작게', off: '끔' },
   soundSet: (now, next) => `효과음: ${now}. /cappl-sound를 한 번 더 입력하면 ${next}`,
-  hint: { idle: 'ctrl+x Tab 누르고 글자 키로 조작', focused: '⇅ 이동 ∙ Enter 누르기 ∙ Esc 나가기', scroll: 'Tab 다음 ∙ ⇅ 스크롤 ∙ Esc 나가기' },
+  hint: { idle: 'ctrl+x Tab 누르고 키 입력', focused: '글자 키 ∙ Tab 버튼 ∙ Esc', scroll: '글자 키 ∙ Tab ∙ ⇅ 스크롤' },
+  keyLabel: '키',
+  keySubmit: '실행',
+  withKey: (label, key) => `${label}(${key})`,
   keys: 'p 쓰다듬기 ∙ t 재주 ∙ f 간식 ∙ r 규칙 ∙ s 현황',
   bountyHeader: (done, total) => `▸ 오늘의 현상금 ${done}/${total} (r: 설명)`,
   menu: { rules: '규칙과 현상금', status: '내 현황', back: '돌아가기' },
