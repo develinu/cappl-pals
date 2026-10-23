@@ -58,12 +58,6 @@ type Words = {
   soundSet: (now: string, next: string) => string
   // How to drive the pane from the keyboard: before and after it takes the focus.
   hint: { idle: string; focused: string; scroll: string }
-  // The key field's label and its Enter word, and a control's label with its key.
-  keyLabel: string
-  keySubmit: string
-  withKey: (label: string, key: string) => string
-  // The keys at a glance, for a pane too low to show the buttons.
-  keys: string
   bountyHeader: (done: number, total: number) => string
   menu: { rules: string; status: string; back: string }
   rules: {
@@ -179,12 +173,8 @@ const EN: Words = {
   bonusToast: gold => `All of today's bounties done! +$${gold}`,
   sound: { normal: 'normal', quiet: 'quiet', off: 'off' },
   soundSet: (now, next) => `Sound effects: ${now}. Run /cappl-sound again for ${next}.`,
-  hint: { idle: 'ctrl+x Tab, then a key', focused: 'a key ∙ Tab: buttons ∙ Esc', scroll: 'a key ∙ Tab ∙ ⇅ scroll' },
-  keyLabel: 'Key',
-  keySubmit: 'go',
-  withKey: (label, key) => `${label} (${key})`,
-  keys: 'p pet ∙ t trick ∙ f treat ∙ r rules ∙ s progress',
-  bountyHeader: (done, total) => `▸ Today's bounties ${done}/${total} (r: rules)`,
+  hint: { idle: 'Click, or ctrl+x Tab for the keyboard', focused: '⇅ move ∙ Enter select ∙ Esc leave', scroll: 'Tab move ∙ ⇅ scroll ∙ Enter select' },
+  bountyHeader: (done, total) => `▸ Today's bounties ${done}/${total}`,
   menu: { rules: 'Rules and bounties', status: 'My progress', back: 'Back' },
   rules: {
     title: 'How rewards work',
@@ -308,12 +298,8 @@ const KO: Words = {
   bonusToast: gold => `오늘 현상금을 모두 마쳤어요! +$${gold}`,
   sound: { normal: '보통', quiet: '작게', off: '끔' },
   soundSet: (now, next) => `효과음: ${now}. /cappl-sound를 한 번 더 입력하면 ${next}`,
-  hint: { idle: 'ctrl+x Tab 누르고 키 입력', focused: '글자 키 ∙ Tab 버튼 ∙ Esc', scroll: '글자 키 ∙ Tab ∙ ⇅ 스크롤' },
-  keyLabel: '키',
-  keySubmit: '실행',
-  withKey: (label, key) => `${label}(${key})`,
-  keys: 'p 쓰다듬기 ∙ t 재주 ∙ f 간식 ∙ r 규칙 ∙ s 현황',
-  bountyHeader: (done, total) => `▸ 오늘의 현상금 ${done}/${total} (r: 설명)`,
+  hint: { idle: '클릭하거나 ctrl+x Tab으로 조작', focused: '⇅ 이동 ∙ Enter 선택 ∙ Esc 나가기', scroll: 'Tab 이동 ∙ ⇅ 스크롤 ∙ Enter 선택' },
+  bountyHeader: (done, total) => `▸ 오늘의 현상금 ${done}/${total}`,
   menu: { rules: '규칙과 현상금', status: '내 현황', back: '돌아가기' },
   rules: {
     title: '보상 규칙',

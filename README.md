@@ -58,7 +58,7 @@ Without auto-update, update by hand with `claude plugin update cappl-pals@cappl-
 | `/cappl-rules` | The reward table and how many of each you earned today. |
 | `/cappl-sound` | Cycle the sound: normal → quiet → off. |
 
-To use the pane, focus it with a click or `ctrl+x` then `Tab`. Every control is a button on its own row with its key, like `[ Pet (p) ]`: press `p` to pet your pal, `t` for a trick, `f` to give a treat, `1`–`0` to buy an item or to put it on and take it off, `r` for the rules and what each bounty means, `s` for your progress (today's rewards, tricks and wardrobe), `c` to switch characters, or `q` to close. The focus starts in the key field at the top, which takes the keys from any keyboard layout, Korean included (`ㅔ` is `p`). `Tab` moves to the buttons, where `Enter` presses one; the arrow keys move between them, or scroll a pane taller than its window, and `Esc` hands the keyboard back to the prompt. The field's hint says which applies. In the picker, the arrows and `Enter` choose a pal. The keys work even when their buttons are scrolled out of view. On a wide fullscreen terminal (110 columns or more) the pane docks on the right. On other terminals it opens above the prompt. A low pane shows the small sprite with your stats beside it and lists the keys under them.
+Every control in the pane is a button on its own row: pet, trick and treat, the shop (buy an item, or put it on and take it off), the rules and what each bounty means, your progress (today's rewards, tricks and wardrobe), switching characters, and closing. Click one, or drive the pane from the keyboard: `ctrl+x` then `Tab` gives it the keyboard, `Tab` and the arrow keys move between the buttons (the arrows scroll a pane taller than its window), `Enter` presses the one in focus, and `Esc` hands the keyboard back to the prompt. A hint line in the pane says which applies. On a wide fullscreen terminal (110 columns or more) the pane docks on the right. On other terminals it opens above the prompt. A low pane shows the small sprite with your stats beside it.
 
 Several sessions share one profile. Rep, gold, recent rewards, purchases and your choice of character show up in every open pane within about two seconds.
 
@@ -84,9 +84,9 @@ The pal changes with what the session is doing.
 
 | Button | Cost | What happens |
 |---|---|---|
-| Pet `p` | Free | Heart eyes and hearts. Pet three times quickly for a happy wiggle. |
-| Trick `t` | Free | Your pal's newest trick, then the others in turn. Each pal learns ten, from a wave at Lv2 to a big finale at Lv50. |
-| Treat `f` | $6 | LOCKI eats a star cookie, CAPPL a maple biscuit. Then they blush for 10 minutes and show off tricks twice as often. |
+| Pet | Free | Heart eyes and hearts. Pet three times quickly for a happy wiggle. |
+| Trick | Free | Your pal's newest trick, then the others in turn. Each pal learns ten, from a wave at Lv2 to a big finale at Lv50. |
+| Treat | $6 | LOCKI eats a star cookie, CAPPL a maple biscuit. Then they blush for 10 minutes and show off tricks twice as often. |
 
 Petting and tricks never earn rep. On the desktop app the pal plays the same moves, and waves when you hover over it.
 

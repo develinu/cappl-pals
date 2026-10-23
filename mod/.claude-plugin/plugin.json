@@ -3,7 +3,7 @@
   "author": { "name": "develinu", "url": "https://github.com/develinu" },
   "homepage": "https://develinu.github.io/cappl-pals/",
   "repository": "https://github.com/develinu/cappl-pals",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "LOCKI and CAPPL from the CAPPL app peek over your Claude Code prompt, react to what your session is doing and grow with your work: passing tests, commits and merged PRs earn rep, tricks and gold for treats, hats, shades and banjos.",
   "license": "MIT",
   "keywords": ["mod", "pet", "gamification", "pixel-art", "productivity"],

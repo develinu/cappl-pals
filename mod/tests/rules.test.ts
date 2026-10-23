@@ -39,7 +39,6 @@ import {
   type Work,
 } from '../hooks/rules'
 import { animatedSvgOf, encode, frame } from '../hooks/sprite'
-import { keysOf } from '../hooks/keys'
 
 test('a test run is judged by its summary line, not its exit code', async () => {
   expect(testOutcome('pytest -q', '12 passed in 0.31s', false)).toBe(true)
@@ -368,10 +367,3 @@ test('bounties: three a day, one with the pal; each pays once, all three pay a b
   expect(BOUNTY_BONUS).toBe(15)
 })
 
-test('keys typed with a Korean layout come back as the keys pressed', async () => {
-  expect(keysOf('ㅔ')).toEqual(['p'])
-  expect(keysOf('ㅅㄹㄱㄴㅊㅂㅠ')).toEqual(['t', 'f', 'r', 's', 'c', 'q', 'b'])
-  // Shifted letters, two letters joined, and a whole syllable.
-  expect(keysOf('ㅖㄽ세')).toEqual(['p', 'f', 't', 't', 'p'])
-  expect(keysOf('P3!')).toEqual(['p', '3'])
-})

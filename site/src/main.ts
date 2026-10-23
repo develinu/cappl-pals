@@ -315,7 +315,6 @@ new IntersectionObserver(([entry]) => {
 const playPal = palAt('play', 'locki')
 const outfits: Record<CharacterId, string[]> = { locki: [], cappl: [] }
 let trickTurn = 0
-let isPlayVisible = false
 const playToast = () => $('.stage-floor .toast')
 
 function playCharacter(): Character {
@@ -362,21 +361,6 @@ const playActions: Record<string, () => void> = {
 }
 $$('[data-play]').forEach(button => button.addEventListener('click', () => playActions[button.dataset.play!]!()))
 $$('[data-play-pal]').forEach(tab => tab.addEventListener('click', () => setPlayCharacter(tab.dataset.playPal as CharacterId)))
-new IntersectionObserver(([entry]) => {
-  isPlayVisible = entry!.isIntersecting
-}, { threshold: 0.3 }).observe($('#play'))
-document.addEventListener('keydown', event => {
-  if (event.metaKey || event.ctrlKey || event.altKey || !isPlayVisible) return
-  const target = event.target as HTMLElement
-  if (target.closest('input, textarea, select, [contenteditable]')) return
-  const action = { p: 'pet', t: 'trick', f: 'treat' }[event.key.toLowerCase()]
-  if (action === undefined) return
-  event.preventDefault()
-  const button = $(`[data-play="${action}"]`)
-  button.classList.add('pressed')
-  setTimeout(() => button.classList.remove('pressed'), 160)
-  playActions[action]!()
-})
 
 function renderWardrobe() {
   const character = playCharacter()

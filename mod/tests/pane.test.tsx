@@ -127,7 +127,7 @@ test('one command can test, commit and open a pull request, and each counts', as
   await ui.unmount()
 })
 
-test('every control is a button on its own row; a key field takes keys from any layout; r and s open the rules and my progress', async ($, on) => {
+test('every control is a button on its own row, driven by click or keyboard; the rules and my progress open from the menu', async ($, on) => {
   engine(on, { 'pytest -q': '12 passed in 0.3s' })
   mock.store(on, LOCKI)
   mock.clock(on, { now: NOW })
@@ -136,19 +136,18 @@ test('every control is a button on its own row; a key field takes keys from any 
   await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
   await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
   const idle = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect((await idle.find({ key: 'keys' }))?.props.placeholder).toBe('ctrl+x Tab, then a key')
+  expect(await text(idle, /^Click, or ctrl\+x Tab/)).toBe('Click, or ctrl+x Tab for the keyboard')
   await idle.unmount()
   const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, isFocused: true }, surface: 'terminal' })
-  const field = await ui.find({ key: 'keys' })
-  expect([field?.type, field?.props.autoFocus, field?.props.placeholder]).toEqual(['Input', true, 'a key ∙ Tab: buttons ∙ Esc'])
-  for (const [key, label] of [['pet', 'Pet (p)'], ['trick', 'Trick (t)'], ['rules', 'Rules and bounties (r)'], ['status', 'My progress (s)'], ['switch', 'Switch character (c)']]) {
-    expect([key, (await ui.find({ key: key! }))?.text]).toEqual([key, label])
+  expect(await text(ui, /^⇅ move/)).toBe('⇅ move ∙ Enter select ∙ Esc leave')
+  expect(await ui.find({ key: 'keys' })).toBeUndefined()
+  for (const [key, label] of [['pet', 'Pet'], ['trick', 'Trick'], ['rules', 'Rules and bounties'], ['status', 'My progress'], ['switch', 'Switch character']]) {
+    const button = await ui.find({ key: key! })
+    expect([key, button?.text, button?.props.hotkey]).toEqual([key, label, undefined])
   }
-  // Bounties say what to do in plain words, and point at the rules.
-  expect(await text(ui, /^▸ Today's bounties/)).toMatch(/\(r: rules\)$/)
+  expect(await text(ui, /^▸ Today's bounties/)).toBe("▸ Today's bounties 0/3")
 
-  // With a Korean layout, r arrives as ㄱ: the key field still opens the rules.
-  await ui.input({ key: 'keys', text: 'ㄱ' })
+  await ui.press({ key: 'rules' })
   expect(await text(ui, /^How rewards work/)).toBe('How rewards work')
   expect(await text(ui, /first passing test after you edit/)).toMatch(/\(today 1\)$/)
   expect(await text(ui, /^\s*Three a day/)).toBeDefined()
@@ -157,23 +156,21 @@ test('every control is a button on its own row; a key field takes keys from any 
   await ui.press({ key: 'back' })
   expect(await text(ui, /Lv1/)).toBe('LOCKI Lv1 Greenhorn')
 
-  await ui.input({ key: 'keys', text: 'ㄴ' })
+  await ui.press({ key: 'status' })
   expect(await text(ui, /^My progress/)).toBe('My progress')
   expect(await text(ui, /Bullseye ×1/)).toBe('  Bullseye ×1')
   expect(await text(ui, /rep to Lv2/)).toBe('25 rep to Lv2')
-  await ui.input({ key: 'keys', text: 'ㅠ' })
-  expect(await text(ui, /Lv1/)).toBe('LOCKI Lv1 Greenhorn')
-  // c opens the picker; 2 (a digit on any layout) picks CAPPL.
-  await ui.input({ key: 'keys', text: 'ㅊ' })
+  await ui.press({ key: 'back' })
+  await ui.press({ key: 'switch' })
   expect(await text(ui, /^Pick your partner/)).toBe('Pick your partner')
-  expect((await ui.find({ key: 'pick-cappl' }))?.text).toBe('Pick CAPPL (2)')
-  await ui.input({ key: 'keys', text: '2' })
+  expect((await ui.find({ key: 'pick-cappl' }))?.text).toBe('Pick CAPPL')
+  await ui.press({ key: 'pick-cappl' })
   expect(await text(ui, /Lv1/)).toBe('CAPPL Lv1 Greenhorn')
   await ui.unmount()
 
-  // The desktop draws the same views with its native buttons and no key field.
+  // The desktop draws the same views with its native buttons and no keyboard hints.
   const desktop = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  expect(await desktop.find({ key: 'keys' })).toBeUndefined()
+  expect(await text(desktop, /^Click, or|^⇅|^Tab move/)).toBeUndefined()
   await desktop.press({ key: 'rules' })
   expect(await text(desktop, /^How rewards work/)).toBe('How rewards work')
   await desktop.press({ key: 'back' })
@@ -185,21 +182,6 @@ test('every control is a button on its own row; a key field takes keys from any 
   expect(rules.text).toMatch(/^How rewards work: /)
   expect(rules.text).toMatch(/- Bullseye: \+5 rep ∙ \$3 ∙ full value 12 a day ∙ today 1\n  The first passing test/)
   expect(rules.text).toMatch(/▸ Bounties\n- Three a day/)
-})
-
-test('keys typed with a Korean layout pet, ask for a trick and give a treat', async ($, on) => {
-  engine(on)
-  mock.store(on, { ...LOCKI, 'ledger:other': { fame: 100, dust: 50, days: {}, lastAt: NOW - 60_000, activeSince: NOW - 600_000 } })
-  mock.clock(on, { now: NOW })
-  const spy = stateSpy(on)
-
-  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  for (const [typed, act] of [['ㅔ', 'pet'], ['ㅅ', 'wave'], ['ㄹ', 'treat'], ['p', 'pet']] as const) {
-    await ui.input({ key: 'keys', text: typed })
-    expect([typed, spy.act()]).toEqual([typed, act])
-  }
-  await ui.unmount()
 })
 
 test('running the same test again earns nothing more', async ($, on) => {
@@ -363,8 +345,8 @@ test('a low pane above the prompt puts the header beside the small sprite', asyn
     expect(beside?.text).toMatch(/LOCKI Lv1 Greenhorn/)
     expect(beside?.text).toMatch(/Rep [▰▱]/)
     expect(beside?.text).toMatch(/Gold \$0/)
-    // A low pane lists the keys under the header: they work while the buttons are out of view.
-    expect(await text(ui, /^p pet/)).toBe('p pet ∙ t trick ∙ f treat ∙ r rules ∙ s progress')
+    // A low pane says there is more below, beside the sprite.
+    expect(beside?.text).toMatch(/▾ More below/)
     await ui.unmount()
   }
 

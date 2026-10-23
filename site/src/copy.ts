@@ -17,7 +17,6 @@ export type Copy = {
     petHint: string; trickHint: string; treatHint: string
     wardrobe: string; wardrobeNote: string; itemMeta: (level: number, price: string) => string; wearing: string
     petToast: string; petMoreToast: string; treatToast: (name: string) => string; trickToast: (name: string, level: number) => string
-    keys: string
   }
   rewards: {
     eyebrow: string; title: string; lead: string; none: string; noneItems: string[]
@@ -88,7 +87,7 @@ const EN: Copy = {
   play: {
     eyebrow: 'Play',
     title: 'Pet it. Ask for a trick. Buy it a treat.',
-    lead: 'Three buttons in the pane, three keys on your keyboard. Try them here: it is the same art and the same moves as the mod.',
+    lead: 'Three buttons in the pane, to click or to reach from the keyboard. Try them here: it is the same art and the same moves as the mod.',
     pet: 'Pet',
     trick: 'Trick',
     treat: 'Treat',
@@ -103,7 +102,6 @@ const EN: Copy = {
     petMoreToast: '♥ ♥ ♥',
     treatToast: name => `Yum! ${name}`,
     trickToast: (name, level) => `${name} · learned at Lv${level}`,
-    keys: 'Keys',
   },
   rewards: {
     eyebrow: 'Rewards',
@@ -256,7 +254,7 @@ const KO: Copy = {
   play: {
     eyebrow: '놀이',
     title: '쓰다듬고, 재주를 부탁하고, 간식을 사 주세요',
-    lead: '창에는 버튼 세 개, 키보드에는 키 세 개. 여기서 직접 눌러 보세요. mod와 같은 그림, 같은 동작이에요.',
+    lead: '창에 있는 버튼 세 개, 마우스로도 키보드로도 누를 수 있어요. 여기서 직접 눌러 보세요. mod와 같은 그림, 같은 동작이에요.',
     pet: '쓰다듬기',
     trick: '재주',
     treat: '간식',
@@ -271,7 +269,6 @@ const KO: Copy = {
     petMoreToast: '♥ ♥ ♥',
     treatToast: name => `냠! ${name}`,
     trickToast: (name, level) => `${name} · Lv${level}에 배움`,
-    keys: '단축키',
   },
   rewards: {
     eyebrow: '보상',

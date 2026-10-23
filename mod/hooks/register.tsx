@@ -5,7 +5,6 @@ import type { Act, Activity, CareKind, CharacterId, Fx, FxKind, Language, Ledger
 import { ACTS, DANCES, actTicks, busySlot, idleGap, lookAt, loopTicks, type Moment } from './animations'
 import { CHARACTERS, characterOf, fullId, isCharacterId, learnedTricks, type Character } from './characters'
 import { WORDS, languageOf } from './i18n'
-import { keysOf } from './keys'
 import {
   BOUNTY_BONUS,
   CONTINUOUS_GAP_MS,
@@ -54,8 +53,6 @@ import { animatedSvgOf, encode, frame, type Size } from './sprite'
 
 const PANE = 'cappl-pals'
 const SPRITE = 'sprite'
-// The field at the top of the pane that takes keys typed with any layout (see typed).
-const KEY_FIELD = 'keys'
 const TICK_MS = 250
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'WebFetch', 'WebSearch', 'NotebookRead', 'ToolSearch'])
@@ -71,8 +68,6 @@ const HEADER_COLUMNS = 16
 const BIG_ROWS = 14 + HEADER_ROWS + 6
 // Rows the rules view and my progress take (progress adds a row per reward kind earned today).
 const RULES_ROWS = 44
-// Below this many rows the pane shows the keys instead of hoping the buttons get seen.
-const LOW_ROWS = 16
 // The rules' name-and-value rows stay this narrow on a wide pane, so the eye need not travel.
 const RULES_WIDTH = 52
 const PROGRESS_ROWS = 22
@@ -98,8 +93,6 @@ const fxAtom = atom({ plugin: 'cappl-pals', key: 'fx' } as const, null as Fx | n
 const characterAtom = atom({ plugin: 'cappl-pals', key: 'character' } as const, null as CharacterId | null)
 const pickingAtom = atom({ plugin: 'cappl-pals', key: 'picking' } as const, false)
 const viewAtom = atom({ plugin: 'cappl-pals', key: 'view' } as const, 'main' as PaneView)
-// Bumped after each key typed into the key field, so the next drawing clears it.
-const typedAtom = atom({ plugin: 'cappl-pals', key: 'typed' } as const, 0)
 
 // Module variables start over on a hot reload: what the pane reads lives in $.state,
 // what must last lives in $.store.
@@ -539,11 +532,12 @@ async function isPaneOpen($: EngineInterface): Promise<boolean> {
   return (await $.ui.panes()).some(pane => pane.id === PANE && pane.isPlaced && pane.isShown)
 }
 
-// Opens a view of the pane at its top, the focus on `focus` (its first control, or on
-// the way back the menu row that opened it).
-async function showView($: EngineInterface, view: PaneView) {
+// Opens a view of the pane: the rules and my progress at their top with the focus on
+// "Back"; the pal's view with the focus back on the menu row that opened the other.
+async function showView($: EngineInterface, view: PaneView, from: PaneView = 'main') {
   await update($, viewAtom, () => view)
-  await focusTop($, KEY_FIELD)
+  if (view === 'main') await $.ui.focus({ requestId: PANE, key: from === 'progress' ? 'status' : 'rules' }).catch(() => undefined)
+  else await focusTop($, 'back')
 }
 
 // Puts the focus on `key` once the new drawing has it, then shows that drawing from
@@ -551,22 +545,6 @@ async function showView($: EngineInterface, view: PaneView) {
 async function focusTop($: EngineInterface, key: string) {
   await $.ui.focus({ requestId: PANE, key }).catch(() => undefined)
   await $.ui.scroll({ in: PANE, to: 'start' }).catch(() => undefined)
-}
-
-type Control = { hotkey: string; run: () => unknown }
-
-// Keys typed into the key field, Latin or Hangul: the first one a control takes runs it.
-async function typed($: EngineInterface, text: string, controls: readonly Control[]) {
-  for (const key of keysOf(text)) {
-    const control = controls.find(one => one.hotkey === key)
-    if (control === undefined) continue
-    await control.run()
-    break
-  }
-  // Clear the field (drawn as a zero-width space), then draw it truly empty so its
-  // hint shows again: each drawing differs from the last, so each one takes.
-  await update($, typedAtom, n => n + 1)
-  $.clock.after(60, () => void update($, typedAtom, n => (n % 2 === 1 ? n + 1 : n)))
 }
 
 async function openPicker($: EngineInterface) {
@@ -581,7 +559,7 @@ async function pick($: EngineInterface, id: CharacterId) {
   await update($, characterAtom, () => id)
   await update($, pickingAtom, () => false)
   await update($, viewAtom, () => 'main' as PaneView)
-  void focusTop($, KEY_FIELD)
+  void focusTop($, 'pet')
   runtime.drawn = ''
   $.ui.toast(character.hello[runtime.language])
   await flash($, 'buy', `✦ ${character.hello[runtime.language]}`)
@@ -945,48 +923,21 @@ export const register: Register = (on, options) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const w = words()
     const lang = runtime.language
-    // Each key typed into the key field bumps this, and the field is drawn empty again:
-    // the drawn value alternates between two empty-looking texts, since the engine
-    // keeps the person's typing while the hook keeps drawing the same value.
-    const typedCount = await read($, typedAtom)
     const chosen = await read($, characterAtom)
     const isPicking = chosen === null || (await read($, pickingAtom))
     const view = await read($, viewAtom)
     const isTerminal = e.surface === 'terminal'
     const columns = isTerminal ? e.props.bodyColumns : 80
     const bodyRows = isTerminal ? e.props.scroll.bodyRows : 60
-    // The pane's focus walks its controls top to bottom, so every control gets its own
-    // row: a row of buttons would look like left and right work too. Tab moves the
-    // focus; ⇅ moves it too while the tree fits, and scrolls once it is taller.
-    const controls: Control[] = []
-    const menuButton = (key: string, hotkey: string, label: string, onPress: () => unknown) => {
-      controls.push({ hotkey, run: onPress })
-      return <Button key={key} label={w.withKey(label, hotkey)} hotkey={hotkey} onPress={onPress} />
-    }
-    // A Button's hotkey is a Latin letter, which a Korean layout never sends: the key
-    // field takes the focus first and runs what any layout types (keys.ts). Its text
-    // doubles as the hint on how to drive the pane.
-    const keyField = (isLong: boolean) => {
-      if (!isTerminal) return null
-      const { Input } = $.ui.resolve(e)
-      const hint = !e.props.isFocused ? w.hint.idle : isLong ? w.hint.scroll : w.hint.focused
-
-      return (
-        <Input
-          key={KEY_FIELD}
-          label={w.keyLabel}
-          placeholder={hint}
-          value={typedCount % 2 === 0 ? '' : '\u200b'}
-          submitLabel={w.keySubmit}
-          autoFocus
-          onInput={value => void typed($, value, controls)}
-          onSubmit={value => void typed($, value, controls)}
-        />
-      )
-    }
-    const toMain = () => showView($, 'main')
-    const back = () => menuButton('back', 'b', w.menu.back, toMain)
-    const close = () => menuButton('close', 'q', w.close, () => hidePane($))
+    // Driven by a click, or from the keyboard: the focus walks the controls top to
+    // bottom (Tab, and ⇅ while the tree fits; ⇅ scrolls a taller one), Enter presses.
+    // So every control gets its own row: a row of buttons would look like left and
+    // right work too. No hotkeys: a Korean layout never sends the Latin letter one needs.
+    const menuButton = (key: string, label: string, onPress: () => unknown) => <Button key={key} label={label} onPress={onPress} />
+    const hintFor = (isLong: boolean) =>
+      isTerminal ? <Text key="hint" dimColor>{!e.props.isFocused ? w.hint.idle : isLong ? w.hint.scroll : w.hint.focused}</Text> : null
+    const back = () => menuButton('back', w.menu.back, () => showView($, 'main', view))
+    const close = () => menuButton('close', w.close, () => hidePane($))
 
     if (isPicking) {
       runtime.isDrawn = false
@@ -1021,11 +972,11 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column">
           <Text bold>{w.pickTitle}</Text>
-          {keyField(false)}
+          {hintFor(false)}
           <Box flexDirection={columns >= cardWidth * 2 + 2 ? 'row' : 'column'}>{cards}</Box>
           <Text> </Text>
           {CHARACTERS.map((character, index) =>
-            menuButton(`pick-${character.id}`, String(index + 1), w.pick(character.name), () => pick($, character.id)),
+            menuButton(`pick-${character.id}`, w.pick(character.name), () => pick($, character.id)),
           )}
           {close()}
         </Box>
@@ -1071,7 +1022,7 @@ export const register: Register = (on, options) => {
         <Box flexDirection="column">
           <Text bold>{r.title}</Text>
           <Text dimColor>{r.intro}</Text>
-          {keyField(bodyRows < RULES_ROWS)}
+          {hintFor(bodyRows < RULES_ROWS)}
           {back()}
           <Text> </Text>
           <Text bold>{r.earn}</Text>
@@ -1118,7 +1069,7 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column">
           <Text bold>{p.title}</Text>
-          {keyField(bodyRows < PROGRESS_ROWS + earned.length)}
+          {hintFor(bodyRows < PROGRESS_ROWS + earned.length)}
           {back()}
           <Text> </Text>
           {rankLine}
@@ -1193,12 +1144,10 @@ export const register: Register = (on, options) => {
       goldLine,
     ]
     const done = lines.filter(line => line.isDone).length
-    // Too low to show the buttons under the header: list their keys, which work unseen.
-    const isLow = isTerminal && bodyRows < LOW_ROWS
 
-    // The hint and, in a low pane, the keys: beside the small sprite there is room for
-    // them next to the header, so a pane of seven rows still shows how to use it.
-    const guide = [keyField(isOverflowing), isLow ? <Text key="legend" dimColor>{w.keys}</Text> : isOverflowing ? <Text key="more" dimColor>{w.scrollHint}</Text> : null]
+    // The hint, and that there is more below: beside the small sprite there is room for
+    // them next to the header, so a pane of seven rows still says how to use it.
+    const guide = [hintFor(isOverflowing), isOverflowing ? <Text key="more" dimColor>{w.scrollHint}</Text> : null]
 
     return (
       <Box flexDirection="column">
@@ -1213,9 +1162,9 @@ export const register: Register = (on, options) => {
         ) : (
           [sprite, ...header, ...guide]
         )}
-        {menuButton('pet', 'p', w.pet, () => pet($))}
-        {menuButton('trick', 't', w.trick, () => trick($))}
-        {menuButton('treat', 'f', w.treat(character.treat.name[lang], character.treat.price), () => treat($))}
+        {menuButton('pet', w.pet, () => pet($))}
+        {menuButton('trick', w.trick, () => trick($))}
+        {menuButton('treat', w.treat(character.treat.name[lang], character.treat.price), () => treat($))}
         <Text dimColor>{w.bountyHeader(done, lines.length)}</Text>
         {lines.map(line => (
           <Text key={`quest-${line.quest.id}`} {...(line.isDone ? { color: '#86EFAC' } : { dimColor: true })}>
@@ -1241,16 +1190,14 @@ export const register: Register = (on, options) => {
             ? `${item.name[lang]} ∙ ${worn.includes(item.id) ? w.takeOff : w.wear}`
             : `${item.name[lang]} $${commas(item.price)}`
 
-          if (index >= 10) return <Button key={`shop-${item.id}`} label={label} onPress={() => shop($, id, level)} />
-
-          return menuButton(`shop-${item.id}`, String((index + 1) % 10), label, () => shop($, id, level))
+          return menuButton(`shop-${item.id}`, label, () => shop($, id, level))
         })}
         {nextLocked !== undefined && <Text dimColor>{w.next(nextLocked.level, nextLocked.name[lang])}</Text>}
         {nextTrick !== undefined && <Text dimColor>{w.nextTrick(nextTrick.level, nextTrick.name[lang])}</Text>}
         <Text> </Text>
-        {menuButton('rules', 'r', w.menu.rules, () => showView($, 'rules'))}
-        {menuButton('status', 's', w.menu.status, () => showView($, 'progress'))}
-        {menuButton('switch', 'c', w.switchCharacter, () => openPicker($))}
+        {menuButton('rules', w.menu.rules, () => showView($, 'rules'))}
+        {menuButton('status', w.menu.status, () => showView($, 'progress'))}
+        {menuButton('switch', w.switchCharacter, () => openPicker($))}
         {close()}
       </Box>
     )
