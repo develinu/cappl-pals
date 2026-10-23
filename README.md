@@ -101,6 +101,7 @@ bun tools/preview.ts docs/cappl-pals-sheet.png
 | `mod/hooks/i18n.ts` | English and Korean |
 | `mod/hooks/sound.ts` | Sound playback per platform |
 | `tools/` | Art, sound, preview, history replay |
+| `demo/` | How the demo video is made ([`demo/README.md`](demo/README.md)) |
 
 To add a character, see [docs/characters.md](docs/characters.md).
 

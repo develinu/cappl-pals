@@ -58,8 +58,8 @@ test('the first time, the pane asks who to ride with; picking shows that charact
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     expect(await text(ui, /^Pick your partner/)).toBe('Pick your partner')
-    expect((await ui.find({ key: 'pick-locki' }))?.text).toMatch(/Ride with LOCKI/)
-    expect((await ui.find({ key: 'pick-cappl' }))?.text).toMatch(/Ride with CAPPL/)
+    expect((await ui.find({ key: 'pick-locki' }))?.text).toMatch(/Pick LOCKI/)
+    expect((await ui.find({ key: 'pick-cappl' }))?.text).toMatch(/Pick CAPPL/)
     await ui.unmount()
   }
 

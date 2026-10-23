@@ -80,7 +80,7 @@ const EN: Words = {
   switchCharacter: 'Switch character',
   scrollHint: '▾ Shop below: click the pane and scroll',
   pickTitle: 'Pick your partner',
-  pick: name => `Ride with ${name}`,
+  pick: name => `Pick ${name}`,
   current: ' (riding now)',
   rewardLine: (label, gain) => `✦ ${label} ${gain}`,
   repGain: n => `+${n} rep`,

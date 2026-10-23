@@ -3,3 +3,9 @@
 # Local Claude Code settings for this folder
 .claude/
 __pycache__/
+# Demo video work: rebuildable files and downloaded fonts
+demo/.venv/
+demo/out/
+demo/assets/poses.json
+demo/assets/fonts/*.ttf
+demo/assets/fonts/*.otf

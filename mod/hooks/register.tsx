@@ -556,7 +556,9 @@ export const register: Register = (on, options) => {
 
     if (isPicking) {
       runtime.isDrawn = false
-      const size: Size = columns >= 68 && bodyRows >= 14 + 6 ? 32 : 16
+      const size: Size = columns >= 70 && bodyRows >= 14 + 6 ? 32 : 16
+      // Two cards side by side fit a 40-column dock with the small sprites.
+      const cardWidth = size === 32 ? 34 : 18
       const cards = CHARACTERS.map((character, index) => {
         const rows = frame({ character: character.id, mood: 'happy', tick: 0, equipped: [], size })
         let art
@@ -570,7 +572,7 @@ export const register: Register = (on, options) => {
         }
 
         return (
-          <Box key={`card-${character.id}`} flexDirection="column" width={Math.max(size, 22)} marginRight={2}>
+          <Box key={`card-${character.id}`} flexDirection="column" width={cardWidth} marginRight={index === 0 ? 2 : 0}>
             {art}
             <Text bold color={character.color}>
               {character.name}
@@ -585,7 +587,7 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column">
           <Text bold>{w.pickTitle}</Text>
-          <Box flexDirection={columns >= Math.max(size, 22) * 2 + 4 ? 'row' : 'column'}>{cards}</Box>
+          <Box flexDirection={columns >= cardWidth * 2 + 2 ? 'row' : 'column'}>{cards}</Box>
           <Text> </Text>
           <Button key="close" label={w.close} hotkey="q" onPress={() => hidePane($)} />
         </Box>
