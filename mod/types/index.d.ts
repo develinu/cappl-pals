@@ -52,6 +52,7 @@ declare module 'claude-code' {
       fx: Fx | null
       character: CharacterId | null
       picking: boolean
+      frame: number
     }
   }
 }

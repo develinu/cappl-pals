@@ -400,3 +400,27 @@ test('when the session id stays the same, as after /compact, the ledger stays pu
   expect(store.get('ledger:s1')).toMatchObject({ fame: 405 })
   expect([...store.keys()].filter(key => key.startsWith('ledger:'))).toEqual(['ledger:s1'])
 })
+
+test('on the desktop the sprite moves too: blinks, ears and sparkles redraw the SVG', async ($, on) => {
+  engine(on, { 'pytest -q': '12 passed in 0.3s' })
+  mock.store(on, LOCKI)
+  const clock = mock.clock(on, { now: NOW })
+
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const seen = new Set<string>()
+  for (let i = 0; i < 30; i += 1) {
+    seen.add(String((await ui.find({ type: 'Svg' }))?.props.source))
+    await clock.advance(250)
+  }
+  // Idle: the open eyes, a blink and an ear twitch at least.
+  expect(seen.size).toBeGreaterThan(1)
+
+  // A reward sparkles around the pal on the desktop as well.
+  const before = String((await ui.find({ type: 'Svg' }))?.props.source)
+  await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
+  await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
+  await clock.advance(250)
+  expect(String((await ui.find({ type: 'Svg' }))?.props.source)).not.toBe(before)
+  await ui.unmount()
+})

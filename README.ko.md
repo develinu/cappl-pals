@@ -22,6 +22,10 @@ cappl-pals는 Claude Code mod(훅 모듈이 든 플러그인)이고 Claude Code 
 
 마켓플레이스를 추가할지 물으면 `y`를 누르고 범위는 user를 그대로 둡니다. 설치한 세션에는 창이 바로 뜹니다. 이미 열려 있던 세션에서는 `/reload-plugins`를 입력하세요. 셸에서는 `claude plugin install cappl-pals --marketplace develinu/cappl-pals`로 설치합니다.
 
+데스크톱 앱에서는 `/plugin`이 동작하지 않습니다. 프롬프트 옆 **+** → **Plugins** → **Add marketplace**에 `develinu/cappl-pals`를 넣고 **Add plugin**을 누릅니다. 같은 컴퓨터의 터미널에서 user 범위로 설치했다면 데스크톱 앱의 로컬 세션에도 켜집니다. 단, WSL의 Claude Code는 설정을 따로 쓰므로 Windows 데스크톱 앱에는 한 번 더 설치해야 하고 진행 기록도 따로 쌓입니다.
+
+cappl-pals는 내 컴퓨터에서 도는 Claude Code라면 어디서든 동작합니다. 터미널과 데스크톱 앱의 Code 탭에서 쓸 수 있고, 데스크톱에서는 움직이는 그림과 누를 수 있는 버튼으로 창이 뜹니다. 웹의 Claude Code처럼 클라우드에서 도는 세션은 내 컴퓨터의 플러그인을 불러오지 않아 동작하지 않습니다.
+
 ### 자동 업데이트 켜기(권장)
 
 직접 추가한 마켓플레이스는 자동 업데이트가 꺼져 있습니다. 한 번만 켜 두면 새 버전이 나올 때마다 알아서 받습니다.

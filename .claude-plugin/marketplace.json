@@ -8,7 +8,7 @@
       "source": "./mod",
       "description": "LOCKI and CAPPL from the CAPPL app peek over your Claude Code prompt and grow with your work: passing tests, commits and merged PRs earn rep and gold for hats, shades and banjos.",
       "author": { "name": "develinu" },
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }

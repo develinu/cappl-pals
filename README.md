@@ -22,6 +22,10 @@ cappl-pals is a Claude Code mod (a plugin with a hooks module). It needs Claude 
 
 Answer `y` to add the marketplace and keep the user scope. The pane opens in the session where you install it. For sessions that were already open, run `/reload-plugins`. To install from a shell, run `claude plugin install cappl-pals --marketplace develinu/cappl-pals`.
 
+In the desktop app, where `/plugin` doesn't run: click **+** next to the prompt, then **Plugins** → **Add marketplace**, enter `develinu/cappl-pals` and click **Add plugin**. A plugin installed from a terminal at the user scope also loads in the desktop app's local sessions on the same computer. (Claude Code in WSL keeps its own settings, so a Windows desktop app needs its own install, and keeps its own progress.)
+
+cappl-pals runs wherever Claude Code runs on your computer: the terminal and the desktop app's Code tab, where the pane shows the pals as an animated picture with clickable buttons. Sessions in the cloud, such as Claude Code on the web, don't load plugins from your computer, so it doesn't run there.
+
 ### Turn on auto-update (recommended)
 
 Marketplaces you add yourself don't update on their own. Turn it on once and every new version arrives by itself:

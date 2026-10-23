@@ -66,6 +66,8 @@ const turnFameAtom = atom({ plugin: 'cappl-pals', key: 'turnFame' } as const, 0)
 const fxAtom = atom({ plugin: 'cappl-pals', key: 'fx' } as const, null as Fx | null)
 const characterAtom = atom({ plugin: 'cappl-pals', key: 'character' } as const, null as CharacterId | null)
 const pickingAtom = atom({ plugin: 'cappl-pals', key: 'picking' } as const, false)
+// The animation tick the desktop drawing last changed at; writing it redraws the SVG.
+const frameAtom = atom({ plugin: 'cappl-pals', key: 'frame' } as const, 0)
 
 // Module variables start over on a hot reload: what the pane reads lives in $.state,
 // what must last lives in $.store.
@@ -74,6 +76,9 @@ const runtime = {
   work: FRESH_WORK,
   size: 32 as Size,
   isDrawn: false,
+  // Whether a desktop, VS Code or mobile surface shows the pane as an SVG, and what it shows.
+  isSvgShown: false,
+  svgDrawn: '',
   tick: 0,
   drawn: '',
   language: 'en' as Language,
@@ -299,6 +304,7 @@ async function showPane($: EngineInterface) {
 }
 
 async function hidePane($: EngineInterface) {
+  runtime.isSvgShown = false
   await $.store.set('hidden', true)
   void play($, 'close', (await currentCharacter($)).id)
   await $.ui.close({ id: PANE })
@@ -351,20 +357,33 @@ async function shop($: EngineInterface, id: string, level: number) {
   }
 }
 
+// The terminal sprite is blitted in place; an SVG surface is drawn again, and only
+// when the frame actually changes (a blink, tapping paws, a sparkle).
 async function animate($: EngineInterface) {
-  if (!runtime.isDrawn) return
+  if (!runtime.isDrawn && !runtime.isSvgShown) return
   runtime.tick += 1
   const character = await read($, characterAtom)
   if (character === null || (await read($, pickingAtom))) return
   const mood = await read($, moodAtom)
   const wallet = await read($, walletAtom)
   const fx = await read($, fxAtom)
-  const rows = frame({ character, mood, tick: runtime.tick, equipped: wornBy(wallet, character), size: runtime.size, fx: fx?.kind })
-  const signature = rows.join('')
-  if (signature === runtime.drawn) return
-  runtime.drawn = signature
-  const done = await $.ui.blit({ requestId: PANE, key: SPRITE, cells: encode(rows).cells })
-  if (done.deny !== undefined) runtime.isDrawn = false
+  const pose = { character, mood, tick: runtime.tick, equipped: wornBy(wallet, character), fx: fx?.kind }
+  if (runtime.isDrawn) {
+    const rows = frame({ ...pose, size: runtime.size })
+    const signature = rows.join('')
+    if (signature !== runtime.drawn) {
+      runtime.drawn = signature
+      const done = await $.ui.blit({ requestId: PANE, key: SPRITE, cells: encode(rows).cells })
+      if (done.deny !== undefined) runtime.isDrawn = false
+    }
+  }
+  if (runtime.isSvgShown) {
+    const signature = frame({ ...pose, size: 32 }).join('')
+    if (signature !== runtime.svgDrawn) {
+      runtime.svgDrawn = signature
+      await update($, frameAtom, () => runtime.tick)
+    }
+  }
 }
 
 function commas(n: number): string {
@@ -471,6 +490,7 @@ export const register: Register = (on, options) => {
   // Closing with ✕ or ctrl+x x is remembered the same way.
   on('ui.close', { id: PANE }, async ($, e, next) => {
     const closed = await next(e)
+    runtime.isSvgShown = false
     if (e.origin.kind === 'person') await $.store.set('hidden', true)
 
     return closed
@@ -626,8 +646,11 @@ export const register: Register = (on, options) => {
       isOverflowing = (isBeside ? Math.max(art.rows, HEADER_ROWS + 2) + below : stacked) > bodyRows
     } else if (e.surface === 'desktop' || e.surface === 'vscode' || e.surface === 'mobile') {
       const { Svg } = $.ui.resolve(e)
-      const rows = frame({ character: character.id, mood, tick: 0, equipped: worn, size: 32 })
-      sprite = <Svg source={svgOf(rows)} alt={`${character.name} Lv${level}`} width={128} height={112} />
+      const tick = await read($, frameAtom)
+      const rows = frame({ character: character.id, mood, tick, equipped: worn, size: 32, fx: fx?.kind })
+      runtime.svgDrawn = rows.join('')
+      runtime.isSvgShown = true
+      sprite = <Svg key={SPRITE} source={svgOf(rows)} alt={`${character.name} Lv${level}`} width={128} height={112} />
     }
 
     // Ambiguous-width glyphs (■ □ · — ★ ×) take two cells on CJK terminals and push
