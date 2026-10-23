@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Act, Activity, CareKind, CharacterId, Fx, FxKind, Language, Ledger, Reward, RewardKind, Totals, Wallet } from '../types'
+import type { Act, Activity, CareKind, CharacterId, Fx, FxKind, Language, Ledger, PaneView, ResultKind, Reward, RewardKind, Totals, Wallet } from '../types'
 import { ACTS, DANCES, actTicks, busySlot, idleGap, lookAt, loopTicks, type Moment } from './animations'
 import { CHARACTERS, characterOf, fullId, isCharacterId, learnedTricks, type Character } from './characters'
 import { WORDS, languageOf } from './i18n'
@@ -66,6 +66,13 @@ const HEADER_ROWS = 4
 const HEADER_COLUMNS = 16
 // The big sprite (14 rows) only when the header and a few rows below it fit too.
 const BIG_ROWS = 14 + HEADER_ROWS + 6
+// Rows the rules view and my progress take (progress adds a row per reward kind earned today).
+const RULES_ROWS = 44
+// Below this many rows the pane shows the keys instead of hoping the buttons get seen.
+const LOW_ROWS = 16
+// The rules' name-and-value rows stay this narrow on a wide pane, so the eye need not travel.
+const RULES_WIDTH = 52
+const PROGRESS_ROWS = 22
 // The height asked for when /cappl opens the pane above the prompt (the terminal may give less).
 const INLINE_ROWS = 30
 // How often other sessions' rewards and purchases are read back; the store sends no change events.
@@ -87,6 +94,7 @@ const turnFameAtom = atom({ plugin: 'cappl-pals', key: 'turnFame' } as const, 0)
 const fxAtom = atom({ plugin: 'cappl-pals', key: 'fx' } as const, null as Fx | null)
 const characterAtom = atom({ plugin: 'cappl-pals', key: 'character' } as const, null as CharacterId | null)
 const pickingAtom = atom({ plugin: 'cappl-pals', key: 'picking' } as const, false)
+const viewAtom = atom({ plugin: 'cappl-pals', key: 'view' } as const, 'main' as PaneView)
 
 // Module variables start over on a hot reload: what the pane reads lives in $.state,
 // what must last lives in $.store.
@@ -526,11 +534,21 @@ async function isPaneOpen($: EngineInterface): Promise<boolean> {
   return (await $.ui.panes()).some(pane => pane.id === PANE && pane.isPlaced && pane.isShown)
 }
 
+// Opens a view of the pane at its top, the focus on `focus` (its first control, or on
+// the way back the menu row that opened it).
+async function showView($: EngineInterface, view: PaneView, focus: string) {
+  await update($, viewAtom, () => view)
+  // The focus waits for the new drawing; the scroll then lands on that drawing's top.
+  await $.ui.focus({ requestId: PANE, key: focus }).catch(() => undefined)
+  if (view !== 'main') await $.ui.scroll({ in: PANE, to: 'start' }).catch(() => undefined)
+}
+
 async function pick($: EngineInterface, id: CharacterId) {
   const character = characterOf(id)
   await $.store.set('character', id)
   await update($, characterAtom, () => id)
   await update($, pickingAtom, () => false)
+  await update($, viewAtom, () => 'main' as PaneView)
   runtime.drawn = ''
   $.ui.toast(character.hello[runtime.language])
   await flash($, 'buy', `✦ ${character.hello[runtime.language]}`)
@@ -596,7 +614,7 @@ async function animate($: EngineInterface) {
   if (!runtime.isDrawn) return
   runtime.tick += 1
   const id = await read($, characterAtom)
-  if (id === null || (await read($, pickingAtom))) return
+  if (id === null || (await read($, pickingAtom)) || (await read($, viewAtom)) !== 'main') return
   const character = characterOf(id)
   const wallet = await read($, walletAtom)
   const fx = await read($, fxAtom)
@@ -637,19 +655,35 @@ function utcOffset(minutes: number): string {
   return `${sign}${Math.floor(abs / 60)}${abs % 60 === 0 ? '' : `:${String(abs % 60).padStart(2, '0')}`}`
 }
 
-async function rulesText($: EngineInterface): Promise<string> {
-  const w = words()
+// The results in the order a day usually brings them, for the rules view and /cappl-rules.
+const RESULT_ORDER: readonly ResultKind[] = ['verify', 'comeback', 'check', 'commit', 'pr', 'merge', 'plan', 'break', 'daily']
+
+async function ruleRows($: EngineInterface) {
   const world = await loadWorld($)
   const day = dayOf(await $.clock.now(), runtime.offset)
-  const lines = Object.entries(RULES).map(([kind, rule]) => {
-    const key = kind as keyof typeof RULES
-    const n = countToday(world.ledgers, key, day)
-    const limit = rule.cap !== undefined ? w.rules.cap(rule.cap) : w.rules.taper(rule.full)
 
-    return w.rules.line(w.rewards[key], rule.fame, rule.dust, limit, n, rateOf(key, n))
+  return RESULT_ORDER.map(kind => {
+    const rule = RULES[kind]
+    const n = countToday(world.ledgers, kind, day)
+
+    return { kind, rule, today: n, rate: rateOf(kind, n) }
   })
+}
 
-  return [w.rules.intro, ...lines, w.rules.commitBonus, w.rules.verifyNote, w.rules.extras, w.rules.dayNote(5, utcOffset(runtime.offset))].join('\n')
+async function rulesText($: EngineInterface): Promise<string> {
+  const w = words()
+  const r = w.rules
+  const rows = await ruleRows($)
+  const lines = [`${r.title}: ${r.intro}`, '', r.earn]
+  for (const row of rows) {
+    const limit = row.rule.cap !== undefined ? r.limit.cap(row.rule.cap) : r.limit.taper(row.rule.full)
+    const today = row.today > 0 ? ` ∙ ${r.today(row.today)}${row.rate < 1 ? ` (x${row.rate})` : ''}` : ''
+    lines.push(`- ${w.rewards[row.kind]}: ${r.values(row.rule.fame, row.rule.dust)} ∙ ${limit}${today}`, `  ${r.when[row.kind]}`)
+  }
+  lines.push(r.commitBonus, r.taper, '', r.bountyTitle, ...r.bounty.map(line => `- ${line}`), '', r.bonusTitle, ...r.bonus.map(line => `- ${line}`))
+  lines.push('', `${r.noneTitle}: ${r.none}`, r.fair(5, utcOffset(runtime.offset)))
+
+  return lines.join('\n')
 }
 
 async function statusText($: EngineInterface): Promise<string> {
@@ -880,8 +914,22 @@ export const register: Register = (on, options) => {
     const lang = runtime.language
     const chosen = await read($, characterAtom)
     const isPicking = chosen === null || (await read($, pickingAtom))
-    const columns = e.surface === 'terminal' ? e.props.bodyColumns : 80
-    const bodyRows = e.surface === 'terminal' ? e.props.scroll.bodyRows : 60
+    const view = await read($, viewAtom)
+    const isTerminal = e.surface === 'terminal'
+    const columns = isTerminal ? e.props.bodyColumns : 80
+    const bodyRows = isTerminal ? e.props.scroll.bodyRows : 60
+    // The pane's focus walks its controls top to bottom, so every control gets its own
+    // row: a row of buttons would look like left and right work too. Tab moves the
+    // focus; ⇅ moves it too while the tree fits, and scrolls once it is taller.
+    const hintFor = (isLong: boolean) =>
+      isTerminal ? <Text key="hint" dimColor>{!e.props.isFocused ? w.hint.idle : isLong ? w.hint.scroll : w.hint.focused}</Text> : null
+    const menuButton = (key: string, hotkey: string, label: string, onPress: () => unknown) => (
+      <Button key={key} plain label={label} hotkey={hotkey} onPress={onPress} />
+    )
+    const toMain = () => showView($, 'main', view === 'progress' ? 'status' : 'rules')
+    const back = menuButton('back', 'b', w.menu.back, toMain)
+    const backBelow = menuButton('back-below', 'b', w.menu.back, toMain)
+    const close = menuButton('close', 'q', w.close, () => hidePane($))
 
     if (isPicking) {
       runtime.isDrawn = false
@@ -890,7 +938,7 @@ export const register: Register = (on, options) => {
       const cardWidth = size === 32 ? 34 : 18
       const cards = CHARACTERS.map((character, index) => {
         let art
-        if (e.surface === 'terminal') {
+        if (isTerminal) {
           const { Raster } = $.ui.resolve(e)
           const look = ACTS.hello!.at(1, character.id)
           const cells = encode(frame({ character: character.id, look, tick: 0, equipped: [], size }))
@@ -905,11 +953,10 @@ export const register: Register = (on, options) => {
           <Box key={`card-${character.id}`} flexDirection="column" width={cardWidth} marginRight={index === 0 ? 2 : 0}>
             {art}
             <Text bold color={character.color}>
-              {character.name}
+              {index + 1}. {character.name}
               {chosen === character.id ? w.current : ''}
             </Text>
             <Text dimColor>{character.blurb[lang]}</Text>
-            <Button key={`pick-${character.id}`} label={w.pick(character.name)} hotkey={String(index + 1)} onPress={() => pick($, character.id)} />
           </Box>
         )
       })
@@ -917,9 +964,13 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column">
           <Text bold>{w.pickTitle}</Text>
+          {hintFor(false)}
           <Box flexDirection={columns >= cardWidth * 2 + 2 ? 'row' : 'column'}>{cards}</Box>
           <Text> </Text>
-          <Button key="close" label={w.close} hotkey="q" onPress={() => hidePane($)} />
+          {CHARACTERS.map((character, index) =>
+            menuButton(`pick-${character.id}`, String(index + 1), w.pick(character.name), () => pick($, character.id)),
+          )}
+          {close}
         </Box>
       )
     }
@@ -932,22 +983,134 @@ export const register: Register = (on, options) => {
     const { level, into, need } = levelOf(totals.fame)
     const filled = need === 0 ? 10 : Math.floor((into / need) * 10)
     const worn = wornBy(wallet, character.id)
-    const visible = character.items.filter(item => item.level <= level || wallet.owned.includes(fullId(character.id, item.id)))
     const nextLocked = character.items.find(item => item.level > level)
     const nextTrick = character.tricks.find(one => one.level > level)
     const now = await $.clock.now()
     const day = dayOf(now, runtime.offset)
     const world = await loadWorld($)
+    const rankLine = (
+      <Text key="rank" bold>
+        <Text color={character.color}>{character.name}</Text> Lv{level} {w.ranks[rankOf(level)]}
+      </Text>
+    )
+    const repLine = (
+      <Text key="rep">
+        {w.rep} {'▰'.repeat(filled)}
+        {'▱'.repeat(10 - filled)} {need === 0 ? w.maxLevel : `${into}/${need}`}
+      </Text>
+    )
+    const goldLine = (
+      <Text key="gold">
+        {w.gold} ${totals.dust} <Text dimColor>∙ {w.fans(commas(fansOf(totals.fame)))}</Text>
+      </Text>
+    )
+
+    if (view === 'rules') {
+      runtime.isDrawn = false
+      const r = w.rules
+      const rows = await ruleRows($)
+
+      return (
+        <Box flexDirection="column">
+          <Text bold>{r.title}</Text>
+          <Text dimColor>{r.intro}</Text>
+          {hintFor(bodyRows < RULES_ROWS)}
+          {back}
+          <Text> </Text>
+          <Text bold>{r.earn}</Text>
+          {rows.map(row => (
+            <Box key={`rule-${row.kind}`} flexDirection="column">
+              <Box flexDirection="row" justifyContent="space-between" width={Math.min(columns, RULES_WIDTH)}>
+                <Text bold>{w.rewards[row.kind]}</Text>
+                <Text color="#FCD34D">{r.values(row.rule.fame, row.rule.dust)}</Text>
+              </Box>
+              <Text dimColor>
+                {'  '}
+                {r.when[row.kind].replaceAll('`', '')}
+                {row.today > 0 ? ` (${r.today(row.today)})` : ''}
+              </Text>
+            </Box>
+          ))}
+          <Text dimColor>{r.commitBonus}</Text>
+          <Text dimColor>{r.taper}</Text>
+          <Text> </Text>
+          <Text bold>{r.bountyTitle}</Text>
+          {r.bounty.map((line, i) => (
+            <Text key={`bounty-${i}`}>  {line}</Text>
+          ))}
+          <Text bold>{r.bonusTitle}</Text>
+          {r.bonus.map((line, i) => (
+            <Text key={`bonus-${i}`}>  {line}</Text>
+          ))}
+          <Text bold>{r.noneTitle}</Text>
+          <Text dimColor>  {r.none}</Text>
+          <Text dimColor>{r.fair(5, utcOffset(runtime.offset))}</Text>
+          <Text> </Text>
+          {backBelow}
+        </Box>
+      )
+    }
+
+    if (view === 'progress') {
+      runtime.isDrawn = false
+      const p = w.progress
+      const earned = (Object.keys(w.rewards) as RewardKind[])
+        .map(kind => ({ kind, n: countToday(world.ledgers, kind, day) }))
+        .filter(one => one.n > 0)
+      const tricks = learnedTricks(character, level)
+      const owned = character.items.filter(item => wallet.owned.includes(fullId(character.id, item.id)))
+
+      return (
+        <Box flexDirection="column">
+          <Text bold>{p.title}</Text>
+          {hintFor(bodyRows < PROGRESS_ROWS + earned.length)}
+          {back}
+          <Text> </Text>
+          {rankLine}
+          {repLine}
+          {need > 0 && <Text dimColor>{p.toNext(need - into, level + 1)}</Text>}
+          {goldLine}
+          <Text> </Text>
+          <Text bold>{p.today}</Text>
+          {earned.length === 0 && <Text dimColor>  {p.nothingToday}</Text>}
+          {earned.map(one => (
+            <Text key={`today-${one.kind}`}>  {p.count(w.rewards[one.kind], one.n)}</Text>
+          ))}
+          <Text bold>{w.recent}</Text>
+          {log.length === 0 && <Text dimColor>  {w.noRewards}</Text>}
+          {log.slice(-5).map(one => (
+            <Text key={`recent-${one.at}-${one.kind}`} dimColor>
+              {'  '}
+              {w.rewards[one.kind]}
+              {one.fame > 0 ? ` +${one.fame}` : ''}
+              {one.dust > 0 ? ` $${one.dust}` : ''}
+              {one.rate < 1 ? ` (x${one.rate})` : ''}
+            </Text>
+          ))}
+          <Text bold>{p.tricks(tricks.length, character.tricks.length)}</Text>
+          <Text dimColor>  {nextTrick === undefined ? p.allLearned : w.nextTrick(nextTrick.level, nextTrick.name[lang])}</Text>
+          <Text bold>{p.items(owned.length, character.items.length)}</Text>
+          <Text dimColor>  {nextLocked === undefined ? p.allUnlocked : w.next(nextLocked.level, nextLocked.name[lang])}</Text>
+          <Text> </Text>
+          {backBelow}
+        </Box>
+      )
+    }
+
+    const visible = character.items.filter(item => item.level <= level || wallet.owned.includes(fullId(character.id, item.id)))
     const quests = questsOf(day)
     const bounty = readBounty(await $.store.get(`bounty:${day}`))
     const lines = bountyLines(quests, world.ledgers, day, bounty.done)
-    // Rows below the header: actions, bounties, recent rewards, the shop, what's next, the buttons.
-    const below = 1 + 5 + 1 + Math.max(1, Math.min(4, log.length)) + 1 + visible.length + (nextLocked ? 1 : 0) + (nextTrick ? 1 : 0) + 3
+    const recent = log.slice(-3)
+    // Rows below the header: the hint, the actions, the bounties, recent rewards, the
+    // shop, what's next and the menu.
+    const below =
+      (isTerminal ? 1 : 0) + 3 + 1 + lines.length + 1 + 1 + Math.max(1, recent.length) + 1 + visible.length + (nextLocked ? 1 : 0) + (nextTrick ? 1 : 0) + 1 + 4
 
     let sprite
     let isBeside = false
     let isOverflowing = false
-    if (e.surface === 'terminal') {
+    if (isTerminal) {
       const { Raster } = $.ui.resolve(e)
       // bodyRows is the most the pane can show at once; rows past it need focus and scrolling.
       runtime.size = columns >= 32 && bodyRows >= BIG_ROWS ? 32 : 16
@@ -960,7 +1123,7 @@ export const register: Register = (on, options) => {
       // When the stack does not fit, put the header beside the small sprite if there is room.
       const stacked = art.rows + HEADER_ROWS + below
       isBeside = runtime.size === 16 && stacked > bodyRows && columns >= art.columns + 2 + HEADER_COLUMNS
-      isOverflowing = (isBeside ? Math.max(art.rows, HEADER_ROWS + 2) + below : stacked) > bodyRows
+      isOverflowing = (isBeside ? Math.max(art.rows, HEADER_ROWS + 3) + below - 1 : stacked) > bodyRows
     } else if (e.surface === 'desktop' || e.surface === 'vscode' || e.surface === 'mobile') {
       const { Svg } = $.ui.resolve(e)
       const moment = await momentNow($, character, 0, 0)
@@ -971,19 +1134,18 @@ export const register: Register = (on, options) => {
     // Ambiguous-width glyphs (■ □ · — ★ ×) take two cells on CJK terminals and push
     // the lines; only single-width ones are used here.
     const header = [
-      <Text bold {...(fx === null ? {} : { color: FX_COLOR[fx.kind] })}>{fx === null ? ' ' : fx.label}</Text>,
-      <Text bold>
-        <Text color={character.color}>{character.name}</Text> Lv{level} {w.ranks[rankOf(level)]}
-      </Text>,
-      <Text>
-        {w.rep} {'▰'.repeat(filled)}
-        {'▱'.repeat(10 - filled)} {need === 0 ? w.maxLevel : `${into}/${need}`}
-      </Text>,
-      <Text>
-        {w.gold} ${totals.dust} <Text dimColor>∙ {w.fans(commas(fansOf(totals.fame)))}</Text>
-      </Text>,
-      ...(isOverflowing ? [<Text dimColor>{w.scrollHint}</Text>] : []),
+      <Text key="fx" bold {...(fx === null ? {} : { color: FX_COLOR[fx.kind] })}>{fx === null ? ' ' : fx.label}</Text>,
+      rankLine,
+      repLine,
+      goldLine,
     ]
+    const done = lines.filter(line => line.isDone).length
+    // Too low to show the buttons under the header: list their keys, which work unseen.
+    const isLow = isTerminal && bodyRows < LOW_ROWS
+
+    // The hint and, in a low pane, the keys: beside the small sprite there is room for
+    // them next to the header, so a pane of seven rows still shows how to use it.
+    const guide = [hintFor(isOverflowing), isLow ? <Text key="keys" dimColor>{w.keys}</Text> : isOverflowing ? <Text key="more" dimColor>{w.scrollHint}</Text> : null]
 
     return (
       <Box flexDirection="column">
@@ -992,19 +1154,16 @@ export const register: Register = (on, options) => {
             {sprite}
             <Box flexDirection="column" marginLeft={2}>
               {header}
+              {guide}
             </Box>
           </Box>
         ) : (
-          [sprite, ...header]
+          [sprite, ...header, ...guide]
         )}
-        <Box key="actions" flexDirection="row" flexWrap="wrap">
-          <Button key="pet" label={w.pet} hotkey="p" onPress={() => pet($)} />
-          <Text> </Text>
-          <Button key="trick" label={w.trick} hotkey="t" onPress={() => trick($)} />
-          <Text> </Text>
-          <Button key="treat" label={w.treat(character.treat.name[lang], character.treat.price)} hotkey="f" onPress={() => treat($)} />
-        </Box>
-        <Text dimColor>{w.bounties}</Text>
+        {menuButton('pet', 'p', w.pet, () => pet($))}
+        {menuButton('trick', 't', w.trick, () => trick($))}
+        {menuButton('treat', 'f', w.treat(character.treat.name[lang], character.treat.price), () => treat($))}
+        <Text dimColor>{w.bountyHeader(done, lines.length)}</Text>
         {lines.map(line => (
           <Text key={`quest-${line.quest.id}`} {...(line.isDone ? { color: '#86EFAC' } : { dimColor: true })}>
             {w.questLine(w.quests[line.quest.id] ?? line.quest.id, line.have, line.quest.target, line.quest.gold, line.isDone)}
@@ -1012,9 +1171,9 @@ export const register: Register = (on, options) => {
         ))}
         <Text dimColor>{w.bonusLine(BOUNTY_BONUS, bounty.bonus)}</Text>
         <Text dimColor>{w.recent}</Text>
-        {log.length === 0 && <Text dimColor>{w.noRewards}</Text>}
-        {log.slice(-4).map(one => (
-          <Text dimColor>
+        {recent.length === 0 && <Text dimColor>{w.noRewards}</Text>}
+        {recent.map(one => (
+          <Text key={`recent-${one.at}-${one.kind}`} dimColor>
             {w.rewards[one.kind]}
             {one.fame > 0 ? ` +${one.fame}` : ''}
             {one.dust > 0 ? ` $${one.dust}` : ''}
@@ -1026,12 +1185,13 @@ export const register: Register = (on, options) => {
           const id = fullId(character.id, item.id)
           const isOwned = wallet.owned.includes(id)
           const label = isOwned
-            ? `${item.name[lang]} ${worn.includes(item.id) ? w.takeOff : w.wear}`
+            ? `${item.name[lang]} ∙ ${worn.includes(item.id) ? w.takeOff : w.wear}`
             : `${item.name[lang]} $${commas(item.price)}`
 
           return (
             <Button
               key={`shop-${item.id}`}
+              plain
               label={label}
               {...(index < 10 ? { hotkey: String((index + 1) % 10) } : {})}
               onPress={() => shop($, id, level)}
@@ -1041,8 +1201,10 @@ export const register: Register = (on, options) => {
         {nextLocked !== undefined && <Text dimColor>{w.next(nextLocked.level, nextLocked.name[lang])}</Text>}
         {nextTrick !== undefined && <Text dimColor>{w.nextTrick(nextTrick.level, nextTrick.name[lang])}</Text>}
         <Text> </Text>
-        <Button key="switch" label={w.switchCharacter} hotkey="c" onPress={() => update($, pickingAtom, () => true)} />
-        <Button key="close" label={w.close} hotkey="q" onPress={() => hidePane($)} />
+        {menuButton('rules', 'r', w.menu.rules, () => showView($, 'rules', 'back'))}
+        {menuButton('status', 's', w.menu.status, () => showView($, 'progress', 'back'))}
+        {menuButton('switch', 'c', w.switchCharacter, () => update($, pickingAtom, () => true))}
+        {close}
       </Box>
     )
   })

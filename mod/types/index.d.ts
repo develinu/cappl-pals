@@ -40,6 +40,7 @@ export type Wallet = {
 
 export type Totals = { fame: number; dust: number }
 
+export type PaneView = 'main' | 'rules' | 'progress'
 export type Activity = 'idle' | 'sleeping' | 'thinking' | 'reading' | 'editing' | 'running' | 'testing' | 'waiting'
 // A one-off animation (a reward, a pet, a trick) and when it started, in ms.
 export type Act = { name: string; at: number }
@@ -62,6 +63,8 @@ declare module 'claude-code' {
       fx: Fx | null
       character: CharacterId | null
       picking: boolean
+      // What the pane shows besides the picker: the pal, the rules or my progress.
+      view: PaneView
     }
   }
 }

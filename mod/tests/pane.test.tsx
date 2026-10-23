@@ -72,7 +72,7 @@ test('the first time, the pane asks who to ride with; picking shows that charact
   expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs \$50/)
   // "Switch character" brings the picker back, marking who rides now.
   await ui.press({ key: 'switch' })
-  expect(await text(ui, /riding now/)).toBe('CAPPL (riding now)')
+  expect(await text(ui, /riding now/)).toBe('2. CAPPL (riding now)')
   await ui.press({ key: 'pick-locki' })
   expect(await text(ui, /Lv1/)).toBe('LOCKI Lv1 Greenhorn')
   await ui.unmount()
@@ -127,6 +127,54 @@ test('one command can test, commit and open a pull request, and each counts', as
   await ui.unmount()
 })
 
+test('every control has its own row, with a keyboard hint; r and s open the rules and my progress', async ($, on) => {
+  engine(on, { 'pytest -q': '12 passed in 0.3s' })
+  mock.store(on, LOCKI)
+  mock.clock(on, { now: NOW })
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
+  await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
+  const idle = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await text(idle, /^ctrl\+x Tab/)).toBe('ctrl+x Tab, then press a key')
+  await idle.unmount()
+  const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, isFocused: true }, surface: 'terminal' })
+  expect(await text(ui, /^⇅/)).toBe('⇅ move ∙ Enter press ∙ Esc leave')
+  for (const key of ['pet', 'trick', 'treat', 'rules', 'status', 'switch', 'close']) expect([key, (await ui.find({ key }))?.text !== undefined]).toEqual([key, true])
+  // Bounties say what to do in plain words, and point at the rules.
+  expect(await text(ui, /^▸ Today's bounties/)).toMatch(/\(r: rules\)$/)
+
+  await ui.press({ key: 'rules' })
+  expect(await text(ui, /^How rewards work/)).toBe('How rewards work')
+  expect(await text(ui, /first passing test after you edit/)).toMatch(/\(today 1\)$/)
+  expect(await text(ui, /^\s*Three a day/)).toBeDefined()
+  await ui.press({ key: 'back' })
+  expect(await text(ui, /Lv1/)).toBe('LOCKI Lv1 Greenhorn')
+
+  await ui.press({ key: 'status' })
+  expect(await text(ui, /^My progress/)).toBe('My progress')
+  expect(await text(ui, /Bullseye ×1/)).toBe('  Bullseye ×1')
+  expect(await text(ui, /rep to Lv2/)).toBe('25 rep to Lv2')
+  await ui.press({ key: 'back-below' })
+  expect(await text(ui, /Lv1/)).toBe('LOCKI Lv1 Greenhorn')
+  await ui.unmount()
+
+  // The desktop draws the same views with its native buttons and no keyboard hints.
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await text(desktop, /^ctrl\+x|^⇅|^Tab next/)).toBeUndefined()
+  await desktop.press({ key: 'rules' })
+  expect(await text(desktop, /^How rewards work/)).toBe('How rewards work')
+  await desktop.press({ key: 'back' })
+  await desktop.press({ key: 'status' })
+  expect(await text(desktop, /^My progress/)).toBe('My progress')
+  await desktop.unmount()
+
+  const rules = await $.command.run({ ...RUN, command: 'cappl-rules' })
+  expect(rules.text).toMatch(/^How rewards work: /)
+  expect(rules.text).toMatch(/- Bullseye: \+5 rep ∙ \$3 ∙ full value 12 a day ∙ today 1\n  The first passing test/)
+  expect(rules.text).toMatch(/▸ Bounties\n- Three a day/)
+})
+
 test('running the same test again earns nothing more', async ($, on) => {
   engine(on, { 'pytest -q': '12 passed in 0.3s' })
   mock.store(on, LOCKI)
@@ -154,7 +202,7 @@ test('other sessions add up; buying spends gold and each character keeps its own
   expect(await text(ui, /Lv/)).toMatch(/^LOCKI Lv6 Stable Hand$/)
   await ui.press({ key: 'shop-aviators' })
   expect(await text(ui, /^Gold/)).toMatch(/^Gold \$70/)
-  expect((await ui.find({ key: 'shop-aviators' }))?.text).toMatch(/Aviator shades take off/)
+  expect((await ui.find({ key: 'shop-aviators' }))?.text).toMatch(/Aviator shades ∙ take off/)
 
   await ui.press({ key: 'switch' })
   await ui.press({ key: 'pick-cappl' })
@@ -288,7 +336,8 @@ test('a low pane above the prompt puts the header beside the small sprite', asyn
     expect(beside?.text).toMatch(/LOCKI Lv1 Greenhorn/)
     expect(beside?.text).toMatch(/Rep [▰▱]/)
     expect(beside?.text).toMatch(/Gold \$0/)
-    expect(beside?.text).toMatch(/▾ Shop below/)
+    // A low pane lists the keys under the header: they work while the buttons are out of view.
+    expect(await text(ui, /^p pet/)).toBe('p pet ∙ t trick ∙ f treat ∙ r rules ∙ s progress')
     await ui.unmount()
   }
 
@@ -401,7 +450,7 @@ test('after /clear the pane keeps rep, gold, items and the character; new reward
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await text(ui, /Lv/)).toBe('CAPPL Lv6 Stable Hand')
   expect(await text(ui, /^Gold/)).toMatch(/^Gold \$70/)
-  expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs take off/)
+  expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs ∙ take off/)
   await ui.unmount()
 
   await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })

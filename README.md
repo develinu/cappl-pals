@@ -58,7 +58,7 @@ Without auto-update, update by hand with `claude plugin update cappl-pals@cappl-
 | `/cappl-rules` | The reward table and how many of each you earned today. |
 | `/cappl-sound` | Cycle the sound: normal → quiet → off. |
 
-To use the pane's buttons, focus it with a click or `ctrl+x` then `Tab`. Then press `p` to pet your pal, `t` for a trick, `f` to give a treat, `1`–`0` to buy an item or to put it on and take it off, `c` to switch characters, or `q` to close. On a wide fullscreen terminal (110 columns or more) the pane docks on the right. On other terminals it opens above the prompt. A low pane shows the small sprite with your stats beside it and a hint to scroll down to the shop.
+To use the pane, focus it with a click or `ctrl+x` then `Tab`. Every control has its own row, its key in front: press `p` to pet your pal, `t` for a trick, `f` to give a treat, `1`–`0` to buy an item or to put it on and take it off, `r` for the rules and what each bounty means, `s` for your progress (today's rewards, tricks and wardrobe), `c` to switch characters, or `q` to close. `Tab` moves to the next control, the arrow keys scroll a pane taller than its window, and `Esc` hands the keyboard back to the prompt; a hint line in the pane says which applies. The keys work even when their buttons are scrolled out of view. On a wide fullscreen terminal (110 columns or more) the pane docks on the right. On other terminals it opens above the prompt. A low pane shows the small sprite with your stats beside it and lists the keys under them.
 
 Several sessions share one profile. Rep, gold, recent rewards, purchases and your choice of character show up in every open pane within about two seconds.
 

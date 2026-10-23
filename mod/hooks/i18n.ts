@@ -1,4 +1,4 @@
-import type { Language, RewardKind } from '../types'
+import type { Language, ResultKind, RewardKind } from '../types'
 
 // Every word the pane, the toasts and the commands show. Item names and character
 // lines live with each character (characters/index.ts).
@@ -56,15 +56,40 @@ type Words = {
   bonusToast: (gold: number) => string
   sound: Record<'normal' | 'quiet' | 'off', string>
   soundSet: (now: string, next: string) => string
+  // How to drive the pane from the keyboard: before and after it takes the focus.
+  hint: { idle: string; focused: string; scroll: string }
+  // The keys at a glance, for a pane too low to show the buttons.
+  keys: string
+  bountyHeader: (done: number, total: number) => string
+  menu: { rules: string; status: string; back: string }
   rules: {
+    title: string
     intro: string
-    line: (label: string, fame: number, dust: number, limit: string, today: number, rate: number) => string
-    cap: (n: number) => string
-    taper: (full: number) => string
+    earn: string
+    when: Record<ResultKind, string>
+    values: (fame: number, dust: number) => string
+    today: (n: number) => string
+    limit: { taper: (full: number) => string; cap: (n: number) => string }
+    taper: string
     commitBonus: string
-    verifyNote: string
-    dayNote: (hour: number, offset: string) => string
-    extras: string
+    bountyTitle: string
+    bounty: readonly string[]
+    bonusTitle: string
+    bonus: readonly string[]
+    noneTitle: string
+    none: string
+    fair: (hour: number, offset: string) => string
+  }
+  progress: {
+    title: string
+    toNext: (n: number, level: number) => string
+    today: string
+    nothingToday: string
+    count: (label: string, n: number) => string
+    tricks: (have: number, all: number) => string
+    items: (have: number, all: number) => string
+    allLearned: string
+    allUnlocked: string
   }
 }
 
@@ -99,7 +124,7 @@ const EN: Words = {
   next: (level, name) => `Next: Lv${level} ${name}`,
   close: 'Close (/cappl)',
   switchCharacter: 'Switch character',
-  scrollHint: '▾ Shop below (click, then scroll)',
+  scrollHint: '▾ More below: the shop and the menu',
   pickTitle: 'Pick your partner',
   pick: name => `Pick ${name}`,
   current: ' (riding now)',
@@ -137,10 +162,12 @@ const EN: Words = {
   chestToast: (level, gold) => `Lv${level} chest: +$${gold}`,
   luckyToast: gold => `Lucky nugget! +$${gold}`,
   bounties: "▸ Today's bounties",
+  // Bounties say what to do, in plain words (the reward names are flavour).
   quests: {
-    bullseye3: 'Bullseye ×3', commit2: 'Stake 2 claims', check2: 'Clean shot ×2', comeback1: 'Win a showdown',
-    merge1: 'Strike gold', pr1: 'Put up a poster', break1: 'Rest by the campfire', plan1: 'Map a trail',
-    pet3: 'Pet your pal ×3', treat1: 'Give a treat', trick2: 'See 2 tricks',
+    bullseye3: 'Pass tests after edits ×3', commit2: 'Commit twice', check2: 'Clean check or build ×2',
+    comeback1: 'Fix a failing test', merge1: 'Merge a pull request', pr1: 'Open a pull request',
+    break1: 'Take a break, come back', plan1: 'Approve a plan first',
+    pet3: 'Pet your pal ×3', treat1: 'Give a treat', trick2: 'Ask for 2 tricks',
   },
   questLine: (label, have, target, gold, isDone) => (isDone ? `✓ ${label} +$${gold}` : `▸ ${label} ${have}/${target} $${gold}`),
   bonusLine: (gold, isDone) => (isDone ? `✓ All three +$${gold}` : `  All three: +$${gold}`),
@@ -148,15 +175,48 @@ const EN: Words = {
   bonusToast: gold => `All of today's bounties done! +$${gold}`,
   sound: { normal: 'normal', quiet: 'quiet', off: 'off' },
   soundSet: (now, next) => `Sound effects: ${now}. Run /cappl-sound again for ${next}.`,
+  hint: { idle: 'ctrl+x Tab, then press a key', focused: '⇅ move ∙ Enter press ∙ Esc leave', scroll: 'Tab next ∙ ⇅ scroll ∙ Esc leave' },
+  keys: 'p pet ∙ t trick ∙ f treat ∙ r rules ∙ s progress',
+  bountyHeader: (done, total) => `▸ Today's bounties ${done}/${total} (r: rules)`,
+  menu: { rules: 'Rules and bounties', status: 'My progress', back: 'Back' },
   rules: {
-    intro: 'Rewards go to results a person can check. Prompts, tokens and tool calls earn nothing.',
-    line: (label, fame, dust, limit, today, rate) => `- ${label}: rep ${fame}, gold $${dust} (${limit}) · today ${today}, now ×${rate}`,
-    cap: n => `up to ${n} a day`,
-    taper: full => `half after ${full} a day, a fifth after ${full * 2}`,
-    commitBonus: '- Claim staked bonus: rep +5 and $3 when tests passed since the last commit, rep +2 for a small commit (8 edits or fewer)',
-    verifyNote: '- Bullseye is the first passing test after edits; Showdown won is fail → fix → pass. Running the same test again earns nothing.',
-    dayNote: (hour, offset) => `- A day starts at ${hour}:00 local time (UTC${offset}). There are no streaks; a day off costs nothing.`,
-    extras: '- Clean shot: a type check, lint or build passes after edits. Poster up: `gh pr create` opens a PR.\n- Every level opens a chest of $5 + the level. Three bounties a day pay $5–15 each, $15 more for all three. About one result in sixteen turns up a lucky nugget ($5–15).',
+    title: 'How rewards work',
+    intro: 'Only results a person can check pay.',
+    earn: '▸ Results (rep, gold)',
+    when: {
+      verify: 'The first passing test after you edit files',
+      comeback: 'A failing test, fixed, then passing',
+      check: 'A type check, lint or build with no errors after edits',
+      commit: 'A commit (more if tested, or small)',
+      pr: '`gh pr create` opens a pull request',
+      merge: '`gh pr merge` merges one',
+      plan: 'A plan approved before editing',
+      break: 'Back from a 20-minute break after an hour of work',
+      daily: 'Your first prompt of the day',
+    },
+    values: (fame, dust) => (fame > 0 ? `+${fame} rep ∙ $${dust}` : `$${dust}`),
+    today: n => `today ${n}`,
+    limit: { taper: full => `full value ${full} a day`, cap: n => `up to ${n} a day` },
+    taper: 'Many of one kind in a day: each new one is worth half, then a fifth.',
+    commitBonus: 'A tested commit earns +5 rep and $3 more; a small one (8 edits or fewer), +2 rep.',
+    bountyTitle: '▸ Bounties',
+    bounty: ['Three a day: one with your pal, two from your work.', 'Each pays once. All three pay $15 more.'],
+    bonusTitle: '▸ Bonus gold',
+    bonus: ['Level chest: $5 + the level, at every level', 'Lucky nugget: about 1 result in 16, $5-15', 'Treat: $6, a snack and extra tricks'],
+    noneTitle: '▸ No reward',
+    none: 'Prompts, tokens, tool calls, lines of code',
+    fair: (hour, offset) => `No streaks, no penalties. A day starts at ${hour}:00 (UTC${offset}).`,
+  },
+  progress: {
+    title: 'My progress',
+    toNext: (n, level) => `${n} rep to Lv${level}`,
+    today: '▸ Today',
+    nothingToday: 'Nothing yet. Pass a test or commit.',
+    count: (label, n) => `${label} ×${n}`,
+    tricks: (have, all) => `▸ Tricks ${have}/${all}`,
+    items: (have, all) => `▸ Wardrobe ${have}/${all}`,
+    allLearned: 'Every trick learned',
+    allUnlocked: 'Every item unlocked',
   },
 }
 
@@ -191,7 +251,7 @@ const KO: Words = {
   next: (level, name) => `다음 소품: Lv${level} ${name}`,
   close: '창 닫기 (/cappl)',
   switchCharacter: '캐릭터 바꾸기',
-  scrollHint: '▾ 상점은 창을 누르고 아래로',
+  scrollHint: '▾ 아래에 상점과 메뉴가 있어요',
   pickTitle: '함께할 친구를 고르세요',
   pick: name => `${name} 고르기`,
   current: ' (지금 함께하는 중)',
@@ -230,9 +290,10 @@ const KO: Words = {
   luckyToast: gold => `행운의 사금! +$${gold}`,
   bounties: '▸ 오늘의 현상금',
   quests: {
-    bullseye3: '과녁 명중 3번', commit2: '말뚝 박기 2번', check2: '깔끔한 사격 2번', comeback1: '결투 승리 1번',
-    merge1: '금맥 발견 1번', pr1: '전단 붙이기 1번', break1: '모닥불 휴식 1번', plan1: '지도 펼치기 1번',
-    pet3: '쓰다듬기 3번', treat1: '간식 주기 1번', trick2: '재주 보기 2번',
+    bullseye3: '고친 뒤 테스트 통과 3번', commit2: '커밋 2번', check2: '오류 없는 검사/빌드 2번',
+    comeback1: '실패한 테스트 고치기', merge1: 'PR 병합하기', pr1: 'PR 열기',
+    break1: '쉬었다 돌아오기', plan1: '고치기 전에 계획 승인',
+    pet3: '쓰다듬기 3번', treat1: '간식 주기', trick2: '재주 2번 보기',
   },
   questLine: (label, have, target, gold, isDone) => (isDone ? `✓ ${label} +$${gold}` : `▸ ${label} ${have}/${target} $${gold}`),
   bonusLine: (gold, isDone) => (isDone ? `✓ 셋 다 완료 +$${gold}` : `  셋 다 하면 +$${gold}`),
@@ -240,15 +301,48 @@ const KO: Words = {
   bonusToast: gold => `오늘 현상금을 모두 마쳤어요! +$${gold}`,
   sound: { normal: '보통', quiet: '작게', off: '끔' },
   soundSet: (now, next) => `효과음: ${now}. /cappl-sound를 한 번 더 입력하면 ${next}`,
+  hint: { idle: 'ctrl+x Tab 누르고 글자 키로 조작', focused: '⇅ 이동 ∙ Enter 누르기 ∙ Esc 나가기', scroll: 'Tab 다음 ∙ ⇅ 스크롤 ∙ Esc 나가기' },
+  keys: 'p 쓰다듬기 ∙ t 재주 ∙ f 간식 ∙ r 규칙 ∙ s 현황',
+  bountyHeader: (done, total) => `▸ 오늘의 현상금 ${done}/${total} (r: 설명)`,
+  menu: { rules: '규칙과 현상금', status: '내 현황', back: '돌아가기' },
   rules: {
-    intro: '보상은 사람이 확인한 결과에만 줘요. 프롬프트·토큰·도구 호출 수에는 주지 않아요.',
-    line: (label, fame, dust, limit, today, rate) => `- ${label}: 명성 ${fame}, 골드 $${dust} (${limit}) · 오늘 ${today}번, 지금 ×${rate}`,
-    cap: n => `하루 ${n}번까지`,
-    taper: full => `하루 ${full}번 넘으면 ½, ${full * 2}번 넘으면 ⅕`,
-    commitBonus: '- 말뚝 박기 덧보상: 직전 커밋 뒤 테스트로 확인했으면 명성 +5·$3, 파일 수정 8번 이하의 작은 커밋이면 명성 +2',
-    verifyNote: '- 과녁 명중은 파일을 고친 뒤 처음 통과한 테스트, 결투 승리는 실패 → 수정 → 통과예요. 같은 테스트를 다시 돌리면 0이에요.',
-    dayNote: (hour, offset) => `- 하루는 이 컴퓨터 시간 ${hour}시에 바뀌어요(UTC${offset}). 연속 출석 기록은 없고, 쉬어도 잃는 것은 없어요.`,
-    extras: '- 깔끔한 사격: 고친 뒤 타입 검사·린트·빌드가 통과. 전단 붙이기: `gh pr create`로 PR을 열었을 때.\n- 레벨이 오를 때마다 $5 + 레벨만큼 든 상자가 열려요. 하루 현상금 세 개는 하나에 $5~15, 셋 다 하면 $15를 더 줘요. 결과 열여섯 번에 한 번꼴로 행운의 사금($5~15)이 나와요.',
+    title: '보상 규칙',
+    intro: '사람이 확인할 수 있는 결과에만 보상해요.',
+    earn: '▸ 결과 보상 (명성, 골드)',
+    when: {
+      verify: '파일을 고친 뒤 처음 통과한 테스트',
+      comeback: '실패한 테스트를 고쳐서 통과',
+      check: '고친 뒤 오류 없이 끝난 타입 검사, 린트, 빌드',
+      commit: '커밋 (테스트로 확인했거나 작으면 더 받아요)',
+      pr: '`gh pr create`로 PR을 열었을 때',
+      merge: '`gh pr merge`로 병합했을 때',
+      plan: '고치기 전에 계획을 승인했을 때',
+      break: '한 시간 넘게 일하고 20분 넘게 쉬었다 돌아옴',
+      daily: '그날 첫 프롬프트',
+    },
+    values: (fame, dust) => (fame > 0 ? `명성 +${fame} ∙ $${dust}` : `$${dust}`),
+    today: n => `오늘 ${n}번`,
+    limit: { taper: full => `하루 ${full}번까지 제값`, cap: n => `하루 ${n}번까지` },
+    taper: '같은 보상을 하루에 많이 받으면 값이 절반, 다시 5분의 1로 줄어요.',
+    commitBonus: '테스트로 확인한 커밋은 명성 +5와 $3을, 파일 수정 8번 이하의 작은 커밋은 명성 +2를 더 받아요.',
+    bountyTitle: '▸ 현상금',
+    bounty: ['하루 세 개: 친구와 하는 일 하나, 작업 결과 둘.', '하나는 한 번만 받고, 셋 다 하면 $15를 더 받아요.'],
+    bonusTitle: '▸ 보너스 골드',
+    bonus: ['레벨 상자: 레벨이 오를 때마다 $5 + 레벨', '행운의 사금: 결과 16번에 한 번꼴로 $5-15', '간식: $6, 먹으면 재주를 더 자주 부려요'],
+    noneTitle: '▸ 보상 없음',
+    none: '프롬프트, 토큰, 도구 호출, 코드 줄 수',
+    fair: (hour, offset) => `연속 출석 기록도 벌칙도 없어요. 하루는 ${hour}시에 바뀌어요(UTC${offset}).`,
+  },
+  progress: {
+    title: '내 현황',
+    toNext: (n, level) => `Lv${level}까지 명성 ${n}`,
+    today: '▸ 오늘',
+    nothingToday: '아직 없어요. 테스트를 통과하거나 커밋해 보세요.',
+    count: (label, n) => `${label} ${n}번`,
+    tricks: (have, all) => `▸ 재주 ${have}/${all}`,
+    items: (have, all) => `▸ 옷장 ${have}/${all}`,
+    allLearned: '재주를 모두 배웠어요',
+    allUnlocked: '소품이 모두 열렸어요',
   },
 }
 
