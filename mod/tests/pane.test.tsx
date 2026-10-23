@@ -329,3 +329,74 @@ test('auto language follows Claude Code’s language setting', async ($, on) => 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   expect((await $.command.run({ command: 'howdy-status', ...RUN })).text).toMatch(/^Locki Lv1 새내기 · 명성 0/)
 })
+
+// $.state kept per session: after /clear the new session id starts with empty values.
+function sessionState(on: On, session: { id: string }) {
+  const bySession = new Map<string, Map<string, { value: unknown; version: number }>>()
+  const slot = (e: { plugin: string; key: string; id?: string }) => {
+    if (!bySession.has(session.id)) bySession.set(session.id, new Map())
+    const values = bySession.get(session.id)!
+    const name = `${e.plugin}/${e.key}/${e.id ?? ''}`
+
+    return { values, name, current: values.get(name) ?? { value: undefined, version: 0 } }
+  }
+  on('state.get', (_, e) => ({ value: slot(e).current }))
+  on('state.set', (_, e) => {
+    const { values, name, current } = slot(e)
+    if (e.ifVersion !== undefined && e.ifVersion !== current.version) return { value: { isSet: false, version: current.version } }
+    values.set(name, { value: e.value, version: current.version + 1 })
+
+    return { value: { isSet: true, version: current.version + 1 } }
+  })
+}
+
+function sessionEngine(on: On) {
+  const session = { id: 's1' }
+  on('session.id', () => ({ value: session.id }))
+  on('command.register', (_, e) => ({ value: { command: e.name } }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('tool.call', (_, e) => ({ result: {}, text: 'command' in e && e.command === 'pytest -q' ? '12 passed in 0.3s' : '' }))
+  on('classic.SessionStart', () => ({}))
+  sessionState(on, session)
+  const store = new Map<string, unknown>([
+    ['character', 'cappl'],
+    ['ledger:s1', { fame: 400, dust: 120, days: {}, lastAt: NOW - 60_000, activeSince: NOW - 600_000 }],
+    ['wallet', { owned: ['cappl/round-specs'], equipped: ['cappl/round-specs'], spent: 50 }],
+  ])
+  sharedStore(on, store)
+  mock.clock(on, { now: NOW })
+
+  return { session, store }
+}
+
+test('after /clear the pane keeps rep, gold, items and the character; new rewards go to the new ledger', async ($, on) => {
+  const { session, store } = sessionEngine(on)
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  // /clear sends no session.start, only SessionStart with source "clear".
+  session.id = 's2'
+  await $.classic.SessionStart({ source: 'clear' })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await text(ui, /Lv/)).toBe('Cappl Lv6 Stable Hand')
+  expect(await text(ui, /^Gold/)).toMatch(/^Gold \$70/)
+  expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs take off/)
+  await ui.unmount()
+
+  await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
+  await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
+  expect(store.get('ledger:s2')).toMatchObject({ fame: 5 })
+  expect(store.get('ledger:s1')).toMatchObject({ fame: 400 })
+})
+
+test('when the session id stays the same, as after /compact, the ledger stays put', async ($, on) => {
+  const { store } = sessionEngine(on)
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.classic.SessionStart({ source: 'compact' })
+  await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
+  await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
+  expect(store.get('ledger:s1')).toMatchObject({ fame: 405 })
+  expect([...store.keys()].filter(key => key.startsWith('ledger:'))).toEqual(['ledger:s1'])
+})

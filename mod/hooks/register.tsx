@@ -240,6 +240,24 @@ async function changeWallet($: EngineInterface, change: (wallet: Wallet, totals:
   return true
 }
 
+// /clear and /resume carry on under a new session id without a new session.start, and
+// the new session's $.state starts from the defaults. Move to that session's ledger
+// (after writes already queued for the old one) and publish everything again.
+function rejoin($: EngineInterface): Promise<unknown> {
+  runtime.queue = runtime.queue
+    .then(async () => {
+      const key = `ledger:${await $.session.id()}`
+      if (key === runtime.key) return
+      runtime.key = key
+      // The new session's values are empty, so publish even what looks unchanged.
+      runtime.synced = ''
+      await publish($, await loadWorld($))
+    })
+    .catch(() => undefined)
+
+  return runtime.queue
+}
+
 // Ledgers quiet for two days fold into `archive` to keep the key count down. A short
 // lease keeps two sessions from folding at once.
 async function compact($: EngineInterface) {
@@ -412,6 +430,13 @@ export const register: Register = (on, options) => {
     void compact($).catch(() => undefined)
 
     return next(e)
+  })
+
+  on('classic.SessionStart', async ($, e, next) => {
+    const started = await next(e)
+    if (e.source !== 'startup') await rejoin($)
+
+    return started
   })
 
   on('command.run', { command: 'howdy' }, async $ => {
