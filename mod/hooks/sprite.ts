@@ -1,15 +1,55 @@
-import type { CharacterId, FxKind, Mood } from '../types'
+import type { CharacterId, FxKind } from '../types'
 import { characterOf } from './characters'
-import { BODY, ITEM_ART, PALETTE, type BodyArt, type ItemArt, type ItemLayer, type Layer } from './characters/art'
+import {
+  BODY,
+  BUBBLES,
+  ITEM_ART,
+  PALETTE,
+  TREAT_ART,
+  type BodyArt,
+  type BrowKind,
+  type BubbleKind,
+  type EyeKind,
+  type ItemArt,
+  type ItemLayer,
+  type Layer,
+  type MouthKind,
+} from './characters/art'
 
-// Composes a character frame from its layers (characters/art.ts). One terminal cell
-// holds two pixels stacked with a half block (▀▄), so 32×28 pixels is 32×14 cells.
+// Composes a character frame from its layers (characters/art.ts) and a Look: which
+// eyes, mouth, paws and extras to show this tick (hooks/animations.ts decides). One
+// terminal cell holds two pixels stacked with a half block, so 32×28 pixels is 32×14 cells.
 
 export type Size = 32 | 16
+export type PawPose = 'rest' | 'tapL' | 'tapR' | 'cheer' | 'waveHi' | 'waveLo' | 'chin' | 'hold' | 'up' | 'stretch' | 'cover'
+export type Particles = 'hearts' | 'stars' | 'notes' | 'confetti'
+
+export type Look = {
+  eyes?: EyeKind
+  // Where the eyes look, in pixels (applies to every eye kind).
+  gaze?: readonly [number, number]
+  brows?: BrowKind
+  mouth?: MouthKind
+  blush?: boolean
+  bubble?: BubbleKind
+  sweat?: boolean
+  paws?: PawPose
+  // The whole pal shifted (hops, sways, bows).
+  body?: readonly [number, number]
+  // Pixels the hat rises; negative pulls it down over the eyes.
+  hat?: number
+  hatDx?: number
+  ears?: number
+  // Put down what the paws hold (instruments, cups, ropes).
+  hideHand?: boolean
+  // A treat held up to the mouth, and how many bites are gone (0 whole, 3 crumbs).
+  treat?: number
+  particles?: Particles
+}
 
 export type Pose = {
   character: CharacterId
-  mood: Mood
+  look: Look
   tick: number
   // Item ids of this character (`aviators`, not `locki/aviators`).
   equipped: readonly string[]
@@ -35,6 +75,13 @@ function px(grid: Grid, x: number, y: number, color: string, isBehind = false) {
   row[x] = color
 }
 
+// Bites come off the top right corner, a diagonal at a time.
+function bitten(layer: Layer, bites: number): Layer {
+  const width = layer[0]?.length ?? 0
+  const gone = bites * (width <= 2 ? 1 : 2)
+  return layer.map((row, y) => [...row].map((key, x) => (width - 1 - x + y < gone ? '.' : key)).join(''))
+}
+
 function stamp(grid: Grid, x0: number, y0: number, art: Layer, recolor: Readonly<Record<string, string>> = {}) {
   art.forEach((line, dy) => {
     for (let dx = 0; dx < line.length; dx += 1) {
@@ -49,15 +96,63 @@ function frameOf(art: ItemArt, tick: number): Layer {
   return art.frames[Math.floor(tick / 2) % art.frames.length] ?? art.frames[0]!
 }
 
-function cycle(list: readonly number[], tick: number): number {
-  return list.length === 0 ? 0 : (list[tick % list.length] ?? 0)
+// ── Paws ────────────────────────────────────────────────────────────────────
+
+type Offsets = readonly [readonly [number, number], readonly [number, number]]
+
+const PAWS: Readonly<Record<Size, Readonly<Record<Exclude<PawPose, 'cover'>, Offsets>>>> = {
+  32: {
+    rest: [[0, 0], [0, 0]],
+    tapL: [[0, -1], [0, 0]],
+    tapR: [[0, 0], [0, -1]],
+    cheer: [[-4, -12], [4, -12]],
+    waveHi: [[0, 0], [4, -11]],
+    waveLo: [[0, 0], [4, -8]],
+    chin: [[2, -5], [0, 0]],
+    up: [[0, -2], [0, -2]],
+    stretch: [[-4, -6], [4, -6]],
+    hold: [[1, -2], [-1, -2]],
+  },
+  16: {
+    rest: [[0, 0], [0, 0]],
+    tapL: [[0, -1], [0, 0]],
+    tapR: [[0, 0], [0, -1]],
+    cheer: [[-2, -6], [2, -6]],
+    waveHi: [[0, 0], [2, -5]],
+    waveLo: [[0, 0], [2, -4]],
+    chin: [[1, -2], [0, 0]],
+    up: [[0, -1], [0, -1]],
+    stretch: [[-2, -3], [2, -3]],
+    hold: [[0, -1], [0, -1]],
+  },
 }
 
-// ── Sparkles: drawn only on empty cells around the character ─────────────────
+function bounds(layer: Layer): { x: number; y: number; w: number; h: number } {
+  let x0 = 99, y0 = 99, x1 = -1, y1 = -1
+  layer.forEach((line, y) => {
+    for (let x = 0; x < line.length; x += 1) {
+      if (line[x] === '.') continue
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y)
+    }
+  })
+  return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 }
+}
+
+// Covering the eyes depends on where each pal's eyes are.
+function pawOffsets(body: BodyArt, pose: PawPose, size: Size): Offsets {
+  if (pose !== 'cover') return PAWS[size][pose]
+  return body.paws.map((paw, side) => {
+    const box = bounds(paw)
+    const [ex, ey] = body.face.eyeAt[side]!
+    return [Math.round(ex - (box.x + box.w / 2) + (size === 32 ? 1 : 0)), ey - box.y - 1] as const
+  }) as unknown as Offsets
+}
+
+// ── Sparkles and particles: drawn only on empty cells around the pal ──────────
 
 const ringCache = new Map<string, [number, number][]>()
 
-// Sixteen empty spots two or three pixels off the silhouette, spread evenly around it.
+// Sixteen empty spots one to three pixels off the silhouette, spread evenly around it.
 function ringSpots(body: BodyArt): [number, number][] {
   const key = `${body.width}x${body.height}:${body.head[Math.floor(body.height / 2)]}`
   const cached = ringCache.get(key)
@@ -89,6 +184,14 @@ function ringSpots(body: BodyArt): [number, number][] {
 
 const SPOTS_FOR: Record<FxKind, number> = { reward: 8, comeback: 10, merge: 12, level: 16, stage: 16, buy: 10 }
 const NOTE: Layer = ['..XX', '..X.', '..X.', 'XXX.', 'XX..']
+const HEART: Layer = ['X.X', 'XXX', '.X.']
+const CONFETTI = ['P', 'y', 'D', 'e', 'r', 'l', 'v']
+
+function shape(grid: Grid, art: Layer, x: number, y: number, color: string) {
+  art.forEach((line, dy) => {
+    for (let dx = 0; dx < line.length; dx += 1) if (line[dx] === 'X') px(grid, x + dx - 1, y + dy - 2, color, true)
+  })
+}
 
 function sparkles(grid: Grid, body: BodyArt, character: CharacterId, kind: FxKind, size: Size, tick: number) {
   const style = characterOf(character)
@@ -99,21 +202,13 @@ function sparkles(grid: Grid, body: BodyArt, character: CharacterId, kind: FxKin
     const [x, y] = spots[Math.floor((i * spots.length) / count)]!
     const color = colors[(i + Math.floor(tick / 2)) % colors.length]!
     const phase = (tick + i * 2) % 4
+    if (phase === 3) continue
     if (style.sparkle === 'note') {
       // Notes rise a pixel per tick and fade on the fourth.
-      if (phase === 3) continue
-      if (size === 16) {
-        px(grid, x, y - phase, color, true)
-        continue
-      }
-      NOTE.forEach((line, dy) => {
-        for (let dx = 0; dx < line.length; dx += 1) {
-          if (line[dx] === 'X') px(grid, x + dx - 2, y + dy - 4 - phase, color, true)
-        }
-      })
+      if (size === 16) px(grid, x, y - phase, color, true)
+      else shape(grid, NOTE, x - 1, y - 2 - phase, color)
       continue
     }
-    if (phase === 3) continue
     px(grid, x, y, color, true)
     if (phase >= 1) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) px(grid, x + dx, y + dy, color, true)
     if (phase === 2 && size === 32) {
@@ -122,47 +217,84 @@ function sparkles(grid: Grid, body: BodyArt, character: CharacterId, kind: FxKin
   }
 }
 
+// Hearts, stars, notes or confetti drifting up around the pal.
+function particles(grid: Grid, body: BodyArt, kind: Particles, size: Size, tick: number) {
+  const spots = ringSpots(body)
+  for (let i = 0; i < 6; i += 1) {
+    const [x, y] = spots[(i * 5 + 2) % spots.length]!
+    const rise = (tick + i * 3) % 6
+    if (rise === 5) continue
+    const yy = y - (size === 32 ? rise : Math.floor(rise / 2))
+    if (size === 16 || kind === 'confetti') {
+      const color = kind === 'hearts' ? 'P' : kind === 'notes' ? 'D' : kind === 'stars' ? 'y' : CONFETTI[(i + tick) % CONFETTI.length]!
+      px(grid, x, yy, color, true)
+      if (kind === 'confetti' && size === 32) px(grid, x + 2, yy + 3, CONFETTI[(i + tick + 3) % CONFETTI.length]!, true)
+      continue
+    }
+    if (kind === 'hearts') shape(grid, HEART, x, yy + 1, i % 2 === 0 ? 'P' : 'h')
+    else if (kind === 'notes') shape(grid, NOTE, x, yy, i % 2 === 0 ? 'D' : 'y')
+    else {
+      const color = i % 2 === 0 ? 'y' : 'O'
+      px(grid, x, yy, color, true)
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) px(grid, x + dx, yy + dy, color, true)
+    }
+  }
+}
+
 // ── A frame ─────────────────────────────────────────────────────────────────
 
-const LOOK = [0, 0, -1, -1, 0, 0, 1, 1]
-
 export function frame(pose: Pose): string[] {
-  const { mood, tick, size } = pose
+  const { tick, size, look } = pose
   const character = characterOf(pose.character)
   const body: BodyArt = BODY[character.id][size]
+  const face = body.face
   const art = ITEM_ART[character.id] ?? {}
   const worn = pose.equipped.flatMap(id => (art[id]?.[size] === undefined ? [] : [art[id]![size]]))
   const on = (where: ItemLayer) => worn.filter(item => item.layer === where)
-  const isWorking = mood === 'working'
-  const isHappy = mood === 'happy'
+
+  // The pal on its own grid first, so the whole of it can hop and sway.
+  const fig = blank(body.width, body.height)
+  stamp(fig, 0, -(look.ears ?? 0), body.ears)
+  stamp(fig, 0, 0, body.head)
+  if (look.blush === true) for (const [x, y] of face.blush.at) stamp(fig, x, y, face.blush.art)
+  const eye = face.eyes[look.eyes ?? 'open']
+  const [gx, gy] = look.gaze ?? [0, 0]
+  for (const [x, y] of face.eyeAt) stamp(fig, x + eye.dx + gx, y + eye.dy + gy, eye.art)
+  if (look.brows !== undefined) {
+    face.brows[look.brows].forEach((brow, side) => {
+      const [x, y] = face.eyeAt[side]!
+      stamp(fig, x + brow.dx, y + brow.dy, brow.art)
+    })
+  }
+  stamp(fig, body.nose.at[0], body.nose.at[1], body.nose.art)
+  if (look.mouth !== undefined) {
+    const mouth = face.mouths[look.mouth]
+    stamp(fig, face.mouthAt[0] + mouth.dx, face.mouthAt[1] + mouth.dy, mouth.art)
+  }
+  for (const item of on('face')) stamp(fig, 0, 0, frameOf(item, tick))
+  if (look.sweat === true) stamp(fig, face.sweat.at[0], face.sweat.at[1], face.sweat.art)
+
+  const hatX = look.hatDx ?? 0
+  const hatY = -(look.hat ?? 0)
+  const recolor = Object.assign({}, ...on('hat').map(item => item.recolor ?? {})) as Record<string, string>
+  stamp(fig, hatX, hatY, body.hat, recolor)
+  for (const item of on('hat')) stamp(fig, hatX, hatY, frameOf(item, tick))
+
+  const paws = look.paws ?? 'rest'
+  if (look.hideHand !== true && look.treat === undefined && paws === 'rest') for (const item of on('hand')) stamp(fig, 0, 0, frameOf(item, tick))
+  const offsets = pawOffsets(body, paws, size)
+  body.paws.forEach((paw, side) => stamp(fig, offsets[side]![0], offsets[side]![1], paw))
+  // The treat sits between the paws, in front of them.
+  if (look.treat !== undefined) stamp(fig, face.treatAt[0], face.treatAt[1], bitten(TREAT_ART[character.id]![size], look.treat))
+  for (const item of on('front')) stamp(fig, 0, 0, frameOf(item, tick))
+  if (look.bubble !== undefined) stamp(fig, face.bubbleAt[0], face.bubbleAt[1], BUBBLES[size][look.bubble])
 
   const grid = blank(body.width, body.height)
-  const ears = isHappy ? cycle(character.happy.ears, tick) : !isWorking && tick % 40 === 20 ? 1 : 0
-  stamp(grid, 0, -ears, body.ears)
-  stamp(grid, 0, 0, body.head)
-
-  // Eyes: blink now and then, read left and right while working, smile when happy.
-  if (isHappy) {
-    for (const [x, y] of body.eyes.happyAt) stamp(grid, x, y, body.eyes.happy)
-  } else {
-    const isBlink = !isWorking && tick % 24 === 23
-    const look = isWorking ? (LOOK[Math.floor(tick / 2) % LOOK.length] ?? 0) : 0
-    for (const [x, y] of body.eyes.at) stamp(grid, x + look, y, isBlink ? body.eyes.blink : body.eyes.open)
-  }
-  stamp(grid, body.nose.at[0], body.nose.at[1], body.nose.art)
-  for (const item of on('face')) stamp(grid, 0, 0, frameOf(item, tick))
-
-  const lift = isHappy ? cycle(character.happy.hat, tick) : 0
-  const recolor = Object.assign({}, ...on('hat').map(item => item.recolor ?? {})) as Record<string, string>
-  stamp(grid, 0, -lift, body.hat, recolor)
-  for (const item of on('hat')) stamp(grid, 0, -lift, frameOf(item, tick))
-
-  // While working the paws tap on the ledge and put down what they hold.
-  if (!isWorking) for (const item of on('hand')) stamp(grid, 0, 0, frameOf(item, tick))
-  body.paws.forEach((paw, side) => stamp(grid, 0, isWorking && tick % 2 === side ? -1 : 0, paw))
-  for (const item of on('front')) stamp(grid, 0, 0, frameOf(item, tick))
+  const [bx, by] = look.body ?? [0, 0]
+  fig.forEach((line, y) => line.forEach((pixel, x) => pixel !== '.' && px(grid, x + bx, y + by, pixel)))
 
   if (pose.fx !== undefined) sparkles(grid, body, character.id, pose.fx, size, tick)
+  if (look.particles !== undefined) particles(grid, body, look.particles, size, tick)
 
   // Backgrounds go under whatever is still empty, sparkles included.
   for (const item of on('back')) {
@@ -171,11 +303,7 @@ export function frame(pose: Pose): string[] {
     back.forEach((line, y) => line.forEach((pixel, x) => pixel !== '.' && px(grid, x, y, pixel, true)))
   }
 
-  const rows = grid.map(line => line.join(''))
-  // Happy: a little hop every other tick.
-  if (isHappy && tick % 2 === 1 && on('back').length === 0) return [...rows.slice(1), '.'.repeat(body.width)]
-
-  return rows
+  return grid.map(line => line.join(''))
 }
 
 // Raster `cells`: row-major, three little-endian u32 per cell [code point, fg, bg].
@@ -263,8 +391,7 @@ const SVG_LIMIT = 120_000
 // A looping animation of frames shown `tickMs` apart, as SMIL inside the SVG: each
 // distinct frame is a group whose visibility steps in turn. The desktop draws an
 // interactive Svg in a sandboxed frame, where SMIL runs without any redraws.
-export function animatedSvgOf(frames: readonly (readonly string[])[], tickMs: number): string {
-  const first = frames[0] ?? []
+function loopGroups(frames: readonly (readonly string[])[], tickMs: number): string {
   const distinct: string[] = []
   const order = frames.map(rows => {
     const signature = rows.join('\n')
@@ -272,24 +399,36 @@ export function animatedSvgOf(frames: readonly (readonly string[])[], tickMs: nu
     if (index < 0) index = distinct.push(signature) - 1
     return index
   })
-  if (distinct.length < 2) return svgOf(first)
+  if (distinct.length < 2) return pathsOf(frames[0] ?? [])
   const duration = `${(frames.length * tickMs) / 1000}s`
-  const groups = distinct.map((signature, index) => {
-    const values = order.map(shown => (shown === index ? 'visible' : 'hidden')).join(';')
-    const start = order[0] === index ? 'visible' : 'hidden'
-    const animate = `<animate attributeName="visibility" values="${values}" dur="${duration}" calcMode="discrete" repeatCount="indefinite"/>`
 
-    return `<g visibility="${start}">${pathsOf(signature.split('\n'))}${animate}</g>`
-  })
-  const svg = svgFrame(first[0]?.length ?? 0, first.length, groups.join(''))
+  return distinct
+    .map((signature, index) => {
+      const values = order.map(shown => (shown === index ? 'visible' : 'hidden')).join(';')
+      const start = order[0] === index ? 'visible' : 'hidden'
+      const animate = `<animate attributeName="visibility" values="${values}" dur="${duration}" calcMode="discrete" repeatCount="indefinite"/>`
 
-  // Too long for the element: fall back to every other frame, then to a still.
+      return `<g visibility="${start}">${pathsOf(signature.split('\n'))}${animate}</g>`
+    })
+    .join('')
+}
+
+// With `hover` frames, pointing at the picture plays them instead (CSS :hover inside
+// the sandboxed frame), so a desktop pal reacts to the mouse.
+export function animatedSvgOf(frames: readonly (readonly string[])[], tickMs: number, hover?: readonly (readonly string[])[]): string {
+  const first = frames[0] ?? []
+  const width = first[0]?.length ?? 0
+  const main = loopGroups(frames, tickMs)
+  const body =
+    hover === undefined || hover.length === 0
+      ? main
+      : `<style>.h{display:none}svg:hover .h{display:inline}svg:hover .m{display:none}</style><g class="m">${main}</g><g class="h">${loopGroups(hover, tickMs)}</g>`
+  const svg = svgFrame(width, first.length, body)
+
+  // Too long for the element: drop the hover loop, then every other frame, then to a still.
   if (svg.length <= SVG_LIMIT) return svg
+  if (hover !== undefined) return animatedSvgOf(frames, tickMs)
   if (frames.length >= 4) return animatedSvgOf(frames.filter((_, i) => i % 2 === 0), tickMs * 2)
 
   return svgOf(first)
 }
-
-// How many 250 ms ticks one loop of each mood takes: idle covers two blinks and an
-// ear twitch, working the eyes' left-right sweep, happy the hop and the hat tip.
-export const LOOP_TICKS: Readonly<Record<Mood, number>> = { idle: 48, working: 16, happy: 8 }

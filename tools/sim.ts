@@ -1,16 +1,21 @@
 // Replays real Claude Code history (the output of extract_events.py) through the
 // mod's own reward rules and measures rep and gold per active hour and the hours to
-// each rank. Usage: bun tools/sim.ts .data/events.jsonl [--json out.json] [--offset 540]
+// each rank, and gold from results, level chests, lucky nuggets and bounties (the
+// pal's own bounty, petting or a treat, is counted as done each day).
+// Usage: bun tools/sim.ts .data/events.jsonl [--json out.json] [--offset 540]
 import { readFileSync, writeFileSync } from 'node:fs'
 
 import type { Ledger, RewardKind } from '../mod/types'
 import { CHARACTERS } from '../mod/hooks/characters'
 import { WORDS } from '../mod/hooks/i18n'
 import {
+  BOUNTY_BONUS,
   FRESH_WORK,
   MAX_LEVEL,
   RANK_LEVELS,
   RULES,
+  checkOutcome,
+  chestsBetween,
   commitOutcome,
   countToday,
   credit,
@@ -18,8 +23,15 @@ import {
   emptyLedger,
   fameFor,
   isBreakOver,
+  levelOf,
+  luckyNugget,
   mergeOutcome,
   observe,
+  prOutcome,
+  questsOf,
+  readBounty,
+  seedOf,
+  settleBounty,
   testOutcome,
   touch,
   valueOf,
@@ -71,21 +83,37 @@ let presence: Ledger = emptyLedger()
 const seenDays = new Set<string>()
 const byDay = new Map<string, { fame: number; dust: number }>()
 const counts: Record<string, { n: number; fame: number; dust: number; diminished: number }> = {}
-const detection = { testPass: 0, testFail: 0, testUnknown: 0, exitZeroButFailed: 0, commits: 0, merges: 0 }
+const detection = { testPass: 0, testFail: 0, testUnknown: 0, exitZeroButFailed: 0, checkPass: 0, checkFail: 0, commits: 0, prs: 0, merges: 0 }
+const bounties = new Map<string, ReturnType<typeof readBounty>>()
 
-function grant(kind: RewardKind, at: number, extra: { isSmall?: boolean; isVerified?: boolean } = {}) {
+function pay(kind: RewardKind, day: string, fame: number, dust: number, rate = 1) {
+  ledger = credit(ledger, kind, day, fame, dust)
+  const row = (counts[kind] ??= { n: 0, fame: 0, dust: 0, diminished: 0 })
+  row.n += 1
+  row.fame += fame
+  row.dust += dust
+  if (rate < 1) row.diminished += 1
+  const today = byDay.get(day) ?? { fame: 0, dust: 0 }
+  byDay.set(day, { fame: today.fame + fame, dust: today.dust + dust })
+}
+
+function grant(kind: RewardKind, at: number, session: string, extra: { isSmall?: boolean; isVerified?: boolean } = {}) {
   const day = dayOf(at)
   const n = countToday([ledger], kind, day)
   const value = valueOf({ kind, ...extra }, n)
   if (value.rate === 0) return
-  ledger = credit(ledger, kind, day, value.fame, value.dust)
-  const row = (counts[kind] ??= { n: 0, fame: 0, dust: 0, diminished: 0 })
-  row.n += 1
-  row.fame += value.fame
-  row.dust += value.dust
-  if (value.rate < 1) row.diminished += 1
-  const today = byDay.get(day) ?? { fame: 0, dust: 0 }
-  byDay.set(day, { fame: today.fame + value.fame, dust: today.dust + value.dust })
+  const before = levelOf(ledger.fame).level
+  pay(kind, day, value.fame, value.dust, value.rate)
+  const nugget = kind === 'daily' ? 0 : luckyNugget(seedOf(`${session}:${at}:${n}`))
+  if (nugget > 0) pay('lucky', day, 0, nugget)
+  const after = levelOf(ledger.fame).level
+  if (after > before) pay('chest', day, 0, chestsBetween(before, after))
+  // The day's bounties; the pal's own is taken as done.
+  const quests = questsOf(day)
+  const settled = settleBounty(quests, count => (count === quests[0]!.count ? quests[0]!.target : countToday([ledger], count as RewardKind, day)), bounties.get(day) ?? readBounty(undefined))
+  bounties.set(day, settled.bounty)
+  for (const quest of settled.finished) pay('quest', day, 0, quest.gold)
+  if (settled.isBonus) pay('quest', day, 0, BOUNTY_BONUS)
 }
 
 for (const event of events) {
@@ -93,42 +121,52 @@ for (const event of events) {
   if (event.k === 'prompt') {
     if (!seenDays.has(day)) {
       seenDays.add(day)
-      grant('daily', event.t)
+      grant('daily', event.t, event.s)
     }
-    if (isBreakOver(presence.lastAt, presence.activeSince, event.t)) grant('break', event.t)
+    if (isBreakOver(presence.lastAt, presence.activeSince, event.t)) grant('break', event.t, event.s)
     presence = touch(presence, event.t)
     continue
   }
   // Agents end turns without a person; only a person's prompts count as presence.
   if (event.k === 'turn') continue
-  let signal: Signal | undefined
-  if (event.k === 'edit_ok') signal = { type: 'edit' }
-  if (event.k === 'plan_ok') signal = { type: 'plan' }
+  // The same order as the mod: a test or check, then a commit, a new PR, a merge.
+  const signals: Signal[] = []
+  if (event.k === 'edit_ok') signals.push({ type: 'edit' })
+  if (event.k === 'plan_ok') signals.push({ type: 'plan' })
   if (event.k === 'bash') {
     const command = event.cmd ?? ''
     const output = event.out ?? ''
     const isError = event.err === true
+    const isPass = testOutcome(command, output, isError)
+    if (isPass === true) detection.testPass += 1
+    if (isPass === false) {
+      detection.testFail += 1
+      if (!isError) detection.exitZeroButFailed += 1
+    }
+    if (isPass === undefined && /test/.test(command)) detection.testUnknown += 1
+    if (isPass !== undefined) signals.push({ type: 'test', isPass })
+    const isClean = isPass === undefined ? checkOutcome(command, output, isError) : undefined
+    if (isClean === true) detection.checkPass += 1
+    if (isClean === false) detection.checkFail += 1
+    if (isClean !== undefined) signals.push({ type: 'check', isPass: isClean })
     if (commitOutcome(command, output, isError)) {
       detection.commits += 1
-      signal = { type: 'commit' }
-    } else if (mergeOutcome(command, output, isError)) {
+      signals.push({ type: 'commit' })
+    }
+    if (prOutcome(command, output, isError)) {
+      detection.prs += 1
+      signals.push({ type: 'pr' })
+    }
+    if (mergeOutcome(command, output, isError)) {
       detection.merges += 1
-      signal = { type: 'merge' }
-    } else {
-      const isPass = testOutcome(command, output, isError)
-      if (isPass === true) detection.testPass += 1
-      if (isPass === false) {
-        detection.testFail += 1
-        if (!isError) detection.exitZeroButFailed += 1
-      }
-      if (isPass === undefined && /test/.test(command)) detection.testUnknown += 1
-      if (isPass !== undefined) signal = { type: 'test', isPass }
+      signals.push({ type: 'merge' })
     }
   }
-  if (signal === undefined) continue
-  const result = observe(works.get(event.s) ?? FRESH_WORK, signal)
-  works.set(event.s, result.work)
-  for (const earn of result.earned) grant(earn.kind, event.t, earn)
+  for (const signal of signals) {
+    const result = observe(works.get(event.s) ?? FRESH_WORK, signal)
+    works.set(event.s, result.work)
+    for (const earn of result.earned) grant(earn.kind, event.t, event.s, earn)
+  }
 }
 
 const days = [...activeByDay.keys()].sort()

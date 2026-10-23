@@ -7,10 +7,13 @@ import type { CharacterId } from '../types'
 // SoundPlayer and other Linux systems through paplay, pw-play or aplay.
 // Each character has its own voice: assets/sfx/<character>/<name>.wav.
 
-export type Sfx = 'coin' | 'comeback' | 'fanfare' | 'levelup' | 'stage' | 'buy' | 'equip' | 'error' | 'open' | 'close' | 'hello'
+export type Sfx =
+  | 'coin' | 'comeback' | 'fanfare' | 'levelup' | 'stage' | 'buy' | 'equip' | 'error' | 'open' | 'close' | 'hello'
+  | 'pet' | 'treat' | 'trick' | 'fail' | 'lucky' | 'quest' | 'chest'
 
 const PRIORITY: Record<Sfx, number> = {
-  open: 0, close: 0, equip: 1, error: 1, coin: 2, hello: 3, buy: 3, comeback: 3, fanfare: 4, levelup: 5, stage: 6,
+  open: 0, close: 0, equip: 1, error: 1, fail: 1, pet: 2, coin: 2, trick: 2, treat: 3, hello: 3, buy: 3, comeback: 3,
+  lucky: 4, quest: 4, fanfare: 4, chest: 5, levelup: 5, stage: 6,
 }
 
 type Player =

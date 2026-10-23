@@ -1,6 +1,6 @@
 # cappl-pals
 
-**LOCKI and CAPPL, the cowboy-hat pals of the [CAPPL](#the-cappl-app) app, grow with your Claude Code work.** Pick one. They peek over your prompt, tap their paws while Claude works, and cheer when a test passes, a commit lands or a pull request merges. Results earn rep and gold. Rep raises your rank from Greenhorn to Legend of the West; gold buys hats, shades, banjos and backdrops.
+**LOCKI and CAPPL, the cowboy-hat pals of the [CAPPL](#the-cappl-app) app, grow with your Claude Code work.** Pick one. They peek over your prompt and follow your session: a thought bubble while Claude thinks, a busy tongue while it edits, a nervous sweat while tests run, a nap when you step away. They cheer when a test passes, a commit lands or a pull request merges. Pet them, ask for a trick, or buy them a treat. Results earn rep and gold, and level chests, daily bounties and lucky nuggets add more gold. Rep raises your rank from Greenhorn to Legend of the West and teaches new tricks; gold buys hats, shades, banjos and backdrops.
 
 [![Picking CAPPL, a new rank, a banjo bought, switching to LOCKI (12-second highlight)](docs/cappl-pals-demo.gif)](docs/cappl-pals-demo.mp4)
 
@@ -8,7 +8,7 @@
 
 The pane, toasts and commands speak English and Korean.
 
-![LOCKI and CAPPL, idle, happy, celebrating and dressed up](docs/cappl-pals-hero.png)
+![LOCKI and CAPPL: idle, petted, thinking, eating a treat, celebrating, asleep and dressed up](docs/cappl-pals-hero.png)
 
 [한국어 README](README.ko.md)
 
@@ -56,11 +56,37 @@ Without auto-update, update by hand with `claude plugin update cappl-pals@cappl-
 | `/cappl-rules` | The reward table and how many of each you earned today. |
 | `/cappl-sound` | Cycle the sound: normal → quiet → off. |
 
-To use the pane's buttons, focus it with a click or `ctrl+x` then `Tab`. Then press `1`–`0` to buy an item or to put it on and take it off, `c` to switch characters, or `q` to close. On a wide fullscreen terminal (110 columns or more) the pane docks on the right. On other terminals it opens above the prompt. A low pane shows the small sprite with your stats beside it and a hint to scroll down to the shop.
+To use the pane's buttons, focus it with a click or `ctrl+x` then `Tab`. Then press `p` to pet your pal, `t` for a trick, `f` to give a treat, `1`–`0` to buy an item or to put it on and take it off, `c` to switch characters, or `q` to close. On a wide fullscreen terminal (110 columns or more) the pane docks on the right. On other terminals it opens above the prompt. A low pane shows the small sprite with your stats beside it and a hint to scroll down to the shop.
 
 Several sessions share one profile. Rep, gold, recent rewards, purchases and your choice of character show up in every open pane within about two seconds.
 
 The language follows Claude Code's `language` setting (Korean or English). To pin it, open `/config` and change **cappl-pals › Language**.
+
+## Moods and play
+
+The pal changes with what the session is doing.
+
+| Session | The pal |
+|---|---|
+| You send a prompt | Perks up with a `!` |
+| Claude is thinking | Paw on chin, a `…` bubble |
+| Reading or searching | Eyes scanning down the page |
+| Editing files | Tongue out, paws tapping |
+| Running a command | Swaying side to side |
+| Running tests | Wide eyes, a drop of sweat |
+| A test fails | Dizzy eyes, then a determined frown |
+| Waiting for your permission | A `?` bubble and a wave |
+| A turn ends | A little dance |
+| Five minutes with nothing going on | Falls asleep, `z z z` |
+| Nothing else going on | Blinks, looks around, stretches, yawns, hums and shows off tricks |
+
+| Button | Cost | What happens |
+|---|---|---|
+| Pet `p` | Free | Heart eyes and hearts. Pet three times quickly for a happy wiggle. |
+| Trick `t` | Free | The next trick your pal knows. Each pal learns ten, from a wave at Lv2 to a big finale at Lv50. |
+| Treat `f` | $6 | LOCKI eats a star cookie, CAPPL a maple biscuit. Then they blush for 10 minutes and show off tricks twice as often. |
+
+Petting and tricks never earn rep. On the desktop app the pal plays the same moves, and waves when you hover over it.
 
 ## The pals
 
@@ -88,12 +114,22 @@ Rewards go to results a person can check, never to how much Claude did. Prompts,
 | Bullseye | The first passing test after you edit files | 5 | $3 |
 | Showdown won | A test fails, you fix it, it passes | 8 | $5 |
 | Claim staked | A commit (+5 rep and $3 more if tests passed since the last one, +2 rep if it is small) | 3 | $2 |
+| Clean shot | A type check, lint or build with no errors after you edit files | 2 | $2 |
+| Poster up | `gh pr create` opens a pull request | 4 | $3 |
 | Gold strike | `gh pr merge` succeeds | 15 | $10 |
 | Trail mapped | A plan approved before editing | 3 | $2 |
 | Campfire rest | Back from a 20-minute-plus break after an hour of work | 2 | $4 |
 | Saddled up | Your first prompt of the day | 0 | $10 |
 
-If you earn many rewards of one kind in a day, each new one is worth half, then a fifth. There are no streaks and no penalties, and a day off costs nothing. A day starts at 05:00 on your computer's clock. Level 50 takes about 1,000 active hours at a steady pace. The numbers and their reasoning are in [docs/reward-design.md](docs/reward-design.md).
+Gold also comes from:
+
+| Bonus | When | Gold |
+|---|---|---|
+| Level chest | Every level you reach | $5 + the level |
+| Bounties | Three a day in the pane: one with your pal, two from your work | $5–$15 each, $15 more for all three |
+| Lucky nugget | About one result in sixteen | $5–$15 |
+
+If you earn many rewards of one kind in a day, each new one is worth half, then a fifth. There are no streaks and no penalties, and a day off costs nothing. A day starts at 05:00 on your computer's clock. Level 50 takes about 850 active hours at a steady pace. The numbers and their reasoning are in [docs/reward-design.md](docs/reward-design.md).
 
 ## Privacy
 
@@ -101,14 +137,14 @@ cappl-pals has no server and makes no network calls. It reads no files, and the 
 
 ## Tune the pace to your own history
 
-The level curve was calibrated on 27 days (185 active hours) of one heavy user's Claude Code history. To see how fast it runs for you:
+The level curve was calibrated on 28 days (189 active hours) of one heavy user's Claude Code history. To see how fast it runs for you:
 
 ```sh
 python3 -I tools/extract_events.py ~/.claude/projects .data/events.jsonl
 bun tools/sim.ts .data/events.jsonl
 ```
 
-No prompts or code are kept. For test, commit and merge commands only, the command and the start and end of its output go to `.data/`, which git ignores. To change the pace, change `LEVEL_BASE` in `mod/hooks/rules.ts`.
+No prompts or code are kept. For test, check, commit, pull request and merge commands only, the command and the start and end of its output go to `.data/`, which git ignores. To change the pace, change `LEVEL_BASE` in `mod/hooks/rules.ts`.
 
 ## Develop
 

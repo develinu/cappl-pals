@@ -250,6 +250,128 @@ def cappl16():
     }
 
 
+# ── Faces, bubbles and treats ────────────────────────────────────────────────
+# Expressions are stamps placed relative to each eye (`dx`, `dy` from the eye's
+# anchor), the mouth anchor under the nose, and fixed spots for blush, sweat, the
+# speech bubble and a held treat. The mod picks them per tick (hooks/animations.ts).
+
+
+def stamp(art, dx=0, dy=0):
+    return {"art": art, "dx": dx, "dy": dy}
+
+
+def face32(who):
+    k = "K" if who == "locki" else "t"
+    eyes = {
+        "open": stamp([f"w{k}", f"{k}{k}", f"{k}{k}"]),
+        "blink": stamp(["..", "..", f"{k}{k}"]),
+        "closed": stamp([f"{k}..{k}", f".{k}{k}."], -1, 1),
+        "happy": stamp([f".{k}{k}.", f"{k}..{k}"], -1, 1),
+        "shiny": stamp([f"w{k}", f"{k}{k}", f"{k}w"]),
+        "heart": stamp(["P.P", "PPP", ".P."], -1, 0),
+        "star": stamp([".y.", "yly", ".y."], -1, 0),
+        "wide": stamp([f".{k}{k}.", f"{k}w{k}{k}", f"{k}{k}{k}{k}", f".{k}{k}."], -1, -1),
+        "x": stamp([f"{k}.{k}", f".{k}.", f"{k}.{k}"], -1, 0),
+        "sleepy": stamp(["..", f"{k}{k}", f"{k}{k}"]),
+    }
+    brows = {
+        "worried": [stamp([f".{k}", f"{k}."], -1, -3), stamp([f"{k}.", f".{k}"], 1, -3)],
+        "determined": [stamp([f"{k}.", f".{k}"], -1, -3), stamp([f".{k}", f"{k}."], 1, -3)],
+    }
+    mouths = {
+        "open": stamp([f"{k}PP{k}", f".{k}{k}."]),
+        "w": stamp([f"{k}.{k}{k}.{k}", f".{k}..{k}."], -1, 0),
+        "o": stamp([f".{k}{k}.", f"{k}..{k}", f".{k}{k}."]),
+        "tongue": stamp([f"{k}{k}{k}P", "...P"]),
+        "chomp": stamp([f"{k}{k}{k}{k}"]),
+        "yawn": stamp([f".{k}{k}.", f"{k}PP{k}", f"{k}PP{k}", f".{k}{k}."]),
+        "smile": stamp([f"{k}..{k}", f".{k}{k}."]),
+    }
+    if who == "locki":
+        eye_at, mouth_at, blush_at, sweat_at, treat_at = [[10, 15], [20, 15]], [14, 21], [[5, 19], [24, 19]], [27, 11], [14, 22]
+    else:
+        eye_at, mouth_at, blush_at, sweat_at, treat_at = [[11, 17], [19, 17]], [14, 23], [[7, 21], [23, 21]], [27, 13], [14, 22]
+    return {
+        "eyeAt": eye_at, "eyes": eyes, "brows": brows, "mouthAt": mouth_at, "mouths": mouths,
+        "blush": {"at": blush_at, "art": ["hhh"]}, "sweat": {"at": sweat_at, "art": [".D", "DD", "DA"]},
+        "bubbleAt": [25, 0], "treatAt": treat_at,
+    }
+
+
+def face16(who):
+    k = "K" if who == "locki" else "t"
+    eyes = {
+        "open": stamp([k, k]),
+        "blink": stamp([".", k]),
+        "closed": stamp([".", k]),
+        "happy": stamp([f".{k}.", f"{k}.{k}"], -1, 0),
+        "shiny": stamp(["w", k]),
+        "heart": stamp(["P", "P"]),
+        "star": stamp(["y", "l"]),
+        "wide": stamp([f"{k}{k}", f"{k}{k}"]),
+        "x": stamp([f"{k}.{k}", f".{k}."], -1, 0),
+        "sleepy": stamp([".", k]),
+    }
+    brows = {"worried": [stamp([k], 0, -1), stamp([k], 0, -1)], "determined": [stamp([k], 0, -1), stamp([k], 0, -1)]}
+    mouths = {
+        "open": stamp(["PP"]), "w": stamp([f"{k}.{k}"], 0, 0), "o": stamp([k], 1, 0), "tongue": stamp([".P"]),
+        "chomp": stamp([f"{k}{k}"]), "yawn": stamp(["PP", "PP"]), "smile": stamp([f"{k}{k}"]),
+    }
+    if who == "locki":
+        eye_at, mouth_at, blush_at, sweat_at, treat_at = [[5, 7], [10, 7]], [7, 10], [[3, 9], [12, 9]], [13, 5], [6, 10]
+    else:
+        eye_at, mouth_at, blush_at, sweat_at, treat_at = [[5, 8], [10, 8]], [7, 11], [[3, 10], [12, 10]], [13, 6], [6, 11]
+    return {
+        "eyeAt": eye_at, "eyes": eyes, "brows": brows, "mouthAt": mouth_at, "mouths": mouths,
+        "blush": {"at": blush_at, "art": ["h"]}, "sweat": {"at": sweat_at, "art": ["D", "D"]},
+        "bubbleAt": [12, 0], "treatAt": treat_at,
+    }
+
+
+BUBBLE_SYMBOLS = {
+    "!": (["..X..", "..X..", "..X..", ".....", "..X.."], "r"),
+    "?": ([".XXX.", "...X.", "..X..", ".....", "..X.."], "k"),
+    "heart": ([".....", "XX.XX", "XXXXX", ".XXX.", "..X.."], "P"),
+    "note": (["..XX.", "..X.X", "..X..", "XXX..", "XX..."], "k"),
+    "dots": ([".....", ".....", "X.X.X", ".....", "....."], "G"),
+    "star": (["..X..", ".XXX.", "XXXXX", ".XXX.", ".X.X."], "y"),
+}
+
+
+def bubble_art(symbol_rows, color):
+    out = [".ggggg."]
+    for line in symbol_rows:
+        out.append("g" + "".join(color if c == "X" else "w" for c in line[:5]) + "g")
+    out.append(".ggggg.")
+    out.append(".g.....")
+    return out
+
+
+BUBBLE_SYMBOLS_16 = {
+    "!": (["X", "X", ".", "X"], "r"),
+    "?": (["XX", ".X", "X.", "..", "X."], "k"),
+    "heart": (["X.X", "XXX", ".X."], "P"),
+    "note": ([".X", ".X", "XX"], "k"),
+    "dots": (["X.X.X"], "G"),
+    "star": ([".X.", "XXX", ".X."], "y"),
+}
+
+
+def bubbles():
+    big = {name: bubble_art(rows, color) for name, (rows, color) in BUBBLE_SYMBOLS.items()}
+    small = {name: ["".join(color if c == "X" else "." for c in line) for line in rows] for name, (rows, color) in BUBBLE_SYMBOLS_16.items()}
+    big["zzz"] = ["..AAAA.", "....A..", "...A...", "..AAAA.", "AAA....", ".A.....", "AAA...."]
+    small["zzz"] = ["AAA", ".A.", "AAA"]
+    return {32: big, 16: small}
+
+
+TREATS = {
+    # A pink-frosted star cookie for LOCKI, a maple biscuit for CAPPL.
+    "locki": {32: ["..P..", ".mPm.", "mPmPm", ".mmm.", ".m.m."], 16: ["mP", "Pm"]},
+    "cappl": {32: [".xxx.", "xmlmx", "xmmmx", "xmlmx", ".xxx."], 16: ["xm", "mx"]},
+}
+
+
 # ── Items ─────────────────────────────────────────────────────────────────────
 # Each item is drawn on one layer: "back" (behind the character, empty cells only),
 # "face" (over the eyes), "hat" (over the hat, lifts with it), "hand" (under the
@@ -506,7 +628,7 @@ PALETTE = {
     "r": "#E5484D", "d": "#A3272B", "m": "#D9A066", "M": "#A0703F", "x": "#8B5A2B", "X": "#5C3A1A",
     "e": "#5BA35E", "s": "#C9D1DB", "S": "#7C8796", "F": "#F97316", "a": "#FDE047", "A": "#E7EEF5",
     "u": "#FB923C", "U": "#E879A8", "v": "#7C5CC4", "z": "#27235E", "Z": "#17143D", "W": "#F4F1EA",
-    "V": "#CFC8BA", "O": "#F59E0B", "q": "#2A2A30", "j": "#A7B0BC", "D": "#8ECDF0", "I": "#C4E6F6", "E": "#3E7D47", "J": "#E8C98F",
+    "V": "#CFC8BA", "h": "#F7A1BD", "O": "#F59E0B", "q": "#2A2A30", "j": "#A7B0BC", "D": "#8ECDF0", "I": "#C4E6F6", "E": "#3E7D47", "J": "#E8C98F",
 }
 
 
@@ -585,6 +707,23 @@ export type BodyArt = {
     happyAt: readonly (readonly [number, number])[]
   }
   nose: { at: readonly [number, number]; art: Layer }
+  face: Face
+}
+export type Stamp = { art: Layer; dx: number; dy: number }
+export type EyeKind = 'open' | 'blink' | 'closed' | 'happy' | 'shiny' | 'heart' | 'star' | 'wide' | 'x' | 'sleepy'
+export type BrowKind = 'worried' | 'determined'
+export type MouthKind = 'open' | 'w' | 'o' | 'tongue' | 'chomp' | 'yawn' | 'smile'
+export type BubbleKind = '!' | '?' | 'heart' | 'note' | 'dots' | 'star' | 'zzz'
+export type Face = {
+  eyeAt: readonly (readonly [number, number])[]
+  eyes: Readonly<Record<EyeKind, Stamp>>
+  brows: Readonly<Record<BrowKind, readonly [Stamp, Stamp]>>
+  mouthAt: readonly [number, number]
+  mouths: Readonly<Record<MouthKind, Stamp>>
+  blush: { at: readonly (readonly [number, number])[]; art: Layer }
+  sweat: { at: readonly [number, number]; art: Layer }
+  bubbleAt: readonly [number, number]
+  treatAt: readonly [number, number]
 }
 export type ItemArt = { layer: ItemLayer; frames: readonly Layer[]; recolor?: Readonly<Record<string, string>> }
 """
@@ -609,6 +748,7 @@ def ts_body(art, indent):
         f"{pad}  eyes: {{ at: {json.dumps(eyes['at'])}, open: {json.dumps(eyes['open'])}, blink: {json.dumps(eyes['blink'])}, "
         f"happy: {json.dumps(eyes['happy'])}, happyAt: {json.dumps(eyes['happyAt'])} }},\n"
         f"{pad}  nose: {{ at: {json.dumps(art['nose']['at'])}, art: {json.dumps(art['nose']['art'])} }},\n"
+        f"{pad}  face: {json.dumps(art['face'])},\n"
         f"{pad}}}"
     )
 
@@ -633,6 +773,8 @@ def emit(arts, items):
             out.append(f"    {size}: {ts_body(art, 4)},")
         out.append("  },")
     out.append("} as const satisfies Record<string, Record<32 | 16, BodyArt>>\n")
+    out.append(f"export const BUBBLES: Readonly<Record<32 | 16, Readonly<Record<BubbleKind, Layer>>>> = {json.dumps(bubbles())}\n")
+    out.append(f"export const TREAT_ART: Readonly<Record<string, Record<32 | 16, Layer>>> = {json.dumps(TREATS)}\n")
     out.append("export const ITEM_ART: Readonly<Record<string, Readonly<Record<string, Record<32 | 16, ItemArt>>>>> = {")
     for name, sizes in items.items():
         out.append(f"  {name}: {{")
@@ -691,6 +833,9 @@ def icon(path, arts, size=1024):
 
 if __name__ == "__main__":
     arts = {"locki": {32: locki32(), 16: locki16()}, "cappl": {32: cappl32(), 16: cappl16()}}
+    for who in arts:
+        arts[who][32]["face"] = face32(who)
+        arts[who][16]["face"] = face16(who)
     items = {"locki": locki_items32(), "cappl": cappl_items32()}
     emit(arts, {"locki": {32: items["locki"], 16: locki_items16()}, "cappl": {32: items["cappl"], 16: cappl_items16()}})
     if "--icon" in sys.argv:

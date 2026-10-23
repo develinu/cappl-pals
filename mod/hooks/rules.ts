@@ -1,4 +1,4 @@
-import type { CharacterId, DayCounts, Ledger, RewardKind, Totals, Wallet } from '../types'
+import type { CareKind, CharacterId, DayCounts, Ledger, ResultKind, RewardKind, Totals, Wallet } from '../types'
 import { CHARACTERS, itemOf } from './characters'
 
 // ── Reward table ───────────────────────────────────────────────────────────
@@ -9,8 +9,10 @@ import { CHARACTERS, itemOf } from './characters'
 
 type Rule = { fame: number; dust: number; full: number; cap?: number }
 
-export const RULES: Record<RewardKind, Rule> = {
+export const RULES: Record<ResultKind, Rule> = {
   verify: { fame: 5, dust: 3, full: 12 },
+  check: { fame: 2, dust: 2, full: 15 },
+  pr: { fame: 4, dust: 3, full: 5 },
   comeback: { fame: 8, dust: 5, full: 5 },
   commit: { fame: 3, dust: 2, full: 10 },
   merge: { fame: 15, dust: 10, full: 4 },
@@ -42,7 +44,7 @@ export function dayOf(now: number, offsetMinutes: number): string {
   return new Date(shifted).toISOString().slice(0, 10)
 }
 
-export function rateOf(kind: RewardKind, countToday: number): number {
+export function rateOf(kind: ResultKind, countToday: number): number {
   const rule = RULES[kind]
   if (rule.cap !== undefined && countToday >= rule.cap) return 0
   if (countToday < rule.full) return 1
@@ -51,7 +53,7 @@ export function rateOf(kind: RewardKind, countToday: number): number {
   return 0.2
 }
 
-export type Earn = { kind: RewardKind; isSmall?: boolean; isVerified?: boolean }
+export type Earn = { kind: ResultKind; isSmall?: boolean; isVerified?: boolean }
 
 export function valueOf(earn: Earn, countToday: number): { fame: number; dust: number; rate: number } {
   const rule = RULES[earn.kind]
@@ -86,6 +88,10 @@ const PASS_COUNT = /(\d+)\s+(?:passed|passing|pass)\b|(\d+)\s+examples?,\s+0\s+f
 const FAIL_MARK = /Some tests failed|FAILURES!|^FAIL\b|^--- FAIL|test result: FAILED|^FAILED\b|Tests? failed/m
 const PASS_MARK = /All tests passed!|^ok\s+\S+|test result: ok\./m
 
+export function isTestCommand(command: string): boolean {
+  return TEST_COMMAND.test(command)
+}
+
 export function testOutcome(command: string, output: string, isError: boolean): boolean | undefined {
   if (!TEST_COMMAND.test(command)) return undefined
   const failed = sum(output, FAIL_COUNT)
@@ -114,6 +120,31 @@ export function commitOutcome(command: string, output: string, isError: boolean)
   return !isError && COMMIT_COMMAND.test(command) && !COMMIT_EMPTY.test(output)
 }
 
+// A type check, lint or build that ends clean after edits. These rarely pipe, and
+// print errors when they fail, so a clean exit with no error line is a pass. The tool
+// must be what runs (first in the command or after `&&`, `;`, `|`, `npx` and the like),
+// so `npm install -D eslint`, `grep tsc` or `tsc --version` are not checks.
+const RUN_AT = String.raw`(?:^|\n|&&|\|\||;|\||\$\(|\b(?:npx|bunx|pnpm\s+(?:exec|dlx)|yarn\s+(?:exec|dlx)|uv\s+run|poetry\s+run|python3?\s+-m))\s*`
+const CHECK_TOOL = String.raw`(?:tsc|vue-tsc|eslint|biome\s+(?:check|lint)|ruff\s+check|mypy|pyright|flake8|pylint|cargo\s+(?:check|build|clippy)|go\s+(?:build|vet)|(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:build|lint|typecheck|type-check|check)|swift\s+build|dotnet\s+build|gradlew?\s+build|mvn\s+(?:\S+\s+)*compile|make\s+(?:build|lint)|claude\s+plugin\s+validate)\b`
+const CHECK_COMMAND = new RegExp(`${RUN_AT}(?:\\S*/)?${CHECK_TOOL}`)
+const CHECK_NOT_RUN = /\s--(?:version|help|init)\b|\s-v\s*$/
+const CHECK_FAIL = /\berror(?![-.\w/])|\berrors?:|\b[1-9]\d*\s+errors?\b|✖|✘|\b[1-9]\d*\s+problems?\b|\bfailed\b|FAILED|Traceback|panicked/i
+const CHECK_CLEAN = /\b0 errors?\b|\bno (?:errors|issues|problems)\b|found 0/i
+
+export function checkOutcome(command: string, output: string, isError: boolean): boolean | undefined {
+  if (!CHECK_COMMAND.test(command) || CHECK_NOT_RUN.test(command) || TEST_COMMAND.test(command)) return undefined
+  if (isError) return false
+  if (CHECK_FAIL.test(output) && !CHECK_CLEAN.test(output)) return false
+
+  return true
+}
+
+// `gh pr create` prints the new PR's address; "already exists" names an old one.
+const PR_COMMAND = /\bgh\s+pr\s+create\b/
+export function prOutcome(command: string, output: string, isError: boolean): boolean {
+  return !isError && PR_COMMAND.test(command) && /https:\/\/github\.com\/\S+\/pull\/\d+/.test(output) && !/already exists/i.test(output)
+}
+
 const MERGE_COMMAND = /\bgh\s+pr\s+merge\b/
 export function mergeOutcome(command: string, output: string, isError: boolean): boolean {
   return (
@@ -131,21 +162,25 @@ export type Work = {
   isFailing: boolean
   isFixing: boolean
   isVerified: boolean
+  // Edits since the last clean type check, lint or build.
+  isUnchecked: boolean
   edits: number
 }
-export const FRESH_WORK: Work = { isDirty: false, isFailing: false, isFixing: false, isVerified: false, edits: 0 }
+export const FRESH_WORK: Work = { isDirty: false, isFailing: false, isFixing: false, isVerified: false, isUnchecked: false, edits: 0 }
 
 export type Signal =
   | { type: 'edit' }
   | { type: 'test'; isPass: boolean }
+  | { type: 'check'; isPass: boolean }
   | { type: 'commit' }
   | { type: 'merge' }
+  | { type: 'pr' }
   | { type: 'plan' }
 
 export function observe(work: Work, signal: Signal): { work: Work; earned: Earn[] } {
   switch (signal.type) {
     case 'edit':
-      return { work: { ...work, isDirty: true, isFixing: work.isFailing, edits: work.edits + 1 }, earned: [] }
+      return { work: { ...work, isDirty: true, isUnchecked: true, isFixing: work.isFailing, edits: work.edits + 1 }, earned: [] }
     case 'test': {
       if (!signal.isPass) {
         return { work: { ...work, isFailing: true, isFixing: false }, earned: [] }
@@ -174,8 +209,13 @@ export function observe(work: Work, signal: Signal): { work: Work; earned: Earn[
           { kind: 'commit', isSmall: work.edits > 0 && work.edits <= SMALL_COMMIT_EDITS, isVerified: work.isVerified },
         ],
       }
+    case 'check':
+      if (!signal.isPass) return { work, earned: [] }
+      return { work: { ...work, isUnchecked: false }, earned: work.isUnchecked ? [{ kind: 'check' }] : [] }
     case 'merge':
       return { work, earned: [{ kind: 'merge' }] }
+    case 'pr':
+      return { work, earned: [{ kind: 'pr' }] }
     case 'plan':
       return { work, earned: work.isDirty ? [] : [{ kind: 'plan' }] }
   }
@@ -238,7 +278,15 @@ function previousDay(day: string): string {
   return new Date(Date.parse(`${day}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10)
 }
 
-export function countToday(ledgers: readonly Ledger[], kind: RewardKind, day: string): number {
+// Counts one more pet, treat or trick for the day, with nothing paid.
+export function tally(ledger: Ledger, kind: CareKind, day: string): Ledger {
+  const counts: DayCounts = ledger.days[day] ?? {}
+  const kept = Object.fromEntries(Object.entries(ledger.days).filter(([key]) => key >= previousDay(day)))
+
+  return { ...ledger, days: { ...kept, [day]: { ...counts, [kind]: (counts[kind] ?? 0) + 1 } } }
+}
+
+export function countToday(ledgers: readonly Ledger[], kind: RewardKind | CareKind, day: string): number {
   return ledgers.reduce((total, ledger) => total + (ledger.days[day]?.[kind] ?? 0), 0)
 }
 
@@ -294,6 +342,97 @@ export function rankOf(level: number): number {
 // Fans are a decorative number that grows with rep (a taste of an idle game).
 export function fansOf(fame: number): number {
   return Math.floor(fame * 3 + (fame / 40) ** 2)
+}
+
+// ── Bonuses: level chests, lucky nuggets, the day's bounties ───────────────────
+
+// Every level reached opens a chest of gold, bigger as levels go up.
+export function chestFor(level: number): number {
+  return 5 + level
+}
+
+export function chestsBetween(from: number, to: number): number {
+  let gold = 0
+  for (let level = from + 1; level <= to; level += 1) gold += chestFor(level)
+
+  return gold
+}
+
+function hash(n: number): number {
+  let x = Math.imul(n | 0, 2654435761) >>> 0
+  x ^= x >>> 15
+  x = Math.imul(x, 2246822519) >>> 0
+  x ^= x >>> 13
+
+  return x >>> 0
+}
+
+export function seedOf(text: string): number {
+  let n = 7
+  for (let i = 0; i < text.length; i += 1) n = (Math.imul(n, 31) + text.charCodeAt(i)) | 0
+
+  return hash(n)
+}
+
+// About one result in sixteen turns up a lucky nugget of $5–$15.
+export const LUCKY_ODDS = 16
+export function luckyNugget(seed: number): number {
+  const roll = hash(seed)
+  if (roll % LUCKY_ODDS !== 0) return 0
+
+  return 5 + (Math.floor(roll / LUCKY_ODDS) % 11)
+}
+
+export type Quest = { id: string; count: ResultKind | CareKind; target: number; gold: number }
+
+// Work bounties, weighted toward the ones most days can finish.
+const WORK_QUESTS: readonly (Quest & { weight: number })[] = [
+  { id: 'bullseye3', count: 'verify', target: 3, gold: 8, weight: 3 },
+  { id: 'commit2', count: 'commit', target: 2, gold: 8, weight: 3 },
+  { id: 'check2', count: 'check', target: 2, gold: 8, weight: 2 },
+  { id: 'comeback1', count: 'comeback', target: 1, gold: 10, weight: 1 },
+  { id: 'merge1', count: 'merge', target: 1, gold: 15, weight: 1 },
+  { id: 'pr1', count: 'pr', target: 1, gold: 10, weight: 1 },
+  { id: 'break1', count: 'break', target: 1, gold: 8, weight: 1 },
+  { id: 'plan1', count: 'plan', target: 1, gold: 8, weight: 1 },
+]
+const CARE_QUESTS: readonly Quest[] = [
+  { id: 'pet3', count: 'pet', target: 3, gold: 5 },
+  { id: 'treat1', count: 'treat', target: 1, gold: 5 },
+  { id: 'trick2', count: 'trick', target: 2, gold: 5 },
+]
+// Paid once all three of the day's bounties are done.
+export const BOUNTY_BONUS = 15
+
+// The day's three bounties: one to do with the pal, two from the work.
+export function questsOf(day: string): Quest[] {
+  const seed = seedOf(day)
+  const care = CARE_QUESTS[seed % CARE_QUESTS.length]!
+  const bag = WORK_QUESTS.flatMap(quest => Array.from({ length: quest.weight }, () => quest))
+  const first = bag[hash(seed + 1) % bag.length]!
+  const rest = bag.filter(quest => quest.id !== first.id)
+  const second = rest[hash(seed + 2) % rest.length]!
+  const strip = ({ id, count, target, gold }: Quest): Quest => ({ id, count, target, gold })
+
+  return [strip(care), strip(first), strip(second)]
+}
+
+export type Bounty = { done: string[]; bonus: boolean }
+
+export function readBounty(raw: unknown): Bounty {
+  if (typeof raw !== 'object' || raw === null) return { done: [], bonus: false }
+  const value = raw as Partial<Bounty>
+
+  return { done: Array.isArray(value.done) ? value.done.filter(id => typeof id === 'string') : [], bonus: value.bonus === true }
+}
+
+// What finishing the day's bounties pays now, given today's counts and what was paid.
+export function settleBounty(quests: readonly Quest[], count: (kind: Quest['count']) => number, bounty: Bounty) {
+  const finished = quests.filter(quest => !bounty.done.includes(quest.id) && count(quest.count) >= quest.target)
+  const done = [...bounty.done, ...finished.map(quest => quest.id)]
+  const isBonus = !bounty.bonus && quests.every(quest => done.includes(quest.id))
+
+  return { finished, isBonus, bounty: { done, bonus: bounty.bonus || isBonus } }
 }
 
 // ── The shop ───────────────────────────────────────────────────────────────

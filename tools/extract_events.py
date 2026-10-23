@@ -1,7 +1,7 @@
 """Pull the events the reward rules need out of Claude Code transcripts.
 
 No prompts or code are kept: only the timing of prompts, edits and turns, and for
-commands that look like tests, commits or merges, the command and the first and
+commands that look like tests, checks, commits, pull requests or merges, the command and the first and
 last 2,000 characters of its output. Write it under .data/ (ignored by git).
 Usage: python3 -I tools/extract_events.py ~/.claude/projects .data/events.jsonl
 """
@@ -14,7 +14,10 @@ from datetime import datetime
 from pathlib import Path
 
 # The TypeScript rules (mod/hooks/rules.ts) decide; this only keeps candidate commands.
-PREFILTER = re.compile(r"\b(test|pytest|vitest|jest|rspec|phpunit|commit|merge)\b")
+PREFILTER = re.compile(
+    r"\b(test|pytest|vitest|jest|rspec|phpunit|commit|merge|pr\s+create|tsc|eslint|biome|ruff|mypy|pyright|flake8|pylint"
+    r"|cargo|go\s+(?:build|vet)|build|lint|typecheck|type-check|check|validate)\b"
+)
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 
 

@@ -1,6 +1,9 @@
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 
+import { WORDS } from '../hooks/i18n'
+import { dayOf, questsOf } from '../hooks/rules'
+
 const PANE = {
   plugin: 'cappl-pals',
   component: 'Pane',
@@ -105,6 +108,23 @@ test('editing, passing a test and committing shows rep and gold in the pane', as
     expect(await text(ui, /^Claim staked/)).toBe('Claim staked +10 $5')
     await ui.unmount()
   }
+})
+
+test('one command can test, commit and open a pull request, and each counts', async ($, on) => {
+  const all = 'pytest -q && git commit -q -m fix && gh pr create --fill'
+  engine(on, { [all]: '12 passed in 0.3s\n[main 1a2b3c4] fix\nhttps://github.com/o/r/pull/7' })
+  mock.store(on, LOCKI)
+  mock.clock(on, { now: NOW })
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
+  await $.tool.call({ tool: 'Bash', command: all })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await text(ui, /^Bullseye/)).toBe('Bullseye +5 $3')
+  expect(await text(ui, /^Claim staked/)).toBe('Claim staked +10 $5')
+  expect(await text(ui, /^Poster up/)).toBe('Poster up +4 $3')
+  await ui.unmount()
 })
 
 test('running the same test again earns nothing more', async ($, on) => {
@@ -230,7 +250,7 @@ test('/cappl opens and closes the pane, and a closed pane stays closed next sess
   expect((await $.command.run({ command: 'cappl', ...RUN })).text).toMatch(/^Opened/)
   expect(state.isOpen).toBe(true)
   // Opened by /cappl above the prompt, the pane asks for room for the shop too.
-  expect(state.rows).toBe(24)
+  expect(state.rows).toBe(30)
   await $.command.run({ command: 'cappl', ...RUN })
 
   const opensBefore = state.opens
@@ -429,4 +449,132 @@ test('on the desktop the pal is an animated SVG: blinks while idle, taps while w
   await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
   await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
   expect(await source()).not.toBe(working)
+})
+
+const dayNow = () => dayOf(NOW, -new Date().getTimezoneOffset())
+
+// Stands in for the session's $.state so the test can read what the plugin set.
+function stateSpy(on: On) {
+  const values = new Map<string, { value: unknown; version: number }>()
+  on('state.get', (_, e) => ({ value: values.get(e.key) ?? { value: undefined, version: 0 } }))
+  on('state.set', (_, e) => {
+    const version = (values.get(e.key)?.version ?? 0) + 1
+    values.set(e.key, { value: e.value, version })
+    return { value: { isSet: true, version } }
+  })
+  return {
+    value: (key: string) => values.get(key)?.value,
+    act: () => (values.get('act')?.value as { name: string } | null | undefined)?.name,
+  }
+}
+
+test('the pal follows the session: thinking in a turn, asleep after five quiet minutes, waving at a permission prompt', async ($, on) => {
+  engine(on)
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('turn.complete', (_, e) => ({ text: e.answer }))
+  on('classic.Notification', () => ({}))
+  mock.store(on, LOCKI)
+  const clock = mock.clock(on, { now: NOW })
+  const spy = stateSpy(on)
+  const activity = async () => spy.value('activity') ?? 'idle'
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  expect(await activity()).toBe('idle')
+  await $.turn.start({ text: 'go', turnId: 't1' })
+  expect(await activity()).toBe('thinking')
+  await $.classic.Notification({ message: 'Claude needs your permission', notification_type: 'permission_prompt' })
+  expect(await activity()).toBe('waiting')
+  await $.turn.complete({ turnId: 't1', answer: 'done', durationMs: 1000, reason: 'answer' } as never)
+  expect(await activity()).toBe('idle')
+  await clock.advance(6 * 60_000)
+  expect(await activity()).toBe('sleeping')
+})
+
+test('playing with the pal mid-turn keeps it at work; a pet wakes it from a nap', async ($, on) => {
+  engine(on)
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  mock.store(on, LOCKI)
+  const clock = mock.clock(on, { now: NOW })
+  const spy = stateSpy(on)
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await clock.advance(6 * 60_000)
+  expect(spy.value('activity')).toBe('sleeping')
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'pet' })
+  expect(spy.value('activity')).toBe('idle')
+  await $.turn.start({ text: 'go', turnId: 't1' })
+  await ui.press({ key: 'trick' })
+  await ui.press({ key: 'pet' })
+  expect(spy.value('activity')).toBe('thinking')
+  await ui.unmount()
+})
+
+test('pet, trick and treat: each plays its act and counts toward the bounties; a treat costs gold', async ($, on) => {
+  engine(on)
+  // Level 3 knows the first trick (wave at Lv2).
+  mock.store(on, { ...LOCKI, 'ledger:other': { fame: 100, dust: 50, days: {}, lastAt: NOW - 60_000, activeSince: NOW - 600_000 } })
+  mock.clock(on, { now: NOW })
+  const spy = stateSpy(on)
+  const act = async () => spy.act()
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'pet' })
+  expect(await act()).toBe('pet')
+  await ui.press({ key: 'trick' })
+  expect(await act()).toBe('wave')
+  await ui.press({ key: 'treat' })
+  expect(await act()).toBe('treat')
+  expect((spy.value('totals') as { dust: number }).dust).toBe(44)
+  await ui.unmount()
+  // The day's care bounty counts the pet, trick or treat (the spy holds the state, so mount again to read it).
+  const again = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const care = questsOf(dayNow())[0]!
+  const label = WORDS.en.quests[care.id]!.replace(/[×()]/g, '.')
+  expect(await text(again, new RegExp(label))).toMatch(care.target === 1 ? /^✓/ : / 1\/\d/)
+  await again.unmount()
+})
+
+test('without gold a treat is refused, and a new pal knows no tricks yet', async ($, on) => {
+  engine(on)
+  mock.store(on, LOCKI)
+  mock.clock(on, { now: NOW })
+  const spy = stateSpy(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'treat' })
+  expect(spy.act()).not.toBe('treat')
+  await ui.press({ key: 'trick' })
+  expect(spy.act()).toBe('lookAround')
+  expect(await text(ui, /^Next trick/)).toBe('Next trick: Lv2 Wave')
+  await ui.unmount()
+})
+
+test('a level up opens a chest of gold and teaches the next trick', async ($, on) => {
+  engine(on, { 'pytest -q': '12 passed in 0.3s' })
+  // 28 rep: two short of Lv2, which teaches LOCKI to wave.
+  mock.store(on, { ...LOCKI, chestLevel: 1, 'ledger:other': { fame: 28, dust: 0, days: {}, lastAt: NOW - 60_000, activeSince: NOW - 600_000 } })
+  const clock = mock.clock(on, { now: NOW })
+  const spy = stateSpy(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
+  await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await text(ui, /^LOCKI Lv/)).toMatch(/^LOCKI Lv2 /)
+  // Bullseye $3 + Lv2 chest $7 (+ a lucky nugget, if this moment rolled one).
+  expect(await text(ui, /^Level chest/)).toBe('Level chest $7')
+  await clock.advance(5000)
+  expect(spy.act()).toBe('wave')
+  await ui.unmount()
+})
+
+test('a failing test makes the pal flinch', async ($, on) => {
+  engine(on, { 'pytest -q': '1 failed, 3 passed' })
+  mock.store(on, LOCKI)
+  mock.clock(on, { now: NOW })
+  const spy = stateSpy(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
+  expect(spy.act()).toBe('fail')
 })

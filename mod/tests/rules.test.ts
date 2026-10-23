@@ -1,13 +1,19 @@
 import { expect, test } from 'claude-code/testing'
 
-import { CHARACTERS } from '../hooks/characters'
+import { ACTS, DANCES, busySlot, idleGap, lookAt, loopTicks, type Moment } from '../hooks/animations'
+import { CHARACTERS, learnedTricks } from '../hooks/characters'
 import { ITEM_ART } from '../hooks/characters/art'
 import { WORDS, languageOf } from '../hooks/i18n'
 import {
   FRESH_WORK,
   MAX_LEVEL,
   RANK_LEVELS,
+  BOUNTY_BONUS,
+  LUCKY_ODDS,
   buy,
+  checkOutcome,
+  chestFor,
+  chestsBetween,
   commitOutcome,
   credit,
   dayOf,
@@ -18,9 +24,13 @@ import {
   levelOf,
   mergeOutcome,
   needFor,
+  luckyNugget,
   observe,
+  prOutcome,
+  questsOf,
   rankOf,
   readWallet,
+  settleBounty,
   testOutcome,
   valueOf,
   wear,
@@ -28,7 +38,7 @@ import {
   type Signal,
   type Work,
 } from '../hooks/rules'
-import { LOOP_TICKS, animatedSvgOf, encode, frame } from '../hooks/sprite'
+import { animatedSvgOf, encode, frame } from '../hooks/sprite'
 
 test('a test run is judged by its summary line, not its exit code', async () => {
   expect(testOutcome('pytest -q', '12 passed in 0.31s', false)).toBe(true)
@@ -156,55 +166,120 @@ test('shop: level and gold gate a purchase; one item per slot per character', as
   })
 })
 
-test('wardrobes: ten items each, rising in level and price, both together near the 1,000-hour economy', async () => {
+test('wardrobes: ten items and ten tricks each, rising in level, the shop sized to the economy', async () => {
   let total = 0
   for (const character of CHARACTERS) {
     expect(character.items.length).toBe(10)
+    expect(character.tricks.length).toBe(10)
     for (let i = 1; i < character.items.length; i += 1) {
       expect(character.items[i]!.level).toBeGreaterThan(character.items[i - 1]!.level)
       expect(character.items[i]!.price).toBeGreaterThan(character.items[i - 1]!.price)
+      expect(character.tricks[i]!.level).toBeGreaterThan(character.tricks[i - 1]!.level)
     }
     total += character.items.reduce((sum, item) => sum + item.price, 0)
-    // Every item has art at both sizes.
     for (const item of character.items) {
       expect(ITEM_ART[character.id]?.[item.id]?.[32]).toBeDefined()
       expect(ITEM_ART[character.id]?.[item.id]?.[16]).toBeDefined()
     }
+    for (const trick of character.tricks) expect([trick.act, ACTS[trick.act] !== undefined]).toEqual([trick.act, true])
+    expect(learnedTricks(character, 1)).toEqual([])
+    expect(learnedTricks(character, 50).length).toBe(10)
   }
-  expect(total).toBeGreaterThan(17_000)
-  expect(total).toBeLessThan(21_000)
+  // Both wardrobes: about what level 50 pays in results, chests, bounties and nuggets.
+  expect(total).toBeGreaterThan(22_000)
+  expect(total).toBeLessThan(25_000)
 })
 
-test('sprites: 32 px is 32 × 14 cells, 16 px is 16 × 7; working taps the paws; every item shows', async () => {
+const still = (character: 'locki' | 'cappl', size: 32 | 16, extra: Partial<Parameters<typeof frame>[0]> = {}) =>
+  frame({ character, look: {}, tick: 0, equipped: [], size, ...extra }).join('')
+
+test('sprites: 32 px is 32 × 14 cells, 16 px is 16 × 7; every item shows at both sizes', async () => {
   for (const character of CHARACTERS) {
-    const big = encode(frame({ character: character.id, mood: 'idle', tick: 0, equipped: [], size: 32 }))
+    const big = encode(frame({ character: character.id, look: {}, tick: 0, equipped: [], size: 32 }))
     expect([big.columns, big.rows]).toEqual([32, 14])
-    const small = encode(frame({ character: character.id, mood: 'idle', tick: 0, equipped: [], size: 16 }))
+    const small = encode(frame({ character: character.id, look: {}, tick: 0, equipped: [], size: 16 }))
     expect([small.columns, small.rows]).toEqual([16, 7])
-    const work = [0, 1, 2].map(tick => frame({ character: character.id, mood: 'working', tick, equipped: [], size: 32 }).join(''))
-    expect(new Set(work).size).toBeGreaterThan(1)
-    const happy = frame({ character: character.id, mood: 'happy', tick: 1, equipped: [], size: 32 }).join('')
-    expect(happy).not.toBe(frame({ character: character.id, mood: 'idle', tick: 1, equipped: [], size: 32 }).join(''))
     for (const size of [32, 16] as const) {
-      const plain = frame({ character: character.id, mood: 'idle', tick: 0, equipped: [], size }).join('')
+      const plain = still(character.id, size)
       for (const item of character.items) {
-        const worn = frame({ character: character.id, mood: 'idle', tick: 0, equipped: [item.id], size }).join('')
-        expect([item.id, size, worn === plain]).toEqual([item.id, size, false])
+        expect([item.id, size, still(character.id, size, { equipped: [item.id] }) === plain]).toEqual([item.id, size, false])
+      }
+    }
+  }
+})
+
+test('every expression part, bubble, paw pose and particle changes the picture', async () => {
+  for (const character of CHARACTERS) {
+    for (const size of [32, 16] as const) {
+      const plain = still(character.id, size)
+      const looks = [
+        { eyes: 'heart' }, { eyes: 'happy' }, { eyes: 'x' }, { eyes: 'wide' }, { eyes: 'star' }, { eyes: 'closed' }, { gaze: [1, 0] },
+        { brows: 'worried' }, { mouth: 'open' }, { mouth: 'w' }, { mouth: 'yawn' }, { blush: true }, { sweat: true },
+        { bubble: '!' }, { bubble: '?' }, { bubble: 'heart' }, { bubble: 'zzz' }, { paws: 'cheer' }, { paws: 'waveHi' },
+        { paws: 'cover' }, { paws: 'hold', treat: 0 }, { paws: 'hold', treat: 2 }, { body: [0, -1] }, { hat: 3 }, { hat: -2 }, { particles: 'hearts' },
+        { particles: 'confetti' },
+      ] as const
+      for (const look of looks) {
+        const drawn = frame({ character: character.id, look, tick: 1, equipped: [], size }).join('')
+        expect([character.id, size, JSON.stringify(look), drawn === plain]).toEqual([character.id, size, JSON.stringify(look), false])
+      }
+    }
+  }
+})
+
+test('activities move: editing taps, testing sweats, sleeping snoozes, waiting waves', async () => {
+  for (const character of CHARACTERS) {
+    const at = (activity: Moment['activity'], tick: number) =>
+      frame({ character: character.id, look: lookAt({ character: character.id, activity, tick, learned: [] }), tick, equipped: [], size: 32 }).join('')
+    for (const activity of ['sleeping', 'thinking', 'reading', 'editing', 'running', 'testing', 'waiting'] as const) {
+      const frames = new Set(Array.from({ length: 16 }, (_, t) => at(activity, t)))
+      expect([activity, frames.size > 1]).toEqual([activity, true])
+      expect([activity, at(activity, 1) !== at('idle', 1)]).toEqual([activity, true])
+    }
+  }
+})
+
+test('acts play for their length, then the activity takes over; idle pals act on their own', async () => {
+  const base: Moment = { character: 'locki', activity: 'idle', tick: 0, learned: [] }
+  expect(lookAt({ ...base, act: { name: 'pet', t: 2 } }).eyes).toBe('heart')
+  expect(lookAt({ ...base, act: { name: 'pet', t: 99 } }).eyes).not.toBe('heart')
+  expect(DANCES.every(name => ACTS[name] !== undefined)).toBe(true)
+  // Somewhere in a few idle stretches, the pal does something other than sit.
+  const plain = JSON.stringify(lookAt(base))
+  const moves = Array.from({ length: idleGap('locki') * 4 }, (_, tick) => JSON.stringify(lookAt({ ...base, tick })))
+  expect(moves.filter(look => look !== plain && !look.includes('blink')).length).toBeGreaterThan(5)
+  // A learned trick turns up among the idle actions.
+  const withTrick = Array.from({ length: 200 }, (_, slot) => slot).some(slot => {
+    const tick = slot * idleGap('cappl') + idleGap('cappl') - 3
+    return JSON.stringify(lookAt({ ...base, character: 'cappl', tick, learned: ['strum'] })).includes('note')
+  })
+  expect(withTrick).toBe(true)
+  expect(busySlot([], 0)).toBeGreaterThanOrEqual(0)
+  expect(loopTicks({ ...base, act: { name: 'treat', t: 0 } })).toBe(ACTS.treat!.ticks)
+})
+
+test('every act draws at both sizes for both pals', async () => {
+  for (const character of CHARACTERS) {
+    for (const [name, anim] of Object.entries(ACTS)) {
+      for (const size of [32, 16] as const) {
+        for (let t = 0; t < anim.ticks; t += 1) {
+          const rows = frame({ character: character.id, look: anim.at(t, character.id), tick: t, equipped: [], size })
+          expect([name, rows.length]).toEqual([name, size === 32 ? 28 : 14])
+        }
       }
     }
   }
 })
 
 test('sparkles stay visible over a full background', async () => {
-  const plain = frame({ character: 'cappl', mood: 'idle', tick: 0, equipped: ['starry-night'], size: 32 }).join('')
-  const sparkling = frame({ character: 'cappl', mood: 'idle', tick: 0, equipped: ['starry-night'], size: 32, fx: 'level' }).join('')
-  expect(sparkling).not.toBe(plain)
+  expect(still('cappl', 32, { equipped: ['starry-night'], fx: 'level' })).not.toBe(still('cappl', 32, { equipped: ['starry-night'] }))
 })
 
 test('both languages have every word, and auto follows the Claude Code language setting', async () => {
   expect(WORDS.en.ranks.length).toBe(RANK_LEVELS.length)
   expect(WORDS.ko.ranks.length).toBe(RANK_LEVELS.length)
   expect(Object.keys(WORDS.ko).sort()).toEqual(Object.keys(WORDS.en).sort())
+  expect(Object.keys(WORDS.ko.quests).sort()).toEqual(Object.keys(WORDS.en.quests).sort())
   expect(languageOf('auto', 'Korean')).toBe('ko')
   expect(languageOf('auto', '한국어')).toBe('ko')
   expect(languageOf('auto', 'English')).toBe('en')
@@ -218,13 +293,76 @@ test('animated SVGs stay under the element limit with the busiest wardrobe', asy
     ['locki', ['heart-shades', 'gold-star', 'lasso', 'sunset', 'galaxy-hat']],
     ['cappl', ['round-specs', 'bandana', 'golden-banjo', 'sparrow', 'starry-night', 'black-hat']],
   ] as const) {
-    for (const mood of ['idle', 'working', 'happy'] as const) {
-      for (const fx of [undefined, 'stage'] as const) {
-        const ticks = fx === undefined ? LOOP_TICKS[mood] : 24
-        const frames = Array.from({ length: ticks }, (_, tick) => frame({ character, mood, tick, equipped, size: 32, fx }))
-        const svg = animatedSvgOf(frames, 250)
-        expect([character, mood, fx, svg.length < 131_072]).toEqual([character, mood, fx, true])
-      }
+    const learned = CHARACTERS.find(one => one.id === character)!.tricks.map(trick => trick.act)
+    const moments: Moment[] = [
+      ...(['idle', 'sleeping', 'editing', 'testing', 'waiting'] as const).map(activity => ({ character, activity, tick: 0, learned })),
+      ...['bigCelebrate', 'treat', 'fireworks', 'campfireSong', 'petMore'].map(name => ({ character, activity: 'idle' as const, tick: 0, learned, act: { name, t: 0 } })),
+    ]
+    for (const moment of moments) {
+      const frames = Array.from({ length: loopTicks(moment) }, (_, tick) =>
+        frame({ character, look: lookAt({ ...moment, tick, ...(moment.act ? { act: { name: moment.act.name, t: tick } } : {}) }), tick, equipped, size: 32, fx: 'stage' }))
+      const hover = Array.from({ length: 8 }, (_, t) => frame({ character, look: ACTS.hello!.at(t, character), tick: t, equipped, size: 32 }))
+      const svg = animatedSvgOf(frames, 250, hover)
+      expect([character, moment.activity, moment.act?.name, svg.length < 131_072]).toEqual([character, moment.activity, moment.act?.name, true])
     }
   }
+})
+
+test('type checks, lints and builds after edits are clean shots; gh pr create puts up a poster', async () => {
+  expect(checkOutcome('npx tsc -p .', '', false)).toBe(true)
+  expect(checkOutcome('npx tsc -p .', "src/a.ts(3,1): error TS2304: Cannot find name 'x'.", true)).toBe(false)
+  expect(checkOutcome('ruff check .', 'All checks passed!', false)).toBe(true)
+  expect(checkOutcome('npm run lint', '✖ 3 problems (3 errors, 0 warnings)', false)).toBe(false)
+  expect(checkOutcome('cargo build', 'Finished dev [unoptimized] target(s)', false)).toBe(true)
+  expect(checkOutcome('npm test', '3 passed', false)).toBe(undefined)
+  expect(checkOutcome('ls', '', false)).toBe(undefined)
+  expect(prOutcome('gh pr create --fill', 'https://github.com/o/r/pull/12', false)).toBe(true)
+  expect(prOutcome('gh pr create --fill', 'a pull request for branch already exists', true)).toBe(false)
+  // Only when the tool is what runs: installing, finding or asking its version is not a check.
+  for (const command of ['npm install -D eslint', 'pip install mypy', 'which tsc', 'tsc --version', 'grep -rn "eslint-disable" src', 'git log --grep tsc']) {
+    expect([command, checkOutcome(command, '', false)]).toEqual([command, undefined])
+  }
+  expect(checkOutcome('cd web && npm run build 2>&1 | tail -3', 'dist/error-boundary-4f2.js  1.2 kB', false)).toBe(true)
+  expect(checkOutcome('./node_modules/.bin/tsc -p .', 'Found 2 errors in 1 file.', false)).toBe(false)
+  // `|| gh pr view` after a failed create names the old PR: no new poster.
+  expect(prOutcome('gh pr create --fill || gh pr view --json url', 'already exists:\nhttps://github.com/o/r/pull/12', false)).toBe(false)
+  const edit = { type: 'edit' } as const
+  const clean = { type: 'check', isPass: true } as const
+  expect(run([edit, clean, clean])).toEqual(['check'])
+  expect(run([clean])).toEqual([])
+  expect(run([{ type: 'pr' }])).toEqual(['pr'])
+})
+
+test('chests grow with the level; nuggets turn up about one result in sixteen', async () => {
+  expect(chestFor(2)).toBe(7)
+  expect(chestsBetween(1, 3)).toBe(chestFor(2) + chestFor(3))
+  expect(chestsBetween(1, 50)).toBeGreaterThan(1_400)
+  const rolls = Array.from({ length: 16_000 }, (_, i) => luckyNugget(i * 7919))
+  const hits = rolls.filter(n => n > 0)
+  expect(hits.length).toBeGreaterThan(16_000 / LUCKY_ODDS / 1.5)
+  expect(hits.length).toBeLessThan((16_000 / LUCKY_ODDS) * 1.5)
+  expect(Math.min(...hits)).toBeGreaterThanOrEqual(5)
+  expect(Math.max(...hits)).toBeLessThanOrEqual(15)
+})
+
+test('bounties: three a day, one with the pal; each pays once, all three pay a bonus', async () => {
+  const quests = questsOf('2026-10-23')
+  expect(quests.length).toBe(3)
+  expect(['pet', 'treat', 'trick']).toContain(quests[0]!.count)
+  expect(new Set(quests.map(quest => quest.id)).size).toBe(3)
+  expect(questsOf('2026-10-23')).toEqual(quests)
+  const days = new Set(Array.from({ length: 30 }, (_, i) => questsOf(`2026-11-${String(i + 1).padStart(2, '0')}`).map(q => q.id).join()))
+  expect(days.size).toBeGreaterThan(10)
+  const none = settleBounty(quests, () => 0, { done: [], bonus: false })
+  expect(none.finished).toEqual([])
+  const first = settleBounty(quests, kind => (kind === quests[0]!.count ? 99 : 0), { done: [], bonus: false })
+  expect(first.finished.map(quest => quest.id)).toEqual([quests[0]!.id])
+  expect(first.isBonus).toBe(false)
+  const again = settleBounty(quests, kind => (kind === quests[0]!.count ? 99 : 0), first.bounty)
+  expect(again.finished).toEqual([])
+  const all = settleBounty(quests, () => 99, first.bounty)
+  expect(all.finished.length).toBe(2)
+  expect(all.isBonus).toBe(true)
+  expect(settleBounty(quests, () => 99, all.bounty).isBonus).toBe(false)
+  expect(BOUNTY_BONUS).toBe(15)
 })

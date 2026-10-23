@@ -38,7 +38,22 @@ type Words = {
   waiting: string
   picked: (name: string) => string
   unknownCharacter: (names: string) => string
-  status: (p: { name: string; level: number; rank: string; fame: number; progress: string; dust: number; fans: string; owned: number; total: number }) => string
+  status: (p: { name: string; level: number; rank: string; fame: number; progress: string; dust: number; fans: string; owned: number; total: number; tricks: number; allTricks: number }) => string
+  pet: string
+  trick: string
+  treat: (name: string, price: number) => string
+  noTreatGold: string
+  noTricks: string
+  nextTrick: (level: number, name: string) => string
+  learned: (name: string) => string
+  chestToast: (level: number, gold: number) => string
+  luckyToast: (gold: number) => string
+  bounties: string
+  quests: Record<string, string>
+  questLine: (label: string, have: number, target: number, gold: number, isDone: boolean) => string
+  bonusLine: (gold: number, isDone: boolean) => string
+  questToast: (label: string, gold: number) => string
+  bonusToast: (gold: number) => string
   sound: Record<'normal' | 'quiet' | 'off', string>
   soundSet: (now: string, next: string) => string
   rules: {
@@ -49,6 +64,7 @@ type Words = {
     commitBonus: string
     verifyNote: string
     dayNote: (hour: number, offset: string) => string
+    extras: string
   }
 }
 
@@ -65,6 +81,11 @@ const EN: Words = {
     plan: 'Trail mapped',
     break: 'Campfire rest',
     daily: 'Saddled up',
+    check: 'Clean shot',
+    pr: 'Poster up',
+    chest: 'Level chest',
+    quest: 'Bounty',
+    lucky: 'Lucky nugget',
   },
   rep: 'Rep',
   gold: 'Gold',
@@ -78,7 +99,7 @@ const EN: Words = {
   next: (level, name) => `Next: Lv${level} ${name}`,
   close: 'Close (/cappl)',
   switchCharacter: 'Switch character',
-  scrollHint: '▾ Shop below: click the pane and scroll',
+  scrollHint: '▾ Shop below (click, then scroll)',
   pickTitle: 'Pick your partner',
   pick: name => `Pick ${name}`,
   current: ' (riding now)',
@@ -105,7 +126,26 @@ const EN: Words = {
   picked: name => `${name} is riding with you now.`,
   unknownCharacter: names => `No such character. Pick one of: ${names}`,
   status: p =>
-    `${p.name} Lv${p.level} ${p.rank} · Rep ${p.fame} (${p.progress}) · Gold $${p.dust} · ${p.fans} · Items ${p.owned}/${p.total}`,
+    `${p.name} Lv${p.level} ${p.rank} · Rep ${p.fame} (${p.progress}) · Gold $${p.dust} · ${p.fans} · Items ${p.owned}/${p.total} · Tricks ${p.tricks}/${p.allTricks}`,
+  pet: 'Pet',
+  trick: 'Trick',
+  treat: (name, price) => `Treat: ${name} $${price}`,
+  noTreatGold: 'Not enough gold for a treat yet.',
+  noTricks: 'No tricks yet. The first one comes at Lv2.',
+  nextTrick: (level, name) => `Next trick: Lv${level} ${name}`,
+  learned: name => `New trick learned: ${name}!`,
+  chestToast: (level, gold) => `Lv${level} chest: +$${gold}`,
+  luckyToast: gold => `Lucky nugget! +$${gold}`,
+  bounties: "▸ Today's bounties",
+  quests: {
+    bullseye3: 'Bullseye ×3', commit2: 'Stake 2 claims', check2: 'Clean shot ×2', comeback1: 'Win a showdown',
+    merge1: 'Strike gold', pr1: 'Put up a poster', break1: 'Rest by the campfire', plan1: 'Map a trail',
+    pet3: 'Pet your pal ×3', treat1: 'Give a treat', trick2: 'See 2 tricks',
+  },
+  questLine: (label, have, target, gold, isDone) => (isDone ? `✓ ${label} +$${gold}` : `▸ ${label} ${have}/${target} $${gold}`),
+  bonusLine: (gold, isDone) => (isDone ? `✓ All three +$${gold}` : `  All three: +$${gold}`),
+  questToast: (label, gold) => `Bounty done: ${label} +$${gold}`,
+  bonusToast: gold => `All of today's bounties done! +$${gold}`,
   sound: { normal: 'normal', quiet: 'quiet', off: 'off' },
   soundSet: (now, next) => `Sound effects: ${now}. Run /cappl-sound again for ${next}.`,
   rules: {
@@ -116,6 +156,7 @@ const EN: Words = {
     commitBonus: '- Claim staked bonus: rep +5 and $3 when tests passed since the last commit, rep +2 for a small commit (8 edits or fewer)',
     verifyNote: '- Bullseye is the first passing test after edits; Showdown won is fail → fix → pass. Running the same test again earns nothing.',
     dayNote: (hour, offset) => `- A day starts at ${hour}:00 local time (UTC${offset}). There are no streaks; a day off costs nothing.`,
+    extras: '- Clean shot: a type check, lint or build passes after edits. Poster up: `gh pr create` opens a PR.\n- Every level opens a chest of $5 + the level. Three bounties a day pay $5–15 each, $15 more for all three. About one result in sixteen turns up a lucky nugget ($5–15).',
   },
 }
 
@@ -132,6 +173,11 @@ const KO: Words = {
     plan: '지도 펼치기',
     break: '모닥불 휴식',
     daily: '안장 얹기',
+    check: '깔끔한 사격',
+    pr: '전단 붙이기',
+    chest: '레벨 상자',
+    quest: '현상금',
+    lucky: '행운의 사금',
   },
   rep: '명성',
   gold: '골드',
@@ -172,7 +218,26 @@ const KO: Words = {
   picked: name => `이제 함께하는 친구: ${name}`,
   unknownCharacter: names => `그런 캐릭터는 없어요. 고를 수 있는 이름: ${names}`,
   status: p =>
-    `${p.name} Lv${p.level} ${p.rank} · 명성 ${p.fame} (${p.progress}) · 골드 $${p.dust} · ${p.fans} · 소품 ${p.owned}/${p.total}`,
+    `${p.name} Lv${p.level} ${p.rank} · 명성 ${p.fame} (${p.progress}) · 골드 $${p.dust} · ${p.fans} · 소품 ${p.owned}/${p.total} · 재주 ${p.tricks}/${p.allTricks}`,
+  pet: '쓰다듬기',
+  trick: '재주',
+  treat: (name, price) => `간식: ${name} $${price}`,
+  noTreatGold: '간식 살 골드가 아직 모자라요.',
+  noTricks: '아직 배운 재주가 없어요. 첫 재주는 Lv2에 배워요.',
+  nextTrick: (level, name) => `다음 재주: Lv${level} ${name}`,
+  learned: name => `새 재주를 배웠어요: ${name}!`,
+  chestToast: (level, gold) => `Lv${level} 상자: +$${gold}`,
+  luckyToast: gold => `행운의 사금! +$${gold}`,
+  bounties: '▸ 오늘의 현상금',
+  quests: {
+    bullseye3: '과녁 명중 3번', commit2: '말뚝 박기 2번', check2: '깔끔한 사격 2번', comeback1: '결투 승리 1번',
+    merge1: '금맥 발견 1번', pr1: '전단 붙이기 1번', break1: '모닥불 휴식 1번', plan1: '지도 펼치기 1번',
+    pet3: '쓰다듬기 3번', treat1: '간식 주기 1번', trick2: '재주 보기 2번',
+  },
+  questLine: (label, have, target, gold, isDone) => (isDone ? `✓ ${label} +$${gold}` : `▸ ${label} ${have}/${target} $${gold}`),
+  bonusLine: (gold, isDone) => (isDone ? `✓ 셋 다 완료 +$${gold}` : `  셋 다 하면 +$${gold}`),
+  questToast: (label, gold) => `현상금 완료: ${label} +$${gold}`,
+  bonusToast: gold => `오늘 현상금을 모두 마쳤어요! +$${gold}`,
   sound: { normal: '보통', quiet: '작게', off: '끔' },
   soundSet: (now, next) => `효과음: ${now}. /cappl-sound를 한 번 더 입력하면 ${next}`,
   rules: {
@@ -183,6 +248,7 @@ const KO: Words = {
     commitBonus: '- 말뚝 박기 덧보상: 직전 커밋 뒤 테스트로 확인했으면 명성 +5·$3, 파일 수정 8번 이하의 작은 커밋이면 명성 +2',
     verifyNote: '- 과녁 명중은 파일을 고친 뒤 처음 통과한 테스트, 결투 승리는 실패 → 수정 → 통과예요. 같은 테스트를 다시 돌리면 0이에요.',
     dayNote: (hour, offset) => `- 하루는 이 컴퓨터 시간 ${hour}시에 바뀌어요(UTC${offset}). 연속 출석 기록은 없고, 쉬어도 잃는 것은 없어요.`,
+    extras: '- 깔끔한 사격: 고친 뒤 타입 검사·린트·빌드가 통과. 전단 붙이기: `gh pr create`로 PR을 열었을 때.\n- 레벨이 오를 때마다 $5 + 레벨만큼 든 상자가 열려요. 하루 현상금 세 개는 하나에 $5~15, 셋 다 하면 $15를 더 줘요. 결과 열여섯 번에 한 번꼴로 행운의 사금($5~15)이 나와요.',
   },
 }
 

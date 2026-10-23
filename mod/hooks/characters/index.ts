@@ -8,6 +8,8 @@ import type { CharacterId, FxKind, Language } from '../../types'
 export type Text = Readonly<Record<Language, string>>
 export type Slot = 'eyes' | 'mouth' | 'head' | 'hat' | 'hand' | 'stage'
 export type Item = { id: string; slot: Slot; price: number; level: number; name: Text }
+// A trick is an act in hooks/animations.ts the pal learns at a level.
+export type Trick = { act: string; level: number; name: Text }
 
 export type Character = {
   id: CharacterId
@@ -19,9 +21,9 @@ export type Character = {
   // `twinkle`: four-point stars; `note`: little music notes that float up.
   sparkle: 'twinkle' | 'note'
   fxColors: Readonly<Record<FxKind, readonly string[]>>
-  // While happy, how many pixels the hat and the ears rise on each tick (cycled).
-  happy: { hat: readonly number[]; ears: readonly number[] }
   items: readonly Item[]
+  tricks: readonly Trick[]
+  treat: { name: Text; price: number }
 }
 
 // Both wardrobes together cost about what a typical user earns on the way to
@@ -45,18 +47,30 @@ export const CHARACTERS: readonly Character[] = [
       stage: ['y', 'P', 'D', 'w'],
       buy: ['w', 'i', 'P'],
     },
-    happy: { hat: [0, 0, 0, 0], ears: [0, 1, 0, 1] },
+    tricks: [
+      { act: 'wave', level: 2, name: { en: 'Wave', ko: '손 흔들기' } },
+      { act: 'hop', level: 4, name: { en: 'Hop hop', ko: '콩콩 뛰기' } },
+      { act: 'spin', level: 7, name: { en: 'Spin', ko: '빙글 돌기' } },
+      { act: 'hatToss', level: 12, name: { en: 'Hat toss', ko: '모자 던지기' } },
+      { act: 'salute', level: 17, name: { en: 'Sheriff salute', ko: '보안관 경례' } },
+      { act: 'peekaboo', level: 23, name: { en: 'Peekaboo', ko: '까꿍' } },
+      { act: 'heartBurst', level: 29, name: { en: 'Heart burst', ko: '하트 뿅뿅' } },
+      { act: 'starDance', level: 35, name: { en: 'Star dance', ko: '별빛 춤' } },
+      { act: 'cartwheel', level: 42, name: { en: 'Cartwheel', ko: '옆돌기' } },
+      { act: 'fireworks', level: 50, name: { en: 'Fireworks show', ko: '불꽃 쇼' } },
+    ],
+    treat: { name: { en: 'Star cookie', ko: '별 쿠키' }, price: 6 },
     items: [
       { id: 'aviators', slot: 'eyes', price: 50, level: 1, name: { en: 'Aviator shades', ko: '보안관 선글라스' } },
       { id: 'feather', slot: 'head', price: 60, level: 3, name: { en: 'Pink feather', ko: '분홍 깃털' } },
-      { id: 'harmonica', slot: 'hand', price: 200, level: 6, name: { en: 'Harmonica', ko: '하모니카' } },
-      { id: 'heart-shades', slot: 'eyes', price: 400, level: 10, name: { en: 'Heart shades', ko: '하트 선글라스' } },
-      { id: 'lasso', slot: 'hand', price: 650, level: 14, name: { en: 'Lasso', ko: '올가미 밧줄' } },
-      { id: 'gold-star', slot: 'head', price: 900, level: 19, name: { en: 'Gold sheriff star', ko: '금빛 보안관 별' } },
-      { id: 'desert', slot: 'stage', price: 1_100, level: 24, name: { en: 'Desert noon', ko: '한낮의 사막' } },
-      { id: 'white-hat', slot: 'hat', price: 1_500, level: 30, name: { en: 'White ten-gallon hat', ko: '하얀 카우보이모자' } },
-      { id: 'sunset', slot: 'stage', price: 2_000, level: 38, name: { en: 'Desert sunset', ko: '사막의 노을' } },
-      { id: 'galaxy-hat', slot: 'hat', price: 2_600, level: 46, name: { en: 'Starry night hat', ko: '별밤 모자' } },
+      { id: 'harmonica', slot: 'hand', price: 250, level: 6, name: { en: 'Harmonica', ko: '하모니카' } },
+      { id: 'heart-shades', slot: 'eyes', price: 500, level: 10, name: { en: 'Heart shades', ko: '하트 선글라스' } },
+      { id: 'lasso', slot: 'hand', price: 800, level: 14, name: { en: 'Lasso', ko: '올가미 밧줄' } },
+      { id: 'gold-star', slot: 'head', price: 1_100, level: 19, name: { en: 'Gold sheriff star', ko: '금빛 보안관 별' } },
+      { id: 'desert', slot: 'stage', price: 1_400, level: 24, name: { en: 'Desert noon', ko: '한낮의 사막' } },
+      { id: 'white-hat', slot: 'hat', price: 1_900, level: 30, name: { en: 'White ten-gallon hat', ko: '하얀 카우보이모자' } },
+      { id: 'sunset', slot: 'stage', price: 2_500, level: 38, name: { en: 'Desert sunset', ko: '사막의 노을' } },
+      { id: 'galaxy-hat', slot: 'hat', price: 3_300, level: 46, name: { en: 'Starry night hat', ko: '별밤 모자' } },
     ],
   },
   {
@@ -77,18 +91,30 @@ export const CHARACTERS: readonly Character[] = [
       stage: ['y', 'Q', 'R', 'F', 'w'],
       buy: ['w', 'C', 'R'],
     },
-    happy: { hat: [0, 2, 2, 0], ears: [0, 0, 0, 0] },
+    tricks: [
+      { act: 'wave', level: 2, name: { en: 'Wave', ko: '손 흔들기' } },
+      { act: 'nod', level: 4, name: { en: 'Nod along', ko: '끄덕끄덕' } },
+      { act: 'hatTip', level: 7, name: { en: 'Hat tip', ko: '모자 인사' } },
+      { act: 'strum', level: 12, name: { en: 'Strum', ko: '밴조 튕기기' } },
+      { act: 'sip', level: 17, name: { en: 'Coffee sip', ko: '커피 한 모금' } },
+      { act: 'hatPeekaboo', level: 23, name: { en: 'Hat peekaboo', ko: '모자 까꿍' } },
+      { act: 'hum', level: 29, name: { en: 'Hum a tune', ko: '콧노래' } },
+      { act: 'twoStep', level: 35, name: { en: 'Two-step', ko: '투스텝' } },
+      { act: 'tumble', level: 42, name: { en: 'Tumble', ko: '데굴데굴' } },
+      { act: 'campfireSong', level: 50, name: { en: 'Campfire song', ko: '모닥불 노래' } },
+    ],
+    treat: { name: { en: 'Maple biscuit', ko: '메이플 비스킷' }, price: 6 },
     items: [
       { id: 'round-specs', slot: 'eyes', price: 50, level: 1, name: { en: 'Round specs', ko: '동그란 안경' } },
       { id: 'straw', slot: 'mouth', price: 60, level: 3, name: { en: 'Wheat straw', ko: '밀짚 한 가닥' } },
-      { id: 'coffee', slot: 'hand', price: 200, level: 6, name: { en: 'Tin cup of coffee', ko: '양철 커피잔' } },
-      { id: 'bandana', slot: 'mouth', price: 400, level: 10, name: { en: 'Outlaw bandana', ko: '무법자 두건' } },
-      { id: 'banjo', slot: 'hand', price: 650, level: 14, name: { en: 'Banjo', ko: '밴조' } },
-      { id: 'sparrow', slot: 'head', price: 900, level: 19, name: { en: 'Sparrow friend', ko: '참새 친구' } },
-      { id: 'campfire', slot: 'stage', price: 1_100, level: 24, name: { en: 'Campfire', ko: '모닥불' } },
-      { id: 'black-hat', slot: 'hat', price: 1_500, level: 30, name: { en: 'Black hat', ko: '검은 카우보이모자' } },
-      { id: 'starry-night', slot: 'stage', price: 2_000, level: 38, name: { en: 'Starry night', ko: '별이 빛나는 밤' } },
-      { id: 'golden-banjo', slot: 'hand', price: 2_600, level: 46, name: { en: 'Golden banjo', ko: '황금 밴조' } },
+      { id: 'coffee', slot: 'hand', price: 250, level: 6, name: { en: 'Tin cup of coffee', ko: '양철 커피잔' } },
+      { id: 'bandana', slot: 'mouth', price: 500, level: 10, name: { en: 'Outlaw bandana', ko: '무법자 두건' } },
+      { id: 'banjo', slot: 'hand', price: 800, level: 14, name: { en: 'Banjo', ko: '밴조' } },
+      { id: 'sparrow', slot: 'head', price: 1_100, level: 19, name: { en: 'Sparrow friend', ko: '참새 친구' } },
+      { id: 'campfire', slot: 'stage', price: 1_400, level: 24, name: { en: 'Campfire', ko: '모닥불' } },
+      { id: 'black-hat', slot: 'hat', price: 1_900, level: 30, name: { en: 'Black hat', ko: '검은 카우보이모자' } },
+      { id: 'starry-night', slot: 'stage', price: 2_500, level: 38, name: { en: 'Starry night', ko: '별이 빛나는 밤' } },
+      { id: 'golden-banjo', slot: 'hand', price: 3_300, level: 46, name: { en: 'Golden banjo', ko: '황금 밴조' } },
     ],
   },
 ]
@@ -108,6 +134,10 @@ export function itemOf(fullId: string): { character: Character; item: Item } | u
   const item = character?.items.find(one => one.id === id)
 
   return character !== undefined && item !== undefined ? { character, item } : undefined
+}
+
+export function learnedTricks(character: Character, level: number): Trick[] {
+  return character.tricks.filter(trick => trick.level <= level)
 }
 
 export function fullId(character: CharacterId, item: string): string {

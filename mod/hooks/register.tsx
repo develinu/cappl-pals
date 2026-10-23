@@ -1,15 +1,20 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { CharacterId, Fx, FxKind, Language, Ledger, Mood, Reward, Totals, Wallet } from '../types'
-import { CHARACTERS, characterOf, fullId, isCharacterId, type Character } from './characters'
+import type { Act, Activity, CareKind, CharacterId, Fx, FxKind, Language, Ledger, Reward, RewardKind, Totals, Wallet } from '../types'
+import { ACTS, DANCES, actTicks, busySlot, idleGap, lookAt, loopTicks, type Moment } from './animations'
+import { CHARACTERS, characterOf, fullId, isCharacterId, learnedTricks, type Character } from './characters'
 import { WORDS, languageOf } from './i18n'
 import {
+  BOUNTY_BONUS,
   CONTINUOUS_GAP_MS,
   FRESH_WORK,
   RULES,
   SHOP_SIZE,
   buy,
+  checkOutcome,
+  chestFor,
+  chestsBetween,
   commitOutcome,
   countToday,
   credit,
@@ -19,12 +24,20 @@ import {
   fansOf,
   isBreakOver,
   levelOf,
+  luckyNugget,
   mergeOutcome,
   observe,
+  prOutcome,
+  isTestCommand,
+  questsOf,
   rankOf,
   rateOf,
+  readBounty,
   readLedger,
   readWallet,
+  seedOf,
+  settleBounty,
+  tally,
   testOutcome,
   totalsOf,
   touch,
@@ -32,15 +45,21 @@ import {
   wear,
   wornBy,
   type Earn,
+  type Quest,
   type Signal,
 } from './rules'
 import { SOUND_LEVELS, play, soundLevel, type Sfx, type SoundLevel } from './sound'
-import { LOOP_TICKS, animatedSvgOf, encode, frame, type Pose, type Size } from './sprite'
+import { animatedSvgOf, encode, frame, type Size } from './sprite'
 
 const PANE = 'cappl-pals'
 const SPRITE = 'sprite'
+const TICK_MS = 250
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
+const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'WebFetch', 'WebSearch', 'NotebookRead', 'ToolSearch'])
 const STALE_MS = 2 * 24 * 60 * 60_000
+// Five quiet minutes and the pal dozes off.
+const SLEEP_MS = 5 * 60_000
+const GLOW_MS = 10 * 60_000
 // The header (fx line, level, rep, gold) and the narrowest column it fits beside the
 // small sprite (seven rows tall) even when its lines wrap.
 const HEADER_ROWS = 4
@@ -48,7 +67,7 @@ const HEADER_COLUMNS = 16
 // The big sprite (14 rows) only when the header and a few rows below it fit too.
 const BIG_ROWS = 14 + HEADER_ROWS + 6
 // The height asked for when /cappl opens the pane above the prompt (the terminal may give less).
-const INLINE_ROWS = 24
+const INLINE_ROWS = 30
 // How often other sessions' rewards and purchases are read back; the store sends no change events.
 const SYNC_MS = 1500
 // Latest rewards kept per session ledger (the pane shows four, all sessions merged).
@@ -61,7 +80,9 @@ const FX_COLOR: Record<FxKind, string> = {
 const totalsAtom = atom({ plugin: 'cappl-pals', key: 'totals' } as const, { fame: 0, dust: 0 })
 const walletAtom = atom({ plugin: 'cappl-pals', key: 'wallet' } as const, emptyWallet())
 const logAtom = atom({ plugin: 'cappl-pals', key: 'log' } as const, [])
-const moodAtom = atom({ plugin: 'cappl-pals', key: 'mood' } as const, 'idle')
+const activityAtom = atom({ plugin: 'cappl-pals', key: 'activity' } as const, 'idle' as Activity)
+const actAtom = atom({ plugin: 'cappl-pals', key: 'act' } as const, null as Act | null)
+const glowAtom = atom({ plugin: 'cappl-pals', key: 'glowUntil' } as const, 0)
 const turnFameAtom = atom({ plugin: 'cappl-pals', key: 'turnFame' } as const, 0)
 const fxAtom = atom({ plugin: 'cappl-pals', key: 'fx' } as const, null as Fx | null)
 const characterAtom = atom({ plugin: 'cappl-pals', key: 'character' } as const, null as CharacterId | null)
@@ -82,7 +103,18 @@ const runtime = {
   // The totals, wallet, log and character last published; unchanged ones are not redrawn.
   synced: '',
   isSyncing: false,
-  // Serializes this session's writes. Sessions never share a key, so they need no lock.
+  // The terminal tick the current act started on, so its frames run from the start.
+  actTick: 0,
+  isTurn: false,
+  turns: 0,
+  lastActiveAt: 0,
+  pets: [] as number[],
+  tricks: 0,
+  // Which idle stretch a desktop loop shows; moves on with each redraw for variety.
+  svgSeed: 0,
+  // Serializes this session's writes. Each session writes its own ledger; the few shared
+  // keys (wallet, chestLevel, bounty:<day>) are each read and written straight back,
+  // which keeps the window for two sessions to collide to a few milliseconds.
   queue: Promise.resolve() as Promise<unknown>,
 }
 
@@ -119,7 +151,7 @@ async function publish($: EngineInterface, world: World) {
     .flatMap(ledger => ledger.recent)
     .sort((a, b) => a.at - b.at)
     .slice(-20)
-  const signature = JSON.stringify([totals, world.wallet, log, world.character])
+  const signature = JSON.stringify([totals, world.wallet, log, world.character, world.ledgers.map(ledger => ledger.days)])
   if (signature !== runtime.synced) {
     runtime.synced = signature
     await update($, totalsAtom, () => totals)
@@ -153,28 +185,109 @@ async function saveOwn($: EngineInterface, world: World, own: Ledger): Promise<W
   return { ...world, own, ledgers: [...ledgers, own] }
 }
 
-function award($: EngineInterface, earn: Earn): Promise<unknown> {
-  runtime.queue = runtime.queue.then(() => grant($, earn)).catch(() => undefined)
+function enqueue($: EngineInterface, job: () => Promise<unknown>): Promise<unknown> {
+  runtime.queue = runtime.queue.then(job).catch(() => undefined)
 
   return runtime.queue
+}
+
+// ── Moods and acts ──────────────────────────────────────────────────────────
+
+async function setActivity($: EngineInterface, activity: Activity) {
+  runtime.lastActiveAt = await $.clock.now()
+  if ((await read($, activityAtom)) !== activity) await update($, activityAtom, () => activity)
+}
+
+// Starts a one-off animation; it clears itself when its frames run out.
+async function playAct($: EngineInterface, name: string) {
+  const ticks = actTicks(name)
+  if (ticks === 0) return
+  const at = await $.clock.now()
+  runtime.actTick = runtime.tick
+  runtime.lastActiveAt = at
+  await update($, actAtom, () => ({ name, at }))
+  $.clock.after(ticks * TICK_MS + 50, () => void update($, actAtom, act => (act?.at === at ? null : act)))
+}
+
+// Five quiet minutes: asleep. Any activity wakes the pal again.
+async function checkSleep($: EngineInterface) {
+  const now = await $.clock.now()
+  const activity = await read($, activityAtom)
+  if (activity === 'idle' && runtime.lastActiveAt > 0 && now - runtime.lastActiveAt >= SLEEP_MS) {
+    await update($, activityAtom, () => 'sleeping' as Activity)
+  }
+}
+
+function learned(character: Character, totals: Totals): string[] {
+  return learnedTricks(character, levelOf(totals.fame).level).map(trick => trick.act)
+}
+
+// ── Rewards ─────────────────────────────────────────────────────────────────
+
+function award($: EngineInterface, earn: Earn): Promise<unknown> {
+  return enqueue($, () => grant($, earn))
+}
+
+// Credits a reward or bonus to this session's ledger and returns the new world.
+async function pay($: EngineInterface, world: World, kind: RewardKind, fame: number, dust: number, rate = 1) {
+  const now = await $.clock.now()
+  const day = dayOf(now, runtime.offset)
+  const reward: Reward = { at: now, kind, fame, dust, rate }
+  const own = credit(world.own, kind, day, fame, dust)
+
+  return saveOwn($, world, { ...own, recent: [...own.recent, reward].slice(-RECENT) })
 }
 
 async function grant($: EngineInterface, earn: Earn) {
   const now = await $.clock.now()
   const day = dayOf(now, runtime.offset)
-  const world = await loadWorld($)
-  const value = valueOf(earn, countToday(world.ledgers, earn.kind, day))
+  let world = await loadWorld($)
+  const count = countToday(world.ledgers, earn.kind, day)
+  const value = valueOf(earn, count)
   if (value.rate === 0) return
   const before = await read($, totalsAtom)
+  world = await pay($, world, earn.kind, value.fame, value.dust, value.rate)
+  const character = characterOf(world.character)
   const reward: Reward = { at: now, kind: earn.kind, ...value }
-  const own = credit(world.own, earn.kind, day, value.fame, value.dust)
-  const next = await saveOwn($, world, { ...own, recent: [...own.recent, reward].slice(-RECENT) })
-  const after = await publish($, next)
+  // Now and then a result turns up a lucky nugget.
+  const nugget = earn.kind === 'daily' ? 0 : luckyNugget(seedOf(`${runtime.key}:${now}:${count}`))
+  if (nugget > 0) world = await pay($, world, 'lucky', 0, nugget)
+  let after = await publish($, world)
   await update($, turnFameAtom, n => n + value.fame)
-  await celebrate($, before, after, reward, characterOf(world.character))
+  const levelled = await openChests($, world, before, after)
+  if (levelled !== undefined) {
+    world = levelled.world
+    after = levelled.totals
+  }
+  await celebrate($, before, after, reward, character)
+  if (nugget > 0) {
+    $.ui.toast(words().luckyToast(nugget))
+    $.clock.after(2200, () => void enqueue($, async () => {
+      await playAct($, 'lucky')
+      await play($, 'lucky', character.id)
+    }))
+  }
+  await settleQuests($)
 }
 
-// A reward: one sound, a sparkle around the character, a line in the pane, and a toast for big ones.
+// Every new level opens a chest. `chestLevel` remembers the last level paid, across sessions.
+async function openChests($: EngineInterface, world: World, before: Totals, after: Totals) {
+  const level = levelOf(after.fame).level
+  if (level <= levelOf(before.fame).level) return undefined
+  const paid = Number((await $.store.get('chestLevel')) ?? levelOf(before.fame).level)
+  if (level <= paid) return undefined
+  await $.store.set('chestLevel', level)
+  const gold = chestsBetween(paid, level)
+  const next = await pay($, world, 'chest', 0, gold)
+  $.ui.toast(words().chestToast(level, gold))
+  const id = characterOf(world.character).id
+  $.clock.after(1800, () => void play($, 'chest', id))
+
+  return { world: next, totals: await publish($, next) }
+}
+
+// A reward: one sound, a sparkle around the character, a line in the pane, an act,
+// and a toast for big ones.
 async function celebrate($: EngineInterface, before: Totals, after: Totals, reward: Reward, character: Character) {
   const w = words()
   const label = w.rewards[reward.kind]
@@ -187,14 +300,26 @@ async function celebrate($: EngineInterface, before: Totals, after: Totals, rewa
     const unlocked = character.items.filter(item => item.level > was && item.level <= now)
     if (unlocked.length > 0) $.ui.toast(w.unlocked(unlocked.map(item => item.name[runtime.language]).join(', ')))
     await flash($, isNewRank ? 'stage' : 'level', isNewRank ? w.newRank(rank) : w.levelUp(now))
+    await playAct($, 'bigCelebrate')
     await play($, isNewRank ? 'stage' : 'levelup', character.id)
+    // A new trick: show it right after the cheering.
+    const trick = character.tricks.find(one => one.level > was && one.level <= now)
+    if (trick !== undefined) {
+      $.ui.toast(w.learned(trick.name[runtime.language]))
+      $.clock.after(actTicks('bigCelebrate') * TICK_MS + 200, () => void enqueue($, async () => {
+        await playAct($, trick.act)
+        await play($, 'trick', character.id)
+      }))
+    }
     return
   }
-  if (reward.kind === 'merge' || reward.kind === 'comeback') $.ui.toast(w.bigToast(label, reward.fame, reward.dust))
+  const isBig = reward.kind === 'merge' || reward.kind === 'comeback'
+  if (isBig) $.ui.toast(w.bigToast(label, reward.fame, reward.dust))
   const kind: FxKind = reward.kind === 'merge' ? 'merge' : reward.kind === 'comeback' ? 'comeback' : 'reward'
   const sound: Sfx = reward.kind === 'merge' ? 'fanfare' : reward.kind === 'comeback' ? 'comeback' : 'coin'
   const gain = reward.fame > 0 ? w.repGain(reward.fame) : `+$${reward.dust}`
   await flash($, kind, w.rewardLine(label, gain) + (kind === 'reward' ? '' : '!'))
+  await playAct($, isBig ? 'bigCelebrate' : 'celebrate')
   await play($, sound, character.id)
 }
 
@@ -204,35 +329,69 @@ async function flash($: EngineInterface, kind: FxKind, label: string) {
   $.clock.after(FX_MS[kind], () => void update($, fxAtom, fx => (fx?.at === at ? null : fx)))
 }
 
+// Pays any of the day's bounties that are now done (the shared `bounty:<day>` key
+// remembers what was paid), and the bonus once all three are.
+async function settleQuests($: EngineInterface) {
+  const now = await $.clock.now()
+  const day = dayOf(now, runtime.offset)
+  let world = await loadWorld($)
+  const quests = questsOf(day)
+  const key = `bounty:${day}`
+  const settled = settleBounty(quests, kind => countToday(world.ledgers, kind, day), readBounty(await $.store.get(key)))
+  if (settled.finished.length === 0 && !settled.isBonus) return
+  await $.store.set(key, settled.bounty)
+  const w = words()
+  for (const quest of settled.finished) {
+    world = await pay($, world, 'quest', 0, quest.gold)
+    $.ui.toast(w.questToast(w.quests[quest.id] ?? quest.id, quest.gold))
+  }
+  if (settled.isBonus) {
+    world = await pay($, world, 'quest', 0, BOUNTY_BONUS)
+    $.ui.toast(w.bonusToast(BOUNTY_BONUS))
+  }
+  await publish($, world)
+  const character = characterOf(world.character)
+  $.clock.after(1200, () => void enqueue($, async () => {
+    await playAct($, 'bigCelebrate')
+    await play($, 'quest', character.id)
+  }))
+}
+
 // A person's prompt counts as presence: the day's first earns "Saddled up", coming
 // back from a break after a long stretch earns "Campfire rest".
 function arrive($: EngineInterface): Promise<unknown> {
-  runtime.queue = runtime.queue
-    .then(async () => {
-      const now = await $.clock.now()
-      const day = dayOf(now, runtime.offset)
-      const world = await loadWorld($)
-      const lastAt = Math.max(0, ...world.ledgers.map(ledger => ledger.lastAt))
-      const since = Math.min(
-        lastAt,
-        ...world.ledgers.filter(ledger => ledger.lastAt >= lastAt - CONTINUOUS_GAP_MS).map(l => l.activeSince),
-      )
-      const earned: Earn[] = []
-      if (countToday(world.ledgers, 'daily', day) === 0) earned.push({ kind: 'daily' })
-      if (isBreakOver(lastAt, since, now)) earned.push({ kind: 'break' })
-      const presence = touch({ ...world.own, lastAt, activeSince: since }, now)
-      await saveOwn($, world, { ...world.own, lastAt: presence.lastAt, activeSince: presence.activeSince })
-      for (const earn of earned) await grant($, earn)
-    })
-    .catch(() => undefined)
+  return enqueue($, async () => {
+    const now = await $.clock.now()
+    const day = dayOf(now, runtime.offset)
+    const world = await loadWorld($)
+    const lastAt = Math.max(0, ...world.ledgers.map(ledger => ledger.lastAt))
+    const since = Math.min(
+      lastAt,
+      ...world.ledgers.filter(ledger => ledger.lastAt >= lastAt - CONTINUOUS_GAP_MS).map(l => l.activeSince),
+    )
+    const earned: Earn[] = []
+    if (countToday(world.ledgers, 'daily', day) === 0) earned.push({ kind: 'daily' })
+    if (isBreakOver(lastAt, since, now)) earned.push({ kind: 'break' })
+    const presence = touch({ ...world.own, lastAt, activeSince: since }, now)
+    await saveOwn($, world, { ...world.own, lastAt: presence.lastAt, activeSince: presence.activeSince })
+    for (const earn of earned) await grant($, earn)
+  })
+}
 
-  return runtime.queue
+// Counts a pet, treat or trick for the day's bounties (nothing is paid for it).
+async function count($: EngineInterface, kind: CareKind) {
+  const day = dayOf(await $.clock.now(), runtime.offset)
+  const world = await loadWorld($)
+  const next = await saveOwn($, world, tally(world.own, kind, day))
+  await publish($, next)
+  await settleQuests($)
 }
 
 async function changeWallet($: EngineInterface, change: (wallet: Wallet, totals: Totals) => Wallet | undefined) {
   const world = await loadWorld($)
   const totals = await publish($, world)
-  const wallet = change(world.wallet, totals)
+  // Read the wallet again right before writing it, in case another session just did.
+  const wallet = change(readWallet(await $.store.get('wallet')), totals)
   if (wallet === undefined) return false
   await $.store.set('wallet', wallet)
   await publish($, { ...world, wallet })
@@ -240,26 +399,85 @@ async function changeWallet($: EngineInterface, change: (wallet: Wallet, totals:
   return true
 }
 
+// ── Interactions ────────────────────────────────────────────────────────────
+
+// A sleeping pal wakes up; one at work stays at work.
+async function wake($: EngineInterface) {
+  const activity = await read($, activityAtom)
+  await setActivity($, activity === 'sleeping' ? 'idle' : activity)
+}
+
+// A pet makes hearts; three within a few seconds and the pal rolls about.
+async function pet($: EngineInterface) {
+  const now = await $.clock.now()
+  runtime.pets = [...runtime.pets.filter(at => now - at < 6000), now]
+  const character = await currentCharacter($)
+  await wake($)
+  await playAct($, runtime.pets.length >= 3 ? 'petMore' : 'pet')
+  await play($, 'pet', character.id)
+  await enqueue($, () => count($, 'pet'))
+}
+
+// Shows one of the learned tricks, in turn.
+async function trick($: EngineInterface) {
+  const character = await currentCharacter($)
+  const known = learned(character, await read($, totalsAtom))
+  if (known.length === 0) {
+    $.ui.toast(words().noTricks)
+    await wake($)
+    await playAct($, 'lookAround')
+    await enqueue($, () => count($, 'trick'))
+    return
+  }
+  const act = known[runtime.tricks % known.length]!
+  runtime.tricks += 1
+  await wake($)
+  await playAct($, act)
+  await play($, 'trick', character.id)
+  await enqueue($, () => count($, 'trick'))
+}
+
+// A treat costs a little gold: the pal munches it and glows for ten minutes.
+async function treat($: EngineInterface) {
+  const character = await currentCharacter($)
+  const price = character.treat.price
+  const isPaid = await enqueue($, () =>
+    changeWallet($, (wallet, totals) => (totals.dust < price ? undefined : { ...wallet, spent: wallet.spent + price })),
+  )
+  if (isPaid !== true) {
+    $.ui.toast(words().noTreatGold)
+    await play($, 'error', character.id)
+    return
+  }
+  const now = await $.clock.now()
+  const until = now + GLOW_MS
+  await update($, glowAtom, () => until)
+  // Clear it when it wears off, so a desktop loop is drawn again without the blush.
+  $.clock.after(GLOW_MS + 50, () => void update($, glowAtom, current => (current === until ? 0 : current)))
+  await wake($)
+  await playAct($, 'treat')
+  await play($, 'treat', character.id)
+  await enqueue($, () => count($, 'treat'))
+}
+
+// ── Sessions, panes, commands ───────────────────────────────────────────────
+
 // /clear and /resume carry on under a new session id without a new session.start, and
 // the new session's $.state starts from the defaults. Move to that session's ledger
 // (after writes already queued for the old one) and publish everything again.
 function rejoin($: EngineInterface): Promise<unknown> {
-  runtime.queue = runtime.queue
-    .then(async () => {
-      const key = `ledger:${await $.session.id()}`
-      if (key === runtime.key) return
-      runtime.key = key
-      // The new session's values are empty, so publish even what looks unchanged.
-      runtime.synced = ''
-      await publish($, await loadWorld($))
-    })
-    .catch(() => undefined)
-
-  return runtime.queue
+  return enqueue($, async () => {
+    const key = `ledger:${await $.session.id()}`
+    if (key === runtime.key) return
+    runtime.key = key
+    // The new session's values are empty, so publish even what looks unchanged.
+    runtime.synced = ''
+    await publish($, await loadWorld($))
+  })
 }
 
-// Ledgers quiet for two days fold into `archive` to keep the key count down. A short
-// lease keeps two sessions from folding at once.
+// Ledgers quiet for two days fold into `archive` to keep the key count down, and old
+// bounty boards go. A short lease keeps two sessions from folding at once.
 async function compact($: EngineInterface) {
   const now = await $.clock.now()
   const lease = (await $.store.get('lease')) as { key?: string; until?: number } | undefined
@@ -270,7 +488,9 @@ async function compact($: EngineInterface) {
   if (held?.key !== runtime.key) return
   const archive = readLedger(await $.store.get('archive'))
   const stale: string[] = []
+  const today = dayOf(now, runtime.offset)
   for (const key of await $.store.keys()) {
+    if (key.startsWith('bounty:') && key < `bounty:${today}`) stale.push(key)
     if (!key.startsWith('ledger:') || key === runtime.key) continue
     const ledger = readLedger(await $.store.get(key))
     if (now - ledger.lastAt < STALE_MS) continue
@@ -278,10 +498,8 @@ async function compact($: EngineInterface) {
     archive.dust += ledger.dust
     stale.push(key)
   }
-  if (stale.length > 0) {
-    await $.store.set('archive', { ...archive, days: {}, recent: [] })
-    for (const key of stale) await $.store.delete(key)
-  }
+  if (stale.some(key => key.startsWith('ledger:'))) await $.store.set('archive', { ...archive, days: {}, recent: [] })
+  for (const key of stale) await $.store.delete(key)
   await $.store.delete('lease')
 }
 
@@ -316,6 +534,7 @@ async function pick($: EngineInterface, id: CharacterId) {
   runtime.drawn = ''
   $.ui.toast(character.hello[runtime.language])
   await flash($, 'buy', `✦ ${character.hello[runtime.language]}`)
+  await playAct($, 'hello')
   await play($, 'hello', id)
 }
 
@@ -337,13 +556,14 @@ async function shop($: EngineInterface, id: string, level: number) {
   if (item === undefined) return
   const wallet = readWallet(await $.store.get('wallet'))
   if (wallet.owned.includes(id)) {
-    await changeWallet($, current => wear(current, id))
+    await enqueue($, () => changeWallet($, current => wear(current, id)))
     await play($, 'equip', character.id)
     return
   }
-  const isDone = await changeWallet($, (current, now) => buy(current, now, level, id))
+  const isDone = (await enqueue($, () => changeWallet($, (current, now) => buy(current, now, level, id)))) === true
   if (isDone) {
     await flash($, 'buy', words().bought(item.name[runtime.language]))
+    await playAct($, 'buy')
     await play($, 'buy', character.id)
   } else {
     $.ui.toast(words().broke)
@@ -351,17 +571,37 @@ async function shop($: EngineInterface, id: string, level: number) {
   }
 }
 
-// The terminal sprite is blitted in place every tick. SVG surfaces animate on their
-// own (SMIL inside the SVG), so they need no timer.
+// ── Drawing ─────────────────────────────────────────────────────────────────
+
+async function momentNow($: EngineInterface, character: Character, tick: number, actT?: number): Promise<Moment> {
+  const stored = await read($, actAtom)
+  const glowUntil = await read($, glowAtom)
+  const now = await $.clock.now()
+  // An act past its last frame is over, even if the timer that clears it was lost to a reload.
+  const act = stored !== null && actTicks(stored.name) > 0 && now - stored.at < actTicks(stored.name) * TICK_MS ? stored : null
+
+  return {
+    character: character.id,
+    activity: await read($, activityAtom),
+    tick,
+    learned: learned(character, await read($, totalsAtom)),
+    isGlowing: glowUntil > now,
+    ...(act === null ? {} : { act: { name: act.name, t: actT ?? tick - runtime.actTick } }),
+  }
+}
+
+// The terminal sprite is blitted in place every tick; SVG surfaces animate on their
+// own (SMIL inside the SVG) and are drawn again only when the moment changes.
 async function animate($: EngineInterface) {
   if (!runtime.isDrawn) return
   runtime.tick += 1
-  const character = await read($, characterAtom)
-  if (character === null || (await read($, pickingAtom))) return
-  const mood = await read($, moodAtom)
+  const id = await read($, characterAtom)
+  if (id === null || (await read($, pickingAtom))) return
+  const character = characterOf(id)
   const wallet = await read($, walletAtom)
   const fx = await read($, fxAtom)
-  const rows = frame({ character, mood, tick: runtime.tick, equipped: wornBy(wallet, character), size: runtime.size, fx: fx?.kind })
+  const moment = await momentNow($, character, runtime.tick)
+  const rows = frame({ character: id, look: lookAt(moment), tick: runtime.tick, equipped: wornBy(wallet, id), size: runtime.size, fx: fx?.kind })
   const signature = rows.join('')
   if (signature === runtime.drawn) return
   runtime.drawn = signature
@@ -369,12 +609,21 @@ async function animate($: EngineInterface) {
   if (done.deny !== undefined) runtime.isDrawn = false
 }
 
-// One loop of a mood as an animated SVG.
-function loopSvg(pose: Omit<Pose, 'tick' | 'size'>): string {
-  const ticks = pose.fx === undefined ? LOOP_TICKS[pose.mood] : 24
-  const frames = Array.from({ length: ticks }, (_, tick) => frame({ ...pose, tick, size: 32 }))
+// One loop of the moment as an animated SVG, waving back when pointed at.
+function loopSvg(moment: Moment, equipped: readonly string[], fx: FxKind | undefined): string {
+  const ticks = loopTicks(moment)
+  const isIdle = moment.act === undefined && moment.activity === 'idle'
+  const start = isIdle ? busySlot(moment.learned, runtime.svgSeed) * idleGap(moment.character, moment.isGlowing === true) : 0
+  const frames = Array.from({ length: ticks }, (_, i) => {
+    const tick = start + i
+    const look = lookAt({ ...moment, tick, ...(moment.act === undefined ? {} : { act: { name: moment.act.name, t: i } }) })
+    return frame({ character: moment.character, look, tick, equipped, size: 32, ...(fx === undefined ? {} : { fx }) })
+  })
+  const hover = Array.from({ length: actTicks('hello') }, (_, t) =>
+    frame({ character: moment.character, look: ACTS.hello!.at(t, moment.character), tick: t, equipped, size: 32 }),
+  )
 
-  return animatedSvgOf(frames, 250)
+  return animatedSvgOf(frames, TICK_MS, hover)
 }
 
 function commas(n: number): string {
@@ -400,7 +649,7 @@ async function rulesText($: EngineInterface): Promise<string> {
     return w.rules.line(w.rewards[key], rule.fame, rule.dust, limit, n, rateOf(key, n))
   })
 
-  return [w.rules.intro, ...lines, w.rules.commitBonus, w.rules.verifyNote, w.rules.dayNote(5, utcOffset(runtime.offset))].join('\n')
+  return [w.rules.intro, ...lines, w.rules.commitBonus, w.rules.verifyNote, w.rules.extras, w.rules.dayNote(5, utcOffset(runtime.offset))].join('\n')
 }
 
 async function statusText($: EngineInterface): Promise<string> {
@@ -408,9 +657,10 @@ async function statusText($: EngineInterface): Promise<string> {
   const world = await loadWorld($)
   const totals = await publish($, world)
   const { level, into, need } = levelOf(totals.fame)
+  const character = characterOf(world.character)
 
   return w.status({
-    name: characterOf(world.character).name,
+    name: character.name,
     level,
     rank: w.ranks[rankOf(level)]!,
     fame: totals.fame,
@@ -419,7 +669,17 @@ async function statusText($: EngineInterface): Promise<string> {
     fans: w.fans(commas(fansOf(totals.fame))),
     owned: world.wallet.owned.length,
     total: SHOP_SIZE,
+    tricks: learnedTricks(character, level).length,
+    allTricks: character.tricks.length,
   })
+}
+
+function bountyLines(quests: readonly Quest[], ledgers: readonly Ledger[], day: string, done: readonly string[]) {
+  return quests.map(quest => ({
+    quest,
+    have: Math.min(quest.target, countToday(ledgers, quest.count, day)),
+    isDone: done.includes(quest.id),
+  }))
 }
 
 export const register: Register = (on, options) => {
@@ -427,15 +687,23 @@ export const register: Register = (on, options) => {
     runtime.key = `ledger:${await $.session.id()}`
     runtime.offset = -new Date().getTimezoneOffset()
     runtime.language = languageOf(options.language, await $.settings.read({ key: 'language' }).catch(() => undefined))
+    runtime.lastActiveAt = await $.clock.now()
     const w = words()
     await $.command.register({ name: 'cappl', description: w.commands.toggle, immediate: true })
     await $.command.register({ name: 'cappl-pick', description: w.commands.pick, argumentHint: 'locki | cappl', immediate: true })
     await $.command.register({ name: 'cappl-status', description: w.commands.status })
     await $.command.register({ name: 'cappl-rules', description: w.commands.rules })
     await $.command.register({ name: 'cappl-sound', description: w.commands.sound, immediate: true })
-    await publish($, await loadWorld($))
-    $.clock.every(250, () => void animate($))
+    const totals = await publish($, await loadWorld($))
+    // Chests start from the level a profile already has; only new levels pay.
+    if ((await $.store.get('chestLevel')) === undefined) await $.store.set('chestLevel', levelOf(totals.fame).level)
+    $.clock.every(TICK_MS, () => void animate($).catch(() => undefined))
     $.clock.every(SYNC_MS, () => void sync($))
+    $.clock.every(15_000, () => void checkSleep($).catch(() => undefined))
+    // Desktop loops show a different idle stretch now and then.
+    $.clock.every(30_000, () => {
+      runtime.svgSeed += 1
+    })
     if ((await $.store.get('hidden')) !== true) void $.ui.open({ id: PANE, title: 'CAPPL' })
     void compact($).catch(() => undefined)
 
@@ -447,6 +715,14 @@ export const register: Register = (on, options) => {
     if (e.source !== 'startup') await rejoin($)
 
     return started
+  })
+
+  // Waiting on a permission prompt: the pal waves for attention.
+  on('classic.Notification', async ($, e, next) => {
+    const done = await next(e)
+    if (/permission/i.test(e.notification_type)) await setActivity($, 'waiting')
+
+    return done
   })
 
   on('command.run', { command: 'cappl' }, async $ => {
@@ -494,13 +770,16 @@ export const register: Register = (on, options) => {
 
   on('prompt.submit', async ($, e, next) => {
     await arrive($)
+    if ((await read($, activityAtom)) === 'sleeping') await setActivity($, 'idle')
+    await playAct($, 'listen')
 
     return next(e)
   })
 
   on('turn.start', async ($, e, next) => {
     if (e.agentId === undefined) {
-      await update($, moodAtom, () => 'working' as Mood)
+      runtime.isTurn = true
+      await setActivity($, 'thinking')
       await update($, turnFameAtom, () => 0)
     }
 
@@ -510,34 +789,74 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     const done = await next(e)
     if (e.agentId === undefined) {
-      await update($, moodAtom, () => 'happy' as Mood)
-      $.clock.after(3000, () => void update($, moodAtom, () => 'idle' as Mood))
+      runtime.isTurn = false
+      runtime.turns += 1
+      await setActivity($, 'idle')
+      // A dance to end the turn, after whatever cheering is still going.
+      const act = await read($, actAtom)
+      const now = await $.clock.now()
+      const left = act === null ? 0 : Math.max(0, act.at + actTicks(act.name) * TICK_MS - now)
+      const turn = runtime.turns
+      $.clock.after(left + 100, () => {
+        // Not if the next turn has already begun.
+        if (!runtime.isTurn && runtime.turns === turn) void playAct($, DANCES[turn % DANCES.length]!)
+      })
     }
 
     return done
   })
 
+  on('turn.abort', async ($, e, next) => {
+    const done = await next(e)
+    runtime.isTurn = false
+    await setActivity($, 'idle')
+
+    return done
+  })
+
   on('tool.call', async ($, e, next) => {
+    const isMain = !('agentId' in e) || e.agentId === undefined
+    const tool = String(e.tool)
+    const command = e.tool === 'Bash' ? e.command : ''
+    if (isMain) {
+      const doing: Activity = EDIT_TOOLS.has(tool)
+        ? 'editing'
+        : READ_TOOLS.has(tool)
+          ? 'reading'
+          : isTestCommand(command) || /\btest\b/.test(command)
+            ? 'testing'
+            : 'running'
+      await setActivity($, doing)
+    }
     const ran = await next(e)
+    if (isMain) await setActivity($, runtime.isTurn ? 'thinking' : 'idle')
     if (ran.deny !== undefined) return ran
     const isError = ran.isError === true
-    let signal: Signal | undefined
-    if (EDIT_TOOLS.has(String(e.tool))) {
-      if (!isError) signal = { type: 'edit' }
+    // One command can do several things (`npm test && git commit && gh pr create`),
+    // taken in the order they happen.
+    const signals: Signal[] = []
+    if (EDIT_TOOLS.has(tool)) {
+      if (!isError) signals.push({ type: 'edit' })
     } else if (e.tool === 'ExitPlanMode') {
-      if (!isError) signal = { type: 'plan' }
+      if (!isError) signals.push({ type: 'plan' })
     } else if (e.tool === 'Bash') {
       const output = ran.text ?? ''
-      if (commitOutcome(e.command, output, isError)) {
-        signal = { type: 'commit' }
-      } else if (mergeOutcome(e.command, output, isError)) {
-        signal = { type: 'merge' }
+      const isPass = testOutcome(command, output, isError)
+      if (isPass !== undefined) {
+        signals.push({ type: 'test', isPass })
+        if (!isPass) {
+          await playAct($, 'fail')
+          await play($, 'fail', (await currentCharacter($)).id)
+        }
       } else {
-        const isPass = testOutcome(e.command, output, isError)
-        if (isPass !== undefined) signal = { type: 'test', isPass }
+        const isClean = checkOutcome(command, output, isError)
+        if (isClean !== undefined) signals.push({ type: 'check', isPass: isClean })
       }
+      if (commitOutcome(command, output, isError)) signals.push({ type: 'commit' })
+      if (prOutcome(command, output, isError)) signals.push({ type: 'pr' })
+      if (mergeOutcome(command, output, isError)) signals.push({ type: 'merge' })
     }
-    if (signal !== undefined) {
+    for (const signal of signals) {
       const result = observe(runtime.work, signal)
       runtime.work = result.work
       // The result goes back once the reward is written (a few ms of store writes).
@@ -570,16 +889,16 @@ export const register: Register = (on, options) => {
       // Two cards side by side fit a 40-column dock with the small sprites.
       const cardWidth = size === 32 ? 34 : 18
       const cards = CHARACTERS.map((character, index) => {
-        const rows = frame({ character: character.id, mood: 'happy', tick: 0, equipped: [], size })
         let art
         if (e.surface === 'terminal') {
           const { Raster } = $.ui.resolve(e)
-          const cells = encode(rows)
+          const look = ACTS.hello!.at(1, character.id)
+          const cells = encode(frame({ character: character.id, look, tick: 0, equipped: [], size }))
           art = <Raster key={`art-${character.id}`} columns={cells.columns} rows={cells.rows} cells={cells.cells} />
         } else {
           const { Svg } = $.ui.resolve(e)
-          const source = loopSvg({ character: character.id, mood: 'happy', equipped: [] })
-          art = <Svg source={source} alt={character.name} width={128} height={112} isInteractive />
+          const moment: Moment = { character: character.id, activity: 'idle', tick: 0, learned: [], act: { name: 'hello', t: 0 } }
+          art = <Svg source={loopSvg(moment, [], undefined)} alt={character.name} width={128} height={112} isInteractive />
         }
 
         return (
@@ -609,15 +928,21 @@ export const register: Register = (on, options) => {
     const totals = await read($, totalsAtom)
     const wallet = await read($, walletAtom)
     const log = await read($, logAtom)
-    const mood = await read($, moodAtom)
     const fx = await read($, fxAtom)
     const { level, into, need } = levelOf(totals.fame)
     const filled = need === 0 ? 10 : Math.floor((into / need) * 10)
     const worn = wornBy(wallet, character.id)
     const visible = character.items.filter(item => item.level <= level || wallet.owned.includes(fullId(character.id, item.id)))
     const nextLocked = character.items.find(item => item.level > level)
-    // Rows below the header: recent rewards, the shop, the buttons.
-    const below = 1 + Math.max(1, Math.min(4, log.length)) + 1 + visible.length + (nextLocked ? 1 : 0) + 3
+    const nextTrick = character.tricks.find(one => one.level > level)
+    const now = await $.clock.now()
+    const day = dayOf(now, runtime.offset)
+    const world = await loadWorld($)
+    const quests = questsOf(day)
+    const bounty = readBounty(await $.store.get(`bounty:${day}`))
+    const lines = bountyLines(quests, world.ledgers, day, bounty.done)
+    // Rows below the header: actions, bounties, recent rewards, the shop, what's next, the buttons.
+    const below = 1 + 5 + 1 + Math.max(1, Math.min(4, log.length)) + 1 + visible.length + (nextLocked ? 1 : 0) + (nextTrick ? 1 : 0) + 3
 
     let sprite
     let isBeside = false
@@ -626,7 +951,8 @@ export const register: Register = (on, options) => {
       const { Raster } = $.ui.resolve(e)
       // bodyRows is the most the pane can show at once; rows past it need focus and scrolling.
       runtime.size = columns >= 32 && bodyRows >= BIG_ROWS ? 32 : 16
-      const rows = frame({ character: character.id, mood, tick: runtime.tick, equipped: worn, size: runtime.size, fx: fx?.kind })
+      const moment = await momentNow($, character, runtime.tick)
+      const rows = frame({ character: character.id, look: lookAt(moment), tick: runtime.tick, equipped: worn, size: runtime.size, fx: fx?.kind })
       const art = encode(rows)
       runtime.drawn = rows.join('')
       runtime.isDrawn = true
@@ -637,7 +963,8 @@ export const register: Register = (on, options) => {
       isOverflowing = (isBeside ? Math.max(art.rows, HEADER_ROWS + 2) + below : stacked) > bodyRows
     } else if (e.surface === 'desktop' || e.surface === 'vscode' || e.surface === 'mobile') {
       const { Svg } = $.ui.resolve(e)
-      const source = loopSvg({ character: character.id, mood, equipped: worn, fx: fx?.kind })
+      const moment = await momentNow($, character, 0, 0)
+      const source = loopSvg(moment, worn, fx?.kind)
       sprite = <Svg source={source} alt={`${character.name} Lv${level}`} width={128} height={112} isInteractive />
     }
 
@@ -670,6 +997,20 @@ export const register: Register = (on, options) => {
         ) : (
           [sprite, ...header]
         )}
+        <Box key="actions" flexDirection="row" flexWrap="wrap">
+          <Button key="pet" label={w.pet} hotkey="p" onPress={() => pet($)} />
+          <Text> </Text>
+          <Button key="trick" label={w.trick} hotkey="t" onPress={() => trick($)} />
+          <Text> </Text>
+          <Button key="treat" label={w.treat(character.treat.name[lang], character.treat.price)} hotkey="f" onPress={() => treat($)} />
+        </Box>
+        <Text dimColor>{w.bounties}</Text>
+        {lines.map(line => (
+          <Text key={`quest-${line.quest.id}`} {...(line.isDone ? { color: '#86EFAC' } : { dimColor: true })}>
+            {w.questLine(w.quests[line.quest.id] ?? line.quest.id, line.have, line.quest.target, line.quest.gold, line.isDone)}
+          </Text>
+        ))}
+        <Text dimColor>{w.bonusLine(BOUNTY_BONUS, bounty.bonus)}</Text>
         <Text dimColor>{w.recent}</Text>
         {log.length === 0 && <Text dimColor>{w.noRewards}</Text>}
         {log.slice(-4).map(one => (
@@ -698,6 +1039,7 @@ export const register: Register = (on, options) => {
           )
         })}
         {nextLocked !== undefined && <Text dimColor>{w.next(nextLocked.level, nextLocked.name[lang])}</Text>}
+        {nextTrick !== undefined && <Text dimColor>{w.nextTrick(nextTrick.level, nextTrick.name[lang])}</Text>}
         <Text> </Text>
         <Button key="switch" label={w.switchCharacter} hotkey="c" onPress={() => update($, pickingAtom, () => true)} />
         <Button key="close" label={w.close} hotkey="q" onPress={() => hidePane($)} />

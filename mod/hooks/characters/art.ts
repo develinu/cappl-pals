@@ -19,6 +19,23 @@ export type BodyArt = {
     happyAt: readonly (readonly [number, number])[]
   }
   nose: { at: readonly [number, number]; art: Layer }
+  face: Face
+}
+export type Stamp = { art: Layer; dx: number; dy: number }
+export type EyeKind = 'open' | 'blink' | 'closed' | 'happy' | 'shiny' | 'heart' | 'star' | 'wide' | 'x' | 'sleepy'
+export type BrowKind = 'worried' | 'determined'
+export type MouthKind = 'open' | 'w' | 'o' | 'tongue' | 'chomp' | 'yawn' | 'smile'
+export type BubbleKind = '!' | '?' | 'heart' | 'note' | 'dots' | 'star' | 'zzz'
+export type Face = {
+  eyeAt: readonly (readonly [number, number])[]
+  eyes: Readonly<Record<EyeKind, Stamp>>
+  brows: Readonly<Record<BrowKind, readonly [Stamp, Stamp]>>
+  mouthAt: readonly [number, number]
+  mouths: Readonly<Record<MouthKind, Stamp>>
+  blush: { at: readonly (readonly [number, number])[]; art: Layer }
+  sweat: { at: readonly [number, number]; art: Layer }
+  bubbleAt: readonly [number, number]
+  treatAt: readonly [number, number]
 }
 export type ItemArt = { layer: ItemLayer; frames: readonly Layer[]; recolor?: Readonly<Record<string, string>> }
 
@@ -65,6 +82,7 @@ export const PALETTE: Readonly<Record<string, number>> = {
   "Z": 0x17143d,
   "W": 0xf4f1ea,
   "V": 0xcfc8ba,
+  "h": 0xf7a1bd,
   "O": 0xf59e0b,
   "q": 0x2a2a30,
   "j": 0xa7b0bc,
@@ -230,6 +248,7 @@ export const BODY = {
       ]],
       eyes: { at: [[10, 15], [20, 15]], open: ["wK", "KK", "KK"], blink: ["..", "..", "KK"], happy: [".KK.", "K..K"], happyAt: [[9, 16], [19, 16]] },
       nose: { at: [14, 19], art: ["KKKK", ".KK."] },
+      face: {"eyeAt": [[10, 15], [20, 15]], "eyes": {"open": {"art": ["wK", "KK", "KK"], "dx": 0, "dy": 0}, "blink": {"art": ["..", "..", "KK"], "dx": 0, "dy": 0}, "closed": {"art": ["K..K", ".KK."], "dx": -1, "dy": 1}, "happy": {"art": [".KK.", "K..K"], "dx": -1, "dy": 1}, "shiny": {"art": ["wK", "KK", "Kw"], "dx": 0, "dy": 0}, "heart": {"art": ["P.P", "PPP", ".P."], "dx": -1, "dy": 0}, "star": {"art": [".y.", "yly", ".y."], "dx": -1, "dy": 0}, "wide": {"art": [".KK.", "KwKK", "KKKK", ".KK."], "dx": -1, "dy": -1}, "x": {"art": ["K.K", ".K.", "K.K"], "dx": -1, "dy": 0}, "sleepy": {"art": ["..", "KK", "KK"], "dx": 0, "dy": 0}}, "brows": {"worried": [{"art": [".K", "K."], "dx": -1, "dy": -3}, {"art": ["K.", ".K"], "dx": 1, "dy": -3}], "determined": [{"art": ["K.", ".K"], "dx": -1, "dy": -3}, {"art": [".K", "K."], "dx": 1, "dy": -3}]}, "mouthAt": [14, 21], "mouths": {"open": {"art": ["KPPK", ".KK."], "dx": 0, "dy": 0}, "w": {"art": ["K.KK.K", ".K..K."], "dx": -1, "dy": 0}, "o": {"art": [".KK.", "K..K", ".KK."], "dx": 0, "dy": 0}, "tongue": {"art": ["KKKP", "...P"], "dx": 0, "dy": 0}, "chomp": {"art": ["KKKK"], "dx": 0, "dy": 0}, "yawn": {"art": [".KK.", "KPPK", "KPPK", ".KK."], "dx": 0, "dy": 0}, "smile": {"art": ["K..K", ".KK."], "dx": 0, "dy": 0}}, "blush": {"at": [[5, 19], [24, 19]], "art": ["hhh"]}, "sweat": {"at": [27, 11], "art": [".D", "DD", "DA"]}, "bubbleAt": [25, 0], "treatAt": [14, 22]},
     },
     16: {
       width: 16,
@@ -315,6 +334,7 @@ export const BODY = {
       ]],
       eyes: { at: [[5, 7], [10, 7]], open: ["K", "K"], blink: [".", "K"], happy: [".K.", "K.K"], happyAt: [[4, 7], [9, 7]] },
       nose: { at: [7, 9], art: ["KK"] },
+      face: {"eyeAt": [[5, 7], [10, 7]], "eyes": {"open": {"art": ["K", "K"], "dx": 0, "dy": 0}, "blink": {"art": [".", "K"], "dx": 0, "dy": 0}, "closed": {"art": [".", "K"], "dx": 0, "dy": 0}, "happy": {"art": [".K.", "K.K"], "dx": -1, "dy": 0}, "shiny": {"art": ["w", "K"], "dx": 0, "dy": 0}, "heart": {"art": ["P", "P"], "dx": 0, "dy": 0}, "star": {"art": ["y", "l"], "dx": 0, "dy": 0}, "wide": {"art": ["KK", "KK"], "dx": 0, "dy": 0}, "x": {"art": ["K.K", ".K."], "dx": -1, "dy": 0}, "sleepy": {"art": [".", "K"], "dx": 0, "dy": 0}}, "brows": {"worried": [{"art": ["K"], "dx": 0, "dy": -1}, {"art": ["K"], "dx": 0, "dy": -1}], "determined": [{"art": ["K"], "dx": 0, "dy": -1}, {"art": ["K"], "dx": 0, "dy": -1}]}, "mouthAt": [7, 10], "mouths": {"open": {"art": ["PP"], "dx": 0, "dy": 0}, "w": {"art": ["K.K"], "dx": 0, "dy": 0}, "o": {"art": ["K"], "dx": 1, "dy": 0}, "tongue": {"art": [".P"], "dx": 0, "dy": 0}, "chomp": {"art": ["KK"], "dx": 0, "dy": 0}, "yawn": {"art": ["PP", "PP"], "dx": 0, "dy": 0}, "smile": {"art": ["KK"], "dx": 0, "dy": 0}}, "blush": {"at": [[3, 9], [12, 9]], "art": ["h"]}, "sweat": {"at": [13, 5], "art": ["D", "D"]}, "bubbleAt": [12, 0], "treatAt": [6, 10]},
     },
   },
   cappl: {
@@ -472,6 +492,7 @@ export const BODY = {
       ]],
       eyes: { at: [[11, 17], [19, 17]], open: ["wt", "tt", "tt"], blink: ["..", "..", "tt"], happy: [".tt.", "t..t"], happyAt: [[10, 18], [18, 18]] },
       nose: { at: [14, 21], art: ["tttt", ".tt."] },
+      face: {"eyeAt": [[11, 17], [19, 17]], "eyes": {"open": {"art": ["wt", "tt", "tt"], "dx": 0, "dy": 0}, "blink": {"art": ["..", "..", "tt"], "dx": 0, "dy": 0}, "closed": {"art": ["t..t", ".tt."], "dx": -1, "dy": 1}, "happy": {"art": [".tt.", "t..t"], "dx": -1, "dy": 1}, "shiny": {"art": ["wt", "tt", "tw"], "dx": 0, "dy": 0}, "heart": {"art": ["P.P", "PPP", ".P."], "dx": -1, "dy": 0}, "star": {"art": [".y.", "yly", ".y."], "dx": -1, "dy": 0}, "wide": {"art": [".tt.", "twtt", "tttt", ".tt."], "dx": -1, "dy": -1}, "x": {"art": ["t.t", ".t.", "t.t"], "dx": -1, "dy": 0}, "sleepy": {"art": ["..", "tt", "tt"], "dx": 0, "dy": 0}}, "brows": {"worried": [{"art": [".t", "t."], "dx": -1, "dy": -3}, {"art": ["t.", ".t"], "dx": 1, "dy": -3}], "determined": [{"art": ["t.", ".t"], "dx": -1, "dy": -3}, {"art": [".t", "t."], "dx": 1, "dy": -3}]}, "mouthAt": [14, 23], "mouths": {"open": {"art": ["tPPt", ".tt."], "dx": 0, "dy": 0}, "w": {"art": ["t.tt.t", ".t..t."], "dx": -1, "dy": 0}, "o": {"art": [".tt.", "t..t", ".tt."], "dx": 0, "dy": 0}, "tongue": {"art": ["tttP", "...P"], "dx": 0, "dy": 0}, "chomp": {"art": ["tttt"], "dx": 0, "dy": 0}, "yawn": {"art": [".tt.", "tPPt", "tPPt", ".tt."], "dx": 0, "dy": 0}, "smile": {"art": ["t..t", ".tt."], "dx": 0, "dy": 0}}, "blush": {"at": [[7, 21], [23, 21]], "art": ["hhh"]}, "sweat": {"at": [27, 13], "art": [".D", "DD", "DA"]}, "bubbleAt": [25, 0], "treatAt": [14, 22]},
     },
     16: {
       width: 16,
@@ -557,9 +578,14 @@ export const BODY = {
       ]],
       eyes: { at: [[5, 8], [10, 8]], open: ["t", "t"], blink: [".", "t"], happy: [".t.", "t.t"], happyAt: [[4, 8], [9, 8]] },
       nose: { at: [7, 10], art: ["tt"] },
+      face: {"eyeAt": [[5, 8], [10, 8]], "eyes": {"open": {"art": ["t", "t"], "dx": 0, "dy": 0}, "blink": {"art": [".", "t"], "dx": 0, "dy": 0}, "closed": {"art": [".", "t"], "dx": 0, "dy": 0}, "happy": {"art": [".t.", "t.t"], "dx": -1, "dy": 0}, "shiny": {"art": ["w", "t"], "dx": 0, "dy": 0}, "heart": {"art": ["P", "P"], "dx": 0, "dy": 0}, "star": {"art": ["y", "l"], "dx": 0, "dy": 0}, "wide": {"art": ["tt", "tt"], "dx": 0, "dy": 0}, "x": {"art": ["t.t", ".t."], "dx": -1, "dy": 0}, "sleepy": {"art": [".", "t"], "dx": 0, "dy": 0}}, "brows": {"worried": [{"art": ["t"], "dx": 0, "dy": -1}, {"art": ["t"], "dx": 0, "dy": -1}], "determined": [{"art": ["t"], "dx": 0, "dy": -1}, {"art": ["t"], "dx": 0, "dy": -1}]}, "mouthAt": [7, 11], "mouths": {"open": {"art": ["PP"], "dx": 0, "dy": 0}, "w": {"art": ["t.t"], "dx": 0, "dy": 0}, "o": {"art": ["t"], "dx": 1, "dy": 0}, "tongue": {"art": [".P"], "dx": 0, "dy": 0}, "chomp": {"art": ["tt"], "dx": 0, "dy": 0}, "yawn": {"art": ["PP", "PP"], "dx": 0, "dy": 0}, "smile": {"art": ["tt"], "dx": 0, "dy": 0}}, "blush": {"at": [[3, 10], [12, 10]], "art": ["h"]}, "sweat": {"at": [13, 6], "art": ["D", "D"]}, "bubbleAt": [12, 0], "treatAt": [6, 11]},
     },
   },
 } as const satisfies Record<string, Record<32 | 16, BodyArt>>
+
+export const BUBBLES: Readonly<Record<32 | 16, Readonly<Record<BubbleKind, Layer>>>> = {"32": {"!": [".ggggg.", "gwwrwwg", "gwwrwwg", "gwwrwwg", "gwwwwwg", "gwwrwwg", ".ggggg.", ".g....."], "?": [".ggggg.", "gwkkkwg", "gwwwkwg", "gwwkwwg", "gwwwwwg", "gwwkwwg", ".ggggg.", ".g....."], "heart": [".ggggg.", "gwwwwwg", "gPPwPPg", "gPPPPPg", "gwPPPwg", "gwwPwwg", ".ggggg.", ".g....."], "note": [".ggggg.", "gwwkkwg", "gwwkwkg", "gwwkwwg", "gkkkwwg", "gkkwwwg", ".ggggg.", ".g....."], "dots": [".ggggg.", "gwwwwwg", "gwwwwwg", "gGwGwGg", "gwwwwwg", "gwwwwwg", ".ggggg.", ".g....."], "star": [".ggggg.", "gwwywwg", "gwyyywg", "gyyyyyg", "gwyyywg", "gwywywg", ".ggggg.", ".g....."], "zzz": ["..AAAA.", "....A..", "...A...", "..AAAA.", "AAA....", ".A.....", "AAA...."]}, "16": {"!": ["r", "r", ".", "r"], "?": ["kk", ".k", "k.", "..", "k."], "heart": ["P.P", "PPP", ".P."], "note": [".k", ".k", "kk"], "dots": ["G.G.G"], "star": [".y.", "yyy", ".y."], "zzz": ["AAA", ".A.", "AAA"]}}
+
+export const TREAT_ART: Readonly<Record<string, Record<32 | 16, Layer>>> = {"locki": {"32": ["..P..", ".mPm.", "mPmPm", ".mmm.", ".m.m."], "16": ["mP", "Pm"]}, "cappl": {"32": [".xxx.", "xmlmx", "xmmmx", "xmlmx", ".xxx."], "16": ["xm", "mx"]}}
 
 export const ITEM_ART: Readonly<Record<string, Readonly<Record<string, Record<32 | 16, ItemArt>>>>> = {
   locki: {

@@ -1,8 +1,16 @@
 // Export the poses the video uses, as pixel grids drawn by the mod's own composer.
 // Usage: bun export_frames.ts > assets/poses.json
+import { ACTS, lookAt } from '../mod/hooks/animations'
 import { PALETTE } from '../mod/hooks/characters/art'
-import { frame, type Pose } from '../mod/hooks/sprite'
+import { frame, type Look } from '../mod/hooks/sprite'
 import type { CharacterId } from '../mod/types'
+
+// The video's three moods, as the mod draws them: idle, celebrating, editing.
+const MOODS = {
+  idle: (character: CharacterId, tick: number): Look => lookAt({ character, activity: 'idle', tick, learned: [] }),
+  happy: (character: CharacterId, tick: number): Look => ACTS.celebrate!.at(tick % ACTS.celebrate!.ticks, character),
+  working: (character: CharacterId, tick: number): Look => lookAt({ character, activity: 'editing', tick, learned: [] }),
+}
 
 // What each pal wears at each rank in the journey scene. Backdrops are left out:
 // the video paints its own.
@@ -34,15 +42,14 @@ const LOOKS: Record<CharacterId, Record<string, string[]>> = {
 const out: Record<string, string[]> = {}
 for (const [character, looks] of Object.entries(LOOKS) as [CharacterId, Record<string, string[]>][]) {
   for (const [look, equipped] of Object.entries(looks)) {
-    for (const mood of ['idle', 'happy', 'working'] as const) {
+    for (const [mood, lookOf] of Object.entries(MOODS)) {
       for (let tick = 0; tick < 24; tick += 1) {
-        const pose: Pose = { character, mood, tick, equipped, size: 32 }
-        out[`${character}:${look}:${mood}:${tick}`] = frame(pose)
+        out[`${character}:${look}:${mood}:${tick}`] = frame({ character, look: lookOf(character, tick), tick, equipped, size: 32 })
       }
     }
     for (const fx of ['reward', 'level', 'stage', 'buy'] as const) {
       for (let tick = 0; tick < 8; tick += 1) {
-        out[`${character}:${look}:fx-${fx}:${tick}`] = frame({ character, mood: 'happy', tick, equipped, size: 32, fx })
+        out[`${character}:${look}:fx-${fx}:${tick}`] = frame({ character, look: MOODS.happy(character, tick), tick, equipped, size: 32, fx })
       }
     }
   }

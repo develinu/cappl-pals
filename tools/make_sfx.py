@@ -127,6 +127,35 @@ def noise_hit(dur, decay):
     return highpass(n) * np.exp(-np.arange(len(n)) / SR / decay)
 
 
+def chomp():
+    """One bite: a short crunchy burst."""
+    n = int(0.07 * SR)
+    t = np.arange(n) / SR
+    return lowpass(RNG.uniform(-1, 1, n), 0.35) * np.exp(-t / 0.02) * 1.4
+
+
+def chomps(count=3, gap=0.15):
+    return mix(*[pad(chomp(), i * gap) for i in range(count)])
+
+
+def creak(dur=0.35):
+    """A chest lid: a low wooden creak that rises."""
+    n = int(dur * SR)
+    f = np.geomspace(110, 260, n)
+    t = np.arange(n) / SR
+    wobble = 1 + 0.5 * np.sign(np.sin(2 * np.pi * 38 * t))
+    return lowpass(np.sign(np.sin(2 * np.pi * np.cumsum(f) / SR)) * wobble, 0.15) * np.clip(t / 0.02, 0, 1) * np.clip((dur - t) / 0.05, 0, 1) * 0.5
+
+
+def coins(count=6, dur=0.5, notes=("E6", "B6", "G6", "D7", "A6", "E7")):
+    out = np.zeros(int(dur * SR))
+    for k in range(count):
+        sig = square(hz(notes[k % len(notes)]), 0.07, 0.25) * env(int(0.07 * SR), decay=0.03)
+        j = int((k / count) * (dur - 0.08) * SR)
+        out[j:j + len(sig)] += sig * 0.6
+    return lowpass(out, 0.6)
+
+
 def locki():
     return {
         "coin": mix(chip("E6", 0.06), pad(yip(1300, 1780, 0.16), 0.06)),
@@ -220,9 +249,35 @@ def cappl():
     }
 
 
+# Sounds added in 0.2 (petting, treats, tricks, bounties, chests). They are made after
+# the first ones so that the shared random noise of the older sounds never changes.
+def locki_more():
+    return {
+        "pet": mix(yip(1000, 1450, 0.08), pad(yip(1100, 1550, 0.08), 0.11), pad(sparkle(0.3, 3), 0.18) * 0.35),
+        "treat": mix(chomps(3), pad(yip(900, 1500, 0.14), 0.5), pad(sparkle(0.25, 2), 0.6) * 0.3),
+        "trick": mix(seq(["C6", "E6", "G6", "E7"], 0.05, chip, tail=0.2), pad(sparkle(0.35, 4), 0.15) * 0.4),
+        "fail": mix(chip("E5", 0.12, duty=0.5, decay=0.08), pad(yip(520, 330, 0.25), 0.12)),
+        "lucky": mix(sparkle(0.5, 7), pad(seq(["E6", "G6", "B6", "E7"], 0.05, chip, tail=0.35), 0.05)),
+        "quest": mix(seq(["G5", "C6", "E6", "G6"], 0.07, chip, tail=0.45), pad(jingle(0.35), 0.28) * 0.7),
+        "chest": mix(creak(0.35), pad(coins(7, 0.55), 0.3), pad(sparkle(0.4, 4), 0.5) * 0.4),
+    }
+
+
+def cappl_more():
+    return {
+        "pet": mix(hum(["D5", "G5"], 0.12), pad(pluck("B5", 0.3, bright=0.3) * 0.6, 0.2)),
+        "treat": mix(chomps(3, 0.17), pad(hum(["G4", "D5"], 0.13), 0.55)),
+        "trick": seq(["G4", "B4", "D5", "G5", "D5", "G5"], 0.045, pluck, tail=0.3),
+        "fail": mix(pluck("D4", 0.2), pad(lowpass(triangle(np.geomspace(200, 110, int(0.4 * SR)), 0.4), 0.3) * 0.6, 0.08)),
+        "lucky": mix(notes_up(0.35), pad(pluck("G6", 0.5, bright=0.2) * 0.6, 0.3)),
+        "quest": mix(strum(["G3", "D4", "G4", "B4"], 0.6), pad(seq(["D5", "G5"], 0.08, pluck, tail=0.4), 0.25)),
+        "chest": mix(creak(0.35), pad(mix(*[pad(pluck(n, 0.25, bright=0.2) * 0.5, i * 0.06) for i, n in enumerate(["E6", "B6", "G6", "D7", "G7"])]), 0.3)),
+    }
+
+
 LEVELS = {"": -27.0, "quiet": -35.0}
-OFFSET = {"coin": -1.0, "equip": -2.0, "open": -3.0, "close": -3.0, "error": -2.0, "hello": -1.0,
-          "levelup": 1.0, "stage": 1.5, "fanfare": 0.5}
+OFFSET = {"coin": -1.0, "equip": -2.0, "open": -3.0, "close": -3.0, "error": -2.0, "hello": -1.0, "pet": -2.0,
+          "trick": -1.0, "fail": -3.0, "treat": -1.0, "levelup": 1.0, "stage": 1.5, "fanfare": 0.5, "chest": 0.5}
 
 
 def short_rms_db(sig):
@@ -258,7 +313,10 @@ def write(folder, name, sig, target_db):
 
 
 if __name__ == "__main__":
-    for character, sounds in (("locki", locki()), ("cappl", cappl())):
+    voices = {"locki": locki(), "cappl": cappl()}
+    voices["locki"].update(locki_more())
+    voices["cappl"].update(cappl_more())
+    for character, sounds in voices.items():
         for sub, level in LEVELS.items():
             for name, sig in sounds.items():
                 write(os.path.join(OUT, character, sub), name, sig, level + OFFSET.get(name, 0.0))
