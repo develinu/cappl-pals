@@ -95,13 +95,13 @@ def inside(points, x, y):
     return hit
 
 
-def paw(c, x0, y0, w, h, toes):
+def paw(c, x0, y0, w, h, toes, fill="C", outline="o"):
     """A rounded paw resting on the ledge, outlined, with toe creases."""
     shape = Canvas(c.w, c.h)
-    shape.spans([(y0, x0 + 1, x0 + w - 2)] + [(y, x0, x0 + w - 1) for y in range(y0 + 1, y0 + h)], "C")
-    shape.outline("o")
+    shape.spans([(y0, x0 + 1, x0 + w - 2)] + [(y, x0, x0 + w - 1) for y in range(y0 + 1, y0 + h)], fill)
+    shape.outline(outline)
     for x in toes:
-        shape.span(y0 + h - 2, x, x, "o")
+        shape.span(y0 + h - 2, x, x, outline)
     return shape
 
 
@@ -161,9 +161,9 @@ def locki32():
 def cappl32():
     W, H = 32, 28
     ears = Canvas(W, H)
-    ears.ellipse(11, 3.2, 3.2, 3.2, "T")
+    ears.polygon([(8.5, 7), (11, 0.5), (13.5, 7)], "T")
     ears.outline("t")
-    ears.ellipse(11, 3.6, 1.6, 1.8, "Q")
+    ears.polygon([(9.5, 6), (11, 2.5), (12.5, 6)], "Q")
     ears.mirror()
 
     head = Canvas(W, H)
@@ -228,7 +228,7 @@ def locki16():
 def cappl16():
     W, H = 16, 14
     ears = Canvas(W, H)
-    ears.ellipse(5.5, 1.4, 1.7, 1.6, "T")
+    ears.polygon([(3.5, 5), (5.5, 0.5), (7.5, 5)], "T")
     ears.mirror()
     head = Canvas(W, H)
     head.ellipse(8, 8.8, 6.6, 4.8, "T", y_max=12)
@@ -261,7 +261,7 @@ def stamp(art, dx=0, dy=0):
 
 
 def face32(who):
-    k = "K" if who == "locki" else "t"
+    k = {"locki": "K", "cappl": "t", "numo": "X"}[who]
     eyes = {
         "open": stamp([f"w{k}", f"{k}{k}", f"{k}{k}"]),
         "blink": stamp(["..", "..", f"{k}{k}"]),
@@ -289,7 +289,9 @@ def face32(who):
     }
     if who == "locki":
         eye_at, mouth_at, blush_at, sweat_at, treat_at = [[10, 15], [20, 15]], [14, 21], [[5, 19], [24, 19]], [27, 11], [14, 22]
-    else:
+    elif who == "cappl":
+        eye_at, mouth_at, blush_at, sweat_at, treat_at = [[11, 17], [19, 17]], [14, 23], [[7, 21], [23, 21]], [27, 13], [14, 22]
+    else:  # numo
         eye_at, mouth_at, blush_at, sweat_at, treat_at = [[11, 17], [19, 17]], [14, 23], [[7, 21], [23, 21]], [27, 13], [14, 22]
     return {
         "eyeAt": eye_at, "eyes": eyes, "brows": brows, "mouthAt": mouth_at, "mouths": mouths,
@@ -299,7 +301,7 @@ def face32(who):
 
 
 def face16(who):
-    k = "K" if who == "locki" else "t"
+    k = {"locki": "K", "cappl": "t", "numo": "X"}[who]
     eyes = {
         "open": stamp([k, k]),
         "blink": stamp([".", k]),
@@ -319,7 +321,9 @@ def face16(who):
     }
     if who == "locki":
         eye_at, mouth_at, blush_at, sweat_at, treat_at = [[5, 7], [10, 7]], [7, 10], [[3, 9], [12, 9]], [13, 5], [6, 10]
-    else:
+    elif who == "cappl":
+        eye_at, mouth_at, blush_at, sweat_at, treat_at = [[5, 8], [10, 8]], [7, 11], [[3, 10], [12, 10]], [13, 6], [6, 11]
+    else:  # numo
         eye_at, mouth_at, blush_at, sweat_at, treat_at = [[5, 8], [10, 8]], [7, 11], [[3, 10], [12, 10]], [13, 6], [6, 11]
     return {
         "eyeAt": eye_at, "eyes": eyes, "brows": brows, "mouthAt": mouth_at, "mouths": mouths,
@@ -366,9 +370,10 @@ def bubbles():
 
 
 TREATS = {
-    # A pink-frosted star cookie for LOCKI, a maple biscuit for CAPPL.
+    # A pink-frosted star cookie for LOCKI, a maple biscuit for CAPPL, a dew drop for NUMO.
     "locki": {32: ["..P..", ".mPm.", "mPmPm", ".mmm.", ".m.m."], 16: ["mP", "Pm"]},
     "cappl": {32: [".xxx.", "xmlmx", "xmmmx", "xmlmx", ".xxx."], 16: ["xm", "mx"]},
+    "numo": {32: [".II.", "IDDI", "IDDI", ".II.", "...."], 16: ["ID", "DI"]},
 }
 
 
@@ -583,6 +588,137 @@ def locki_items16(W=16, H=14):
     }
 
 
+def numo32():
+    W, H = 32, 28
+    ears = Canvas(W, H)  # cactus — no animal ears
+
+    head = Canvas(W, H)
+    head.ellipse(16, 17.5, 12.6, 9.2, "f", y_max=25)
+    head.ellipse(16, 10, 7.5, 6, "f")
+    head.outline("L")
+
+    hat = cowboy_hat(W, H, "B", "b", "R", "W")
+    hat.spans([(2, 15, 16), (3, 13, 18), (4, 14, 17), (5, 14, 14), (5, 17, 17)], "W")
+
+    paws = [paw(Canvas(W, H), 5, 23, 8, 5, [7, 10], "f", "L"),
+            paw(Canvas(W, H), 19, 23, 8, 5, [21, 24], "f", "L")]
+
+    return {
+        "width": W,
+        "height": H,
+        "ears": ears.rows(),
+        "head": head.rows(),
+        "hat": hat.rows(),
+        "paws": [p.rows() for p in paws],
+        "eyes": {"at": [[11, 17], [19, 17]], "open": ["wX", "XX", "XX"], "blink": ["..", "..", "XX"],
+                 "happy": [".XX.", "X..X"], "happyAt": [[10, 18], [18, 18]]},
+        "nose": {"at": [14, 21], "art": ["XXXX", ".XX."]},
+    }
+
+
+def numo16():
+    W, H = 16, 14
+    ears = Canvas(W, H)  # cactus — no animal ears
+
+    head = Canvas(W, H)
+    head.ellipse(8, 8.8, 6.6, 4.8, "f", y_max=12)
+    head.ellipse(8, 4.5, 4, 3.2, "f")
+    head.outline("L")
+
+    hat = cowboy_hat16(W, H, "B", "b", "R", "W")
+    hat.spans([(1, 7, 8), (2, 6, 6), (2, 9, 9)], "W")
+
+    paws = [paw(Canvas(W, H), 2, 11, 4, 3, [3], "f", "L"),
+            paw(Canvas(W, H), 10, 11, 4, 3, [12], "f", "L")]
+
+    return {
+        "width": W, "height": H, "ears": ears.rows(), "head": head.rows(), "hat": hat.rows(),
+        "paws": [p.rows() for p in paws],
+        "eyes": {"at": [[5, 8], [10, 8]], "open": ["X", "X"], "blink": [".", "X"],
+                 "happy": [".X.", "X.X"], "happyAt": [[4, 8], [9, 8]]},
+        "nose": {"at": [7, 10], "art": ["XX"]},
+    }
+
+
+def numo_items32(W=32, H=28):
+    def reading_specs(c):
+        for x0 in (10, 18):
+            c.stamp(x0, 16, [".bb.", "b..b", "b..b", ".bb."])
+        c.span(17, 14, 17, "b")
+
+    def cactus_bloom(c):
+        c.stamp(18, 2, ["..h..", ".hhh.", "hhlhh", ".hhh.", "..h.."])
+
+    def watering_can(c):
+        c.spans([(21, 19, 24), (22, 18, 25), (23, 18, 25), (24, 19, 24)], "e")
+        c.span(21, 20, 23, "E")
+        for x, yy in [(18, 21), (17, 22), (16, 23)]:
+            c.set(x, yy, "e")
+        c.set(15, 24, "D")
+        c.set(16, 25, "D")
+        c.spans([(21, 25, 25), (22, 25, 26), (23, 25, 26), (24, 25, 25)], "e")
+
+    def sun_goggles(c):
+        for x0 in (9, 19):
+            c.stamp(x0, 15, ["yyyy", "yyyy", ".yy."])
+            c.set(x0 + 1, 15, "O")
+        c.span(15, 13, 18, "y")
+        c.span(15, 6, 8, "y")
+        c.span(15, 23, 25, "y")
+
+    def logbook(c):
+        for yy in range(19, 26):
+            c.span(yy, 20, 25, "W")
+        c.spans([(yy, 19, 19) for yy in range(19, 26)], "X")
+        for yy in [21, 23]:
+            c.span(yy, 20, 25, "V")
+        c.set(19, 25, "l")
+
+    def moon_badge(c):
+        c.stamp(20, 2, [".Wl", "W..", "W..", ".W."])
+
+    def oasis(c):
+        background(c, [(9, "D"), (17, "I"), (99, "J")])
+        for yy in range(10, 18):
+            c.set(2, yy, "x")
+        c.stamp(0, 8, ["eee", "ee.", "e.."])
+        c.stamp(2, 7, [".ee", "ee.", "e.."])
+        c.spans([(24, 0, 6), (25, 0, 8)], "D")
+
+    def starry_oasis(tick):
+        spots = [[(2, 9), (28, 2), (24, 0), (30, 13), (1, 16)], [(5, 1), (27, 4), (31, 8), (2, 13), (30, 18)]]
+        def draw(c):
+            background(c, [(99, "z")])
+            c.stamp(1, 0, [".ll.", "l...", "l...", ".ll."])
+            stars(c, spots[tick % 2], "w")
+            stars(c, spots[(tick + 1) % 2], "l")
+            c.spans([(24, 0, 5), (25, 0, 7)], "D")
+        return draw
+
+    def golden_can(c):
+        c.spans([(21, 19, 24), (22, 18, 25), (23, 18, 25), (24, 19, 24)], "y")
+        c.span(21, 20, 23, "Y")
+        for x, yy in [(18, 21), (17, 22), (16, 23)]:
+            c.set(x, yy, "y")
+        c.set(15, 24, "l")
+        c.set(16, 25, "l")
+        c.spans([(21, 25, 25), (22, 25, 26), (23, 25, 26), (24, 25, 25)], "y")
+
+    L = lambda d: layer(W, H, d)
+    return {
+        "reading-specs": item("face", L(reading_specs)),
+        "cactus-bloom": item("hat", L(cactus_bloom)),
+        "watering-can": item("hand", L(watering_can)),
+        "sun-goggles": item("face", L(sun_goggles)),
+        "logbook": item("hand", L(logbook)),
+        "moon-badge": item("hat", L(moon_badge)),
+        "oasis": item("back", L(oasis)),
+        "camel-hat": item("hat", L(lambda c: None), recolor={"B": "m", "b": "M", "R": "l"}),
+        "starry-oasis": item("back", L(starry_oasis(0)), L(starry_oasis(1))),
+        "golden-can": item("hand", L(golden_can)),
+    }
+
+
 def cappl_items16(W=16, H=14):
     def banjo(rim, head):
         return lambda c: (c.stamp(11, 9, [".xx.", "x" + head * 2 + "x", "x" + head * 2 + "x", ".xx."].copy() if rim == "x" else
@@ -616,11 +752,41 @@ def cappl_items16(W=16, H=14):
     }
 
 
+def numo_items16(W=16, H=14):
+    def night_oasis(tick):
+        spots = [[(3, 0), (14, 1), (1, 6)], [(12, 0), (15, 4), (0, 9)]]
+        return lambda c: (background(c, [(99, "z")]), c.stamp(0, 0, [".l", "l."]),
+                          stars(c, spots[tick % 2], "w"), stars(c, spots[(tick + 1) % 2], "l"),
+                          c.spans([(11, 0, 3), (12, 0, 4)], "D"))
+
+    def can(color, rim):
+        return lambda c: (c.spans([(10, 9, 12), (11, 9, 12), (12, 9, 12)], color),
+                          c.span(10, 10, 11, rim),
+                          c.set(8, 11, color), c.set(7, 12, color))
+
+    L = lambda d: layer(W, H, d)
+    return {
+        "reading-specs": item("face", L(lambda c: (c.stamp(4, 7, [".b.", "b.b", ".b."]), c.stamp(9, 7, [".b.", "b.b", ".b."])))),
+        "cactus-bloom": item("hat", L(lambda c: (c.set(8, 1, "h"), c.set(7, 2, "h"), c.set(9, 2, "h"), c.set(8, 2, "l")))),
+        "watering-can": item("hand", L(can("e", "E"))),
+        "sun-goggles": item("face", L(lambda c: (c.stamp(4, 7, ["yy", "yy"]), c.stamp(9, 7, ["yy", "yy"]), c.span(7, 6, 8, "y")))),
+        "logbook": item("hand", L(lambda c: (c.spans([(10, 10, 13), (11, 10, 13), (12, 10, 13)], "W"), c.span(10, 9, 9, "X"), c.span(11, 9, 9, "X"), c.span(12, 9, 9, "X")))),
+        "moon-badge": item("hat", L(lambda c: (c.set(8, 1, "W"), c.set(7, 2, "W"), c.set(7, 3, "W")))),
+        "oasis": item("back", L(lambda c: (background(c, [(4, "D"), (8, "I"), (99, "J")]),
+                                           c.spans([(yy, 0, 0) for yy in range(5, 13)], "x")))),
+        "camel-hat": item("hat", L(lambda c: None), recolor={"B": "m", "b": "M", "R": "l"}),
+        "starry-oasis": item("back", L(night_oasis(0)), L(night_oasis(1))),
+        "golden-can": item("hand", L(can("y", "Y"))),
+    }
+
+
 PALETTE = {
     # LOCKI
     "N": "#2B4A8B", "n": "#1B2C57", "H": "#4568B0", "P": "#F2728F", "p": "#C8526F", "i": "#F6CFCF",
-    # CAPPL
+    # CAPPL / CARO
     "B": "#9C6B42", "b": "#6E4A2C", "R": "#C08E5E", "T": "#2F7A7E", "t": "#1D5257", "Q": "#4A979B",
+    # NUMO
+    "f": "#8BBF97", "L": "#5A8C6A",
     # shared fur and features
     "C": "#FFF3DC", "c": "#EEDDBD", "o": "#C4A57E", "K": "#1F1D24", "w": "#FFFFFF",
     # items and effects
@@ -832,12 +998,12 @@ def icon(path, arts, size=1024):
 
 
 if __name__ == "__main__":
-    arts = {"locki": {32: locki32(), 16: locki16()}, "cappl": {32: cappl32(), 16: cappl16()}}
+    arts = {"locki": {32: locki32(), 16: locki16()}, "cappl": {32: cappl32(), 16: cappl16()}, "numo": {32: numo32(), 16: numo16()}}
     for who in arts:
         arts[who][32]["face"] = face32(who)
         arts[who][16]["face"] = face16(who)
-    items = {"locki": locki_items32(), "cappl": cappl_items32()}
-    emit(arts, {"locki": {32: items["locki"], 16: locki_items16()}, "cappl": {32: items["cappl"], 16: cappl_items16()}})
+    items = {"locki": locki_items32(), "cappl": cappl_items32(), "numo": numo_items32()}
+    emit(arts, {"locki": {32: items["locki"], 16: locki_items16()}, "cappl": {32: items["cappl"], 16: cappl_items16()}, "numo": {32: items["numo"], 16: numo_items16()}})
     if "--icon" in sys.argv:
         icon(sys.argv[sys.argv.index("--icon") + 1], arts)
     if "--png" in sys.argv:
@@ -849,7 +1015,7 @@ if __name__ == "__main__":
                 sheets.append(compose(arts[k][32], [it]))
         png(out, sheets[:11], scale=6)
         png(out.replace(".png", "-2.png"), sheets[11:], scale=6)
-        small = {"locki": locki_items16(), "cappl": cappl_items16()}
+        small = {"locki": locki_items16(), "cappl": cappl_items16(), "numo": numo_items16()}
         sheets = []
         for k in arts:
             sheets.append(compose(arts[k][16]))

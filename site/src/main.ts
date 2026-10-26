@@ -179,10 +179,13 @@ const brand = palAt('brand', 'cappl')
 brand.level = 1
 const heroLocki = palAt('hero-locki', 'locki')
 const heroCappl = palAt('hero-cappl', 'cappl')
+const heroNumo = palAt('hero-numo', 'numo')
 const appLocki = palAt('app-locki', 'locki')
 const appCappl = palAt('app-cappl', 'cappl')
+const appNumo = palAt('app-numo', 'numo')
 appLocki.equipped = ['gold-star', 'lasso', 'white-hat']
 appCappl.equipped = ['sparrow', 'banjo', 'black-hat']
+appNumo.equipped = ['moon-badge', 'logbook', 'camel-hat']
 
 const petTimes = new Map<Pal, number[]>()
 function pet(pal: Pal, bubble: HTMLElement | null) {
@@ -195,7 +198,7 @@ function pet(pal: Pal, bubble: HTMLElement | null) {
   toast(bubble, isMore ? copy().play.petMoreToast : copy().play.petToast)
   if (isMore) petTimes.set(pal, [])
 }
-for (const [name, pal] of [['hero-locki', heroLocki], ['hero-cappl', heroCappl]] as const) {
+for (const [name, pal] of [['hero-locki', heroLocki], ['hero-cappl', heroCappl], ['hero-numo', heroNumo]] as const) {
   const button = $(`[data-pet="${name}"]`)
   button.addEventListener('click', () => pet(pal, button.parentElement!.querySelector('.toast')))
 }
@@ -313,7 +316,7 @@ new IntersectionObserver(([entry]) => {
 // ── Play: pet, trick, treat and the wardrobe ───────────────────────────────
 
 const playPal = palAt('play', 'locki')
-const outfits: Record<CharacterId, string[]> = { locki: [], cappl: [] }
+const outfits: Record<CharacterId, string[]> = { locki: [], cappl: [], numo: [] }
 let trickTurn = 0
 const playToast = () => $('.stage-floor .toast')
 
@@ -490,7 +493,7 @@ function renderGold() {
 
 // ── The trail ──────────────────────────────────────────────────────────────
 
-const trailPals: Record<CharacterId, Pal> = { locki: palAt('trail-locki', 'locki'), cappl: palAt('trail-cappl', 'cappl') }
+const trailPals: Record<CharacterId, Pal> = { locki: palAt('trail-locki', 'locki'), cappl: palAt('trail-cappl', 'cappl'), numo: palAt('trail-numo', 'numo') }
 let trailLevel = 35
 let trailTimer = 0
 
@@ -749,7 +752,8 @@ function render() {
   for (const node of $$('[data-t]')) node.textContent = String(pick(node.dataset.t!) ?? '')
   for (const node of $$('[data-t-html]')) node.innerHTML = String(pick(node.dataset.tHtml!) ?? '')
   for (const node of $$('[data-t-label]')) node.setAttribute('aria-label', String(pick(node.dataset.tLabel!) ?? ''))
-  $$('[data-pet]').forEach((button, i) => button.setAttribute('aria-label', copy().hero.pet(i === 0 ? 'LOCKI' : 'CAPPL')))
+  const heroPalNames = ['RIKI', 'CARO', 'NUMO']
+  $$('[data-pet]').forEach((button, i) => button.setAttribute('aria-label', copy().hero.pet(heroPalNames[i] ?? '')))
   renderLists()
   renderSteps()
   renderRewards()
@@ -785,8 +789,8 @@ setMoodAuto(isMoodAuto)
 
 // A hello from both pals as the page opens.
 setTimeout(() => {
-  const hello = lang === 'ko' ? ['하우디!', '반가워!'] : ['Howdy!', 'Hey, partner!']
-  ;[heroLocki, heroCappl].forEach((pal, i) => {
+  const hello = lang === 'ko' ? ['하우디!', '반가워!', '천천히 와.'] : ['Howdy!', 'Hey, partner!', 'Take your time.']
+  ;[heroLocki, heroCappl, heroNumo].forEach((pal, i) => {
     setTimeout(() => {
       pal.play('hello')
       toast($$('.hero-stage .pal-slot .toast')[i] ?? null, hello[i]!)

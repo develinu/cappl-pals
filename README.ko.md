@@ -10,7 +10,7 @@
 
 창·알림·명령은 영어와 한국어를 모두 지원합니다.
 
-![기본·쓰다듬받음·생각 중·간식·축하·낮잠·꾸민 모습의 LOCKI와 CAPPL](docs/cappl-pals-hero.png)
+![기본·쓰다듬받음·생각 중·간식·축하·낮잠·꾸민 모습의 RIKI, CARO, NUMO](docs/cappl-pals-hero.png)
 
 [English README](README.md)
 

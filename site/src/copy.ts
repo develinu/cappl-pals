@@ -47,7 +47,7 @@ const EN: Copy = {
   meta: {
     title: 'cappl-pals · Cowboy-hat pals for Claude Code',
     description:
-      'LOCKI and CAPPL peek over your Claude Code prompt, react to every moment of your session, and grow with the results you ship. Free, open source and private.',
+      'RIKI, CARO and NUMO peek over your Claude Code prompt, react to every moment of your session, and grow with the results you ship. Free, open source and private.',
   },
   nav: {
     moods: 'Moods', play: 'Play', rewards: 'Rewards', trail: 'The trail', install: 'Install', cta: 'Install',
@@ -57,7 +57,7 @@ const EN: Copy = {
     kicker: 'A Claude Code mod · free and open source',
     title: 'Cowboy-hat pals<br>for Claude Code',
     lead:
-      'LOCKI and CAPPL peek over your prompt and follow everything your session does. When a test passes, a commit lands or a pull request merges, they cheer, level up and learn new tricks.',
+      'RIKI, CARO and NUMO peek over your prompt and follow everything your session does. When a test passes, a commit lands or a pull request merges, they cheer, level up and learn new tricks.',
     install: 'Install the mod',
     demo: 'Watch the demo',
     hint: 'Click a pal to pet it',
@@ -93,7 +93,7 @@ const EN: Copy = {
     treat: 'Treat',
     petHint: 'Heart eyes. Three quick pets for a happy wiggle.',
     trickHint: 'Ten tricks to learn, the newest first.',
-    treatHint: 'A star cookie or a maple biscuit, then a blush.',
+    treatHint: 'A star cookie, a maple biscuit or a dew drop, then a blush.',
     wardrobe: 'Try on the wardrobe',
     wardrobeNote: 'Free to try on here. In the mod, each item costs game gold you earn from results.',
     itemMeta: (level, price) => `Lv${level} · ${price} gold`,
@@ -194,16 +194,16 @@ const EN: Copy = {
     copied: 'Copied',
   },
   cappl: {
-    eyebrow: 'The CAPPL app',
-    title: 'Where LOCKI and CAPPL come from',
+    eyebrow: 'The CAPPL · LOCKI · TUSMO apps',
+    title: 'Where RIKI, CARO and NUMO come from',
     lead:
-      'CAPPL is a planning and reflection app. It looks at how you like to plan, how you get things done and how your energy runs through the day, then suggests a schedule template that fits you. cappl-pals cheers for the work you finish; CAPPL helps you plan it and look back on it.',
+      'CARO is from the CAPPL planning app, RIKI is from the LOCKI lock-screen app, and NUMO is from the TUSMO world. cappl-pals cheers for the work you finish; CAPPL helps you plan it and look back on it.',
     appStore: 'App Store',
     googlePlay: 'Google Play',
   },
   footer: {
     code: 'Code under the MIT license.',
-    art: 'LOCKI and CAPPL are characters of the CAPPL app, used with permission, in this project and its forks only.',
+    art: 'RIKI, CARO and NUMO are characters of the CAPPL, LOCKI and TUSMO apps, used with permission, in this project and its forks only.',
     unofficial: 'An unofficial community mod for Claude Code.',
     source: 'Source on GitHub',
   },
@@ -214,7 +214,7 @@ const KO: Copy = {
   meta: {
     title: 'cappl-pals · Claude Code와 함께하는 카우보이모자 단짝',
     description:
-      'LOCKI와 CAPPL이 Claude Code 프롬프트 위로 고개를 내밀고, 세션의 순간마다 표정을 바꾸며, 작업 결과와 함께 자라요. 무료 오픈소스이고, 개인정보를 모으지 않아요.',
+      'RIKI, CARO, NUMO가 Claude Code 프롬프트 위로 고개를 내밀고, 세션의 순간마다 표정을 바꾸며, 작업 결과와 함께 자라요. 무료 오픈소스이고, 개인정보를 모으지 않아요.',
   },
   nav: {
     moods: '표정', play: '놀이', rewards: '보상', trail: '여정', install: '설치', cta: '설치하기',
@@ -224,7 +224,7 @@ const KO: Copy = {
     kicker: 'Claude Code mod · 무료 오픈소스',
     title: 'Claude Code의<br>카우보이모자 단짝',
     lead:
-      'LOCKI와 CAPPL이 프롬프트 위로 고개를 내밀고 세션이 하는 일을 따라 표정을 바꿔요. 테스트가 통과하고, 커밋이 들어가고, PR이 병합되면 함께 기뻐하고 레벨이 오르며 새 재주를 배워요.',
+      'RIKI, CARO, NUMO가 프롬프트 위로 고개를 내밀고 세션이 하는 일을 따라 표정을 바꿔요. 테스트가 통과하고, 커밋이 들어가고, PR이 병합되면 함께 기뻐하고 레벨이 오르며 새 재주를 배워요.',
     install: '설치하기',
     demo: '데모 보기',
     hint: '친구를 눌러 쓰다듬어 보세요',
@@ -260,7 +260,7 @@ const KO: Copy = {
     treat: '간식',
     petHint: '하트 눈. 빠르게 세 번 쓰다듬으면 몸을 흔들며 좋아해요.',
     trickHint: '배울 수 있는 재주 열 가지, 가장 최근 것부터.',
-    treatHint: '별 쿠키나 메이플 비스킷을 먹고 볼이 발그레해져요.',
+    treatHint: '별 쿠키, 메이플 비스킷, 또는 이슬 한 방울을 먹고 볼이 발그레해져요.',
     wardrobe: '옷장 입어 보기',
     wardrobeNote: '여기서는 마음껏 입어 볼 수 있어요. mod에서는 작업 결과로 모은 게임 골드로 사요.',
     itemMeta: (level, price) => `Lv${level} · ${price} 골드`,
@@ -360,16 +360,16 @@ const KO: Copy = {
     copied: '복사됨',
   },
   cappl: {
-    eyebrow: 'CAPPL 앱',
-    title: 'LOCKI와 CAPPL이 사는 곳',
+    eyebrow: 'CAPPL · LOCKI · TUSMO 앱',
+    title: 'RIKI, CARO, NUMO가 사는 곳',
     lead:
-      'CAPPL은 계획·회고 앱이에요. 내 계획 스타일과 실행 방식, 하루 에너지 흐름을 살펴 나에게 맞는 일정 관리 템플릿을 추천해 줘요. cappl-pals가 끝낸 일을 함께 기뻐해 준다면, CAPPL은 그 일을 계획하고 돌아보게 도와줘요.',
+      'CARO는 계획·회고 앱 CAPPL에서, RIKI는 잠금 화면 앱 LOCKI에서, NUMO는 TUSMO 세계에서 왔어요. cappl-pals가 끝낸 일을 함께 기뻐해 준다면, CAPPL은 그 일을 계획하고 돌아보게 도와줘요.',
     appStore: 'App Store',
     googlePlay: 'Google Play',
   },
   footer: {
     code: '코드는 MIT 라이선스예요.',
-    art: 'LOCKI와 CAPPL은 CAPPL 앱의 캐릭터로, 허가를 받아 이 프로젝트와 포크 안에서만 사용해요.',
+    art: 'RIKI, CARO, NUMO는 CAPPL·LOCKI·TUSMO 앱의 캐릭터로, 허가를 받아 이 프로젝트와 포크 안에서만 사용해요.',
     unofficial: 'Claude Code용 비공식 커뮤니티 mod예요.',
     source: 'GitHub에서 소스 보기',
   },

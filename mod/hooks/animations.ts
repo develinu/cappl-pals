@@ -232,14 +232,22 @@ export const ACTS: Readonly<Record<string, Anim>> = {
     ticks: 16,
     at: t => ({ eyes: t % 8 < 4 ? 'closed' : 'happy', particles: t % 8 < 4 ? 'notes' : 'stars', bubble: 'note', mouth: 'open', body: [0, t % 4 === 0 ? -1 : 0], blush: true }),
   },
+  water: {
+    ticks: 12,
+    at: t => (t < 8 ? { paws: 'hold', mouth: 'smile', eyes: t < 4 ? 'wide' : 'happy', hideHand: true } : { eyes: 'happy', blush: true, bubble: 'heart' }),
+  },
+  bloom: {
+    ticks: 12,
+    at: t => ({ eyes: t < 4 ? 'closed' : 'happy', blush: true, mouth: 'w', particles: 'hearts', body: [0, t % 4 === 0 ? -1 : 0] }),
+  },
 }
 
 export const DANCES = ['dance1', 'dance2', 'dance3'] as const
 
 // ── Idle: base pose plus an action now and then ─────────────────────────────
 
-// Ticks between idle actions: LOCKI fidgets more than CAPPL.
-const IDLE_GAP: Readonly<Record<CharacterId, number>> = { locki: 40, cappl: 64 }
+// Ticks between idle actions: LOCKI fidgets more, CAPPL and NUMO are slower and steadier.
+const IDLE_GAP: Readonly<Record<CharacterId, number>> = { locki: 40, cappl: 64, numo: 72 }
 // What every pal does from the start; learned tricks join these as levels go up.
 const IDLE_ACTIONS: readonly string[] = ['lookAround', 'stretch', 'yawn', 'earWiggle']
 

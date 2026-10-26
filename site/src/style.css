@@ -16,6 +16,8 @@
   --pink-deep: #c9466a;
   --teal: #55a8ac;
   --teal-deep: #2f7a7e;
+  --sage: #8BBF97;
+  --sage-deep: #5A8C6A;
   --gold: #facc15;
   --gold-deep: #c79a06;
   --sand: #e8c98f;
@@ -64,6 +66,7 @@ button { font: inherit; color: inherit; }
 .skip:focus { top: 16px; }
 .pink { color: var(--pink); }
 .teal { color: var(--teal); }
+.sage { color: var(--sage); }
 .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .ico.big { width: 28px; height: 28px; }
 

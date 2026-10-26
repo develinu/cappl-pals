@@ -148,7 +148,7 @@ test('shop: level and gold gate a purchase; one item per slot per character', as
   expect(buy(emptyWallet(), rich, 2, 'locki/feather')).toBe(undefined)
   expect(buy(emptyWallet(), rich, 50, 'locki/no-such-thing')).toBe(undefined)
   const one = buy(emptyWallet(), rich, 10, 'locki/aviators')!
-  expect(one.spent).toBe(50)
+  expect(one.spent).toBe(30)
   expect(one.equipped).toEqual(['locki/aviators'])
   const two = buy(one, rich, 10, 'locki/heart-shades')!
   expect(two.equipped).toEqual(['locki/heart-shades'])

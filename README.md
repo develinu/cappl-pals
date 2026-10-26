@@ -10,7 +10,7 @@
 
 The pane, toasts and commands speak English and Korean.
 
-![LOCKI and CAPPL: idle, petted, thinking, eating a treat, celebrating, asleep and dressed up](docs/cappl-pals-hero.png)
+![RIKI, CARO and NUMO: idle, petted, thinking, eating a treat, celebrating, asleep and dressed up](docs/cappl-pals-hero.png)
 
 [한국어 README](README.ko.md)
 

@@ -735,7 +735,7 @@ export const register: Register = (on, options) => {
     runtime.lastActiveAt = await $.clock.now()
     const w = words()
     await $.command.register({ name: 'cappl', description: w.commands.toggle, immediate: true })
-    await $.command.register({ name: 'cappl-pick', description: w.commands.pick, argumentHint: 'locki | cappl', immediate: true })
+    await $.command.register({ name: 'cappl-pick', description: w.commands.pick, argumentHint: 'riki | caro | numo', immediate: true })
     await $.command.register({ name: 'cappl-status', description: w.commands.status })
     await $.command.register({ name: 'cappl-rules', description: w.commands.rules })
     await $.command.register({ name: 'cappl-sound', description: w.commands.sound, immediate: true })

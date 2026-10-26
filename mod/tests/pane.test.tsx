@@ -61,20 +61,20 @@ test('the first time, the pane asks who to ride with; picking shows that charact
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     expect(await text(ui, /^Pick your partner/)).toBe('Pick your partner')
-    expect((await ui.find({ key: 'pick-locki' }))?.text).toMatch(/Pick LOCKI/)
-    expect((await ui.find({ key: 'pick-cappl' }))?.text).toMatch(/Pick CAPPL/)
+    expect((await ui.find({ key: 'pick-locki' }))?.text).toMatch(/Pick RIKI/)
+    expect((await ui.find({ key: 'pick-cappl' }))?.text).toMatch(/Pick CARO/)
     await ui.unmount()
   }
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'pick-cappl' })
-  expect(await text(ui, /Lv1/)).toBe('CAPPL Lv1 Greenhorn')
-  expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs \$50/)
+  expect(await text(ui, /Lv1/)).toBe('CARO Lv1 Greenhorn')
+  expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs \$30/)
   // "Switch character" brings the picker back, marking who rides now.
   await ui.press({ key: 'switch' })
-  expect(await text(ui, /riding now/)).toBe('2. CAPPL (riding now)')
+  expect(await text(ui, /riding now/)).toBe('2. CARO (riding now)')
   await ui.press({ key: 'pick-locki' })
-  expect(await text(ui, /Lv1/)).toBe('LOCKI Lv1 Greenhorn')
+  expect(await text(ui, /Lv1/)).toBe('RIKI Lv1 Greenhorn')
   await ui.unmount()
 })
 
@@ -84,8 +84,8 @@ test('/cappl-pick picks by name, and says which names exist', async ($, on) => {
   mock.clock(on, { now: NOW })
 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  expect((await $.command.run({ command: 'cappl-pick', ...RUN, args: 'CAPPL' })).text).toBe('CAPPL is riding with you now.')
-  expect((await $.command.run({ command: 'cappl-status', ...RUN })).text).toMatch(/^CAPPL Lv1 Greenhorn/)
+  expect((await $.command.run({ command: 'cappl-pick', ...RUN, args: 'CARO' })).text).toBe('CARO is riding with you now.')
+  expect((await $.command.run({ command: 'cappl-status', ...RUN })).text).toMatch(/^CARO Lv1 Greenhorn/)
   expect((await $.command.run({ command: 'cappl-pick', ...RUN, args: 'bob' })).text).toMatch(/locki, cappl/)
 })
 
@@ -104,7 +104,7 @@ test('editing, passing a test and committing shows rep and gold in the pane', as
     // Bullseye (5, $3) + claim staked (3, $2; tested 5, $3; small 2) = 15 rep, $8
     expect(await text(ui, /^Rep/)).toMatch(/15\/\d+$/)
     expect(await text(ui, /^Gold/)).toMatch(/^Gold \$8/)
-    expect(await text(ui, /Lv/)).toBe('LOCKI Lv1 Greenhorn')
+    expect(await text(ui, /Lv/)).toBe('RIKI Lv1 Greenhorn')
     expect(await text(ui, /^Claim staked/)).toBe('Claim staked +10 $5')
     await ui.unmount()
   }
@@ -154,7 +154,7 @@ test('every control is a button on its own row, driven by click or keyboard; the
   // One way back, at the top.
   expect(await ui.find({ key: 'back-below' })).toBeUndefined()
   await ui.press({ key: 'back' })
-  expect(await text(ui, /Lv1/)).toBe('LOCKI Lv1 Greenhorn')
+  expect(await text(ui, /Lv1/)).toBe('RIKI Lv1 Greenhorn')
 
   await ui.press({ key: 'status' })
   expect(await text(ui, /^My progress/)).toBe('My progress')
@@ -163,9 +163,9 @@ test('every control is a button on its own row, driven by click or keyboard; the
   await ui.press({ key: 'back' })
   await ui.press({ key: 'switch' })
   expect(await text(ui, /^Pick your partner/)).toBe('Pick your partner')
-  expect((await ui.find({ key: 'pick-cappl' }))?.text).toBe('Pick CAPPL')
+  expect((await ui.find({ key: 'pick-cappl' }))?.text).toBe('Pick CARO')
   await ui.press({ key: 'pick-cappl' })
-  expect(await text(ui, /Lv1/)).toBe('CAPPL Lv1 Greenhorn')
+  expect(await text(ui, /Lv1/)).toBe('CARO Lv1 Greenhorn')
   await ui.unmount()
 
   // The desktop draws the same views with its native buttons and no keyboard hints.
@@ -208,18 +208,18 @@ test('other sessions add up; buying spends gold and each character keeps its own
 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect(await text(ui, /Lv/)).toMatch(/^LOCKI Lv6 Stable Hand$/)
+  expect(await text(ui, /Lv/)).toMatch(/^RIKI Lv6 Stable Hand$/)
   await ui.press({ key: 'shop-aviators' })
-  expect(await text(ui, /^Gold/)).toMatch(/^Gold \$70/)
+  expect(await text(ui, /^Gold/)).toMatch(/^Gold \$90/)
   expect((await ui.find({ key: 'shop-aviators' }))?.text).toMatch(/Aviator shades ∙ take off/)
 
   await ui.press({ key: 'switch' })
   await ui.press({ key: 'pick-cappl' })
-  expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs \$50/)
+  expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs \$30/)
   await ui.press({ key: 'shop-round-specs' })
-  expect(await text(ui, /^Gold/)).toMatch(/^Gold \$20/)
+  expect(await text(ui, /^Gold/)).toMatch(/^Gold \$60/)
   await ui.press({ key: 'shop-coffee' })
-  expect(await text(ui, /^Gold/)).toMatch(/^Gold \$20/)
+  expect(await text(ui, /^Gold/)).toMatch(/^Gold \$60/)
 
   await ui.press({ key: 'switch' })
   await ui.press({ key: 'pick-locki' })
@@ -242,7 +242,7 @@ test('folding quiet ledgers into the archive keeps the totals', async ($, on) =>
   // The purchase reads the totals after the fold; a fold that kept the old ledger would leave 160.
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'shop-aviators' })
-  expect(await text(ui, /^Gold/)).toMatch(/^Gold \$70/)
+  expect(await text(ui, /^Gold/)).toMatch(/^Gold \$90/)
   await ui.unmount()
 })
 
@@ -270,7 +270,7 @@ test("another session's rewards, purchases and character show up in an open pane
 
   file.set('character', 'cappl')
   await clock.advance(2_000)
-  expect(await text(ui, /Lv/)).toMatch(/^CAPPL Lv/)
+  expect(await text(ui, /Lv/)).toMatch(/^CARO Lv/)
   await ui.unmount()
 })
 
@@ -342,7 +342,7 @@ test('a low pane above the prompt puts the header beside the small sprite', asyn
     const beside = await ui.find({ key: 'beside' })
     expect(beside?.props.flexDirection).toBe('row')
     expect(JSON.stringify(beside?.children)).toMatch(/"Raster"/)
-    expect(beside?.text).toMatch(/LOCKI Lv1 Greenhorn/)
+    expect(beside?.text).toMatch(/RIKI Lv1 Greenhorn/)
     expect(beside?.text).toMatch(/Rep [▰▱]/)
     expect(beside?.text).toMatch(/Gold \$0/)
     // A low pane says there is more below, beside the sprite.
@@ -390,9 +390,9 @@ test('Korean, from the language option or from the Claude Code setting', { optio
   await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
   await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect(await text(ui, /Lv/)).toBe('LOCKI Lv1 새내기')
+  expect(await text(ui, /Lv/)).toBe('RIKI Lv1 새내기')
   expect(await text(ui, /^골드/)).toMatch(/^골드 \$3/)
-  expect((await ui.find({ key: 'shop-aviators' }))?.text).toMatch(/보안관 선글라스 \$50/)
+  expect((await ui.find({ key: 'shop-aviators' }))?.text).toMatch(/보안관 선글라스 \$30/)
   expect(await text(ui, /^✦ 과녁 명중/)).toBe('✦ 과녁 명중 +5 명성')
   await ui.unmount()
   expect((await $.command.run({ command: 'cappl-rules', ...RUN })).text).toMatch(/UTC/)
@@ -405,7 +405,7 @@ test('auto language follows Claude Code’s language setting', async ($, on) => 
   mock.clock(on, { now: NOW })
 
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  expect((await $.command.run({ command: 'cappl-status', ...RUN })).text).toMatch(/^LOCKI Lv1 새내기 · 명성 0/)
+  expect((await $.command.run({ command: 'cappl-status', ...RUN })).text).toMatch(/^RIKI Lv1 새내기 · 명성 0/)
 })
 
 // $.state kept per session: after /clear the new session id starts with empty values.
@@ -457,7 +457,7 @@ test('after /clear the pane keeps rep, gold, items and the character; new reward
   await $.classic.SessionStart({ source: 'clear' })
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect(await text(ui, /Lv/)).toBe('CAPPL Lv6 Stable Hand')
+  expect(await text(ui, /Lv/)).toBe('CARO Lv6 Stable Hand')
   expect(await text(ui, /^Gold/)).toMatch(/^Gold \$70/)
   expect((await ui.find({ key: 'shop-round-specs' }))?.text).toMatch(/Round specs ∙ take off/)
   await ui.unmount()
@@ -611,7 +611,7 @@ test('without gold a treat is refused, and a new pal knows no tricks yet', async
 
 test('a level up opens a chest of gold and teaches the next trick', async ($, on) => {
   engine(on, { 'pytest -q': '12 passed in 0.3s' })
-  // 28 rep: two short of Lv2, which teaches LOCKI to wave.
+  // 28 rep: two short of Lv2, which teaches RIKI to wave.
   mock.store(on, { ...LOCKI, chestLevel: 1, 'ledger:other': { fame: 28, dust: 0, days: {}, lastAt: NOW - 60_000, activeSince: NOW - 600_000 } })
   const clock = mock.clock(on, { now: NOW })
   const spy = stateSpy(on)
@@ -619,7 +619,7 @@ test('a level up opens a chest of gold and teaches the next trick', async ($, on
   await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
   await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect(await text(ui, /^LOCKI Lv/)).toMatch(/^LOCKI Lv2 /)
+  expect(await text(ui, /^RIKI Lv/)).toMatch(/^RIKI Lv2 /)
   // Bullseye $3 + Lv2 chest $7 (+ a lucky nugget, if this moment rolled one).
   expect(await text(ui, /^Level chest/)).toBe('Level chest $7')
   await clock.advance(5000)

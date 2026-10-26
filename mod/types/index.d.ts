@@ -1,4 +1,4 @@
-export type CharacterId = 'locki' | 'cappl'
+export type CharacterId = 'locki' | 'cappl' | 'numo'
 export type Language = 'en' | 'ko'
 
 // Results a person can check (see rules.ts), plus bonuses paid on top of them.
