@@ -28,7 +28,7 @@ await Bun.write(join(OUT, styleName), style)
 const html = (await Bun.file(join(SRC, 'index.html')).text()).replace('%APP%', scriptName).replace('%CSS%', styleName)
 await Bun.write(join(OUT, 'index.html'), html)
 
-// The favicon: CAPPL's small sprite, as the pane draws it.
+// The favicon: CARO's small sprite, as the pane draws it.
 await Bun.write(join(OUT, 'favicon.svg'), svgOf(frame({ character: 'cappl', look: { eyes: 'happy', blush: true }, tick: 0, equipped: [], size: 16 })))
 
 // The mod's own sounds (the normal set) and the demo videos and posters.

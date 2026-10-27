@@ -194,16 +194,16 @@ const EN: Copy = {
     copied: 'Copied',
   },
   cappl: {
-    eyebrow: 'The CAPPL · LOCKI · TUSMO apps',
+    eyebrow: 'The Sundust world',
     title: 'Where RIKI, CARO and NUMO come from',
     lead:
-      'CARO is from the CAPPL planning app, RIKI is from the LOCKI lock-screen app, and NUMO is from the TUSMO world. cappl-pals cheers for the work you finish; CAPPL helps you plan it and look back on it.',
-    appStore: 'App Store',
-    googlePlay: 'Google Play',
+      'RIKI, CARO and NUMO are the sheriffs of Sundust, a small oasis town where the wind redraws the roads by day. They don’t chase anyone; they bring lost things and days gone astray back where they belong. Sundust is shared by three apps. CARO is the face of CAPPL, a planning app; RIKI of LOCKI, a screen lock app; and NUMO of TUSMO, an app still on its way. cappl-pals cheers for the work you finish; CAPPL helps you plan it and look back on it.',
+    appStore: 'CAPPL · App Store',
+    googlePlay: 'CAPPL · Google Play',
   },
   footer: {
     code: 'Code under the MIT license.',
-    art: 'RIKI, CARO and NUMO are characters of the CAPPL, LOCKI and TUSMO apps, used with permission, in this project and its forks only.',
+    art: 'RIKI, CARO and NUMO are Sundust characters from the CAPPL, LOCKI and TUSMO apps, used with permission, in this project and its forks only.',
     unofficial: 'An unofficial community mod for Claude Code.',
     source: 'Source on GitHub',
   },
@@ -360,16 +360,16 @@ const KO: Copy = {
     copied: '복사됨',
   },
   cappl: {
-    eyebrow: 'CAPPL · LOCKI · TUSMO 앱',
+    eyebrow: 'Sundust 세계관',
     title: 'RIKI, CARO, NUMO가 사는 곳',
     lead:
-      'CARO는 계획·회고 앱 CAPPL에서, RIKI는 잠금 화면 앱 LOCKI에서, NUMO는 TUSMO 세계에서 왔어요. cappl-pals가 끝낸 일을 함께 기뻐해 준다면, CAPPL은 그 일을 계획하고 돌아보게 도와줘요.',
-    appStore: 'App Store',
-    googlePlay: 'Google Play',
+      'RIKI, CARO, NUMO는 낮에는 모래바람이 길을 바꾸는 오아시스 마을 선더스트의 보안관이에요. 누군가를 쫓기보다 잃어버린 물건과 어긋난 하루를 제자리로 돌려놓죠. 선더스트는 세 앱이 함께 쓰는 세계관이에요. CARO는 계획·회고 앱 CAPPL, RIKI는 화면 잠금 앱 LOCKI, NUMO는 곧 나올 앱 TUSMO의 얼굴이에요. cappl-pals가 끝낸 일을 함께 기뻐해 준다면, CAPPL은 그 일을 계획하고 돌아보게 도와줘요.',
+    appStore: 'CAPPL · App Store',
+    googlePlay: 'CAPPL · Google Play',
   },
   footer: {
     code: '코드는 MIT 라이선스예요.',
-    art: 'RIKI, CARO, NUMO는 CAPPL·LOCKI·TUSMO 앱의 캐릭터로, 허가를 받아 이 프로젝트와 포크 안에서만 사용해요.',
+    art: 'RIKI, CARO, NUMO는 CAPPL·LOCKI·TUSMO 앱의 Sundust 캐릭터로, 허가를 받아 이 프로젝트와 포크 안에서만 사용해요.',
     unofficial: 'Claude Code용 비공식 커뮤니티 mod예요.',
     source: 'GitHub에서 소스 보기',
   },

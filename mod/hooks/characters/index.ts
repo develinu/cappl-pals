@@ -34,8 +34,8 @@ export const CHARACTERS: readonly Character[] = [
     name: 'RIKI',
     color: '#F2728F',
     blurb: {
-      en: 'Desert fox who reads the room. Warm, quick to notice, first to sit beside you.',
-      ko: '사막여우 순찰 보안관. 다정하고 눈치 빠르며, 힘든 친구 곁엔 늘 먼저 앉아줘요.',
+      en: 'Desert fox patrol sheriff. Says hi first, catches small changes, sits beside you when you are down.',
+      ko: '마을의 마음을 잇는 사막여우 순찰 보안관. 먼저 인사하고 눈치 빠르며, 풀 죽은 친구 곁엔 먼저 앉아줘요.',
     },
     hello: { en: "Let's go together — it's more fun that way! RIKI here.", ko: '좋아, 같이 가면 더 재밌겠네! RIKI야.' },
     sparkle: 'twinkle',
@@ -78,8 +78,8 @@ export const CHARACTERS: readonly Character[] = [
     name: 'CARO',
     color: '#4A979B',
     blurb: {
-      en: 'A cat who finds new paths. Curious, daring, livelier when ideas collide.',
-      ko: '새 길을 여는 고양이. 호기심 많고 대담하며, 아이디어가 부딪칠 때 더 신나요.',
+      en: 'Cat field sheriff who finds new paths. Full of questions, daring, happiest when ideas join up.',
+      ko: '새로운 길을 여는 고양이 현장 보안관. 질문이 많고 대담하며, 친구의 아이디어와 합쳐질 때 신나요.',
     },
     hello: { en: "Wait — does it have to be that way? CARO here.", ko: '잠깐, 꼭 그 방법이어야 해? CARO야.' },
     sparkle: 'note',
@@ -122,10 +122,10 @@ export const CHARACTERS: readonly Character[] = [
     name: 'NUMO',
     color: '#8BBF97',
     blurb: {
-      en: 'The cactus who keeps the records. Steady, quiet, always has your spot ready.',
-      ko: '기록을 지키는 선인장 보안관. 묵묵하고 든든하며, 네 자리를 늘 미리 마련해둬요.',
+      en: 'Cactus record-keeper sheriff. Keeps every small promise, notices what changed, has your spot ready.',
+      ko: '돌아올 자리를 지키는 선인장 기록 보안관. 작은 약속도 묵묵히 지키고, 네 자리를 미리 마련해둬요.',
     },
-    hello: { en: "Take your time. NUMO had your spot ready.", ko: '천천히 와. NUMO가 네 자리 준비해뒀어.' },
+    hello: { en: "Take your time. Your spot is ready. NUMO here.", ko: '천천히 와. 네 자리도 준비해뒀어. NUMO야.' },
     sparkle: 'twinkle',
     fxColors: {
       reward: ['f', 'W', 'l'],
