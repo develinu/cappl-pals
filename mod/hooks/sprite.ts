@@ -254,7 +254,6 @@ export function frame(pose: Pose): string[] {
 
   // The pal on its own grid first, so the whole of it can hop and sway.
   const fig = blank(body.width, body.height)
-  stamp(fig, 0, -(look.ears ?? 0), body.ears)
   stamp(fig, 0, 0, body.head)
   if (look.blush === true) for (const [x, y] of face.blush.at) stamp(fig, x, y, face.blush.art)
   const eye = face.eyes[look.eyes ?? 'open']
@@ -279,6 +278,8 @@ export function frame(pose: Pose): string[] {
   const recolor = Object.assign({}, ...on('hat').map(item => item.recolor ?? {})) as Record<string, string>
   stamp(fig, hatX, hatY, body.hat, recolor)
   for (const item of on('hat')) stamp(fig, hatX, hatY, frameOf(item, tick))
+  // Ears after hat so cat ears (CARO) poke visibly through the crown.
+  stamp(fig, 0, -(look.ears ?? 0), body.ears)
 
   const paws = look.paws ?? 'rest'
   if (look.hideHand !== true && look.treat === undefined && paws === 'rest') for (const item of on('hand')) stamp(fig, 0, 0, frameOf(item, tick))

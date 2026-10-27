@@ -161,9 +161,9 @@ def locki32():
 def cappl32():
     W, H = 32, 28
     ears = Canvas(W, H)
-    ears.polygon([(8.5, 7), (11, 0.5), (13.5, 7)], "T")
+    ears.polygon([(7.5, 8), (11, 0), (14.5, 8)], "T")
     ears.outline("t")
-    ears.polygon([(9.5, 6), (11, 2.5), (12.5, 6)], "Q")
+    ears.polygon([(9, 7), (11, 2), (13, 7)], "Q")
     ears.mirror()
 
     head = Canvas(W, H)
@@ -228,7 +228,7 @@ def locki16():
 def cappl16():
     W, H = 16, 14
     ears = Canvas(W, H)
-    ears.polygon([(3.5, 5), (5.5, 0.5), (7.5, 5)], "T")
+    ears.polygon([(3, 6), (5.5, 0), (8, 6)], "T")
     ears.mirror()
     head = Canvas(W, H)
     head.ellipse(8, 8.8, 6.6, 4.8, "T", y_max=12)
