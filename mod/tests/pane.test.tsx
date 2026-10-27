@@ -86,7 +86,7 @@ test('/cappl-pick picks by name, and says which names exist', async ($, on) => {
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   expect((await $.command.run({ command: 'cappl-pick', ...RUN, args: 'CARO' })).text).toBe('CARO is riding with you now.')
   expect((await $.command.run({ command: 'cappl-status', ...RUN })).text).toMatch(/^CARO Lv1 Greenhorn/)
-  expect((await $.command.run({ command: 'cappl-pick', ...RUN, args: 'bob' })).text).toMatch(/locki, cappl/)
+  expect((await $.command.run({ command: 'cappl-pick', ...RUN, args: 'bob' })).text).toMatch(/riki, caro, numo/)
 })
 
 test('editing, passing a test and committing shows rep and gold in the pane', async ($, on) => {
