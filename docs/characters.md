@@ -1,6 +1,8 @@
 # Adding a character
 
-A character is four things: pixels, a definition, a voice and a type entry. Nothing else in the mod names LOCKI or CAPPL.
+A character is four things: pixels, a definition, a voice and a type entry. Nothing else in the mod names RIKI, CARO or NUMO.
+
+A character's `id` is what saved progress and file names use; its `name` is what people see. RIKI and CARO keep the ids they had before they were renamed, `locki` and `cappl`, so existing progress and wardrobes carry over. NUMO's id is `numo`. `/cappl-pick` takes either the id or the name.
 
 ## 1. Pixels: `tools/draw_art.py`
 
@@ -59,9 +61,9 @@ Add an entry to `CHARACTERS` with:
 - `tricks`: ten tricks, each an act in `mod/hooks/animations.ts` with the level it is learned at (write new acts there)
 - `treat`: the treat's name and price
 
-`IDLE_GAP` in `animations.ts` sets how often an idle pal does something (LOCKI every 10 seconds, CAPPL every 16).
+`IDLE_GAP` in `animations.ts` sets how often an idle pal does something (RIKI every 10 seconds, CARO every 16, NUMO every 18).
 
-Keep the two wardrobes' combined price near the economy in [reward-design.md](reward-design.md). When a third character's wardrobe is added, lower the prices so that all wardrobes together still cost about the same, or decide on purpose that collecting a new character is extra.
+Keep the wardrobes' combined price near the economy in [reward-design.md](reward-design.md). When a character's wardrobe is added, lower the prices so that all wardrobes together still cost about the same (as NUMO's arrival did), or decide on purpose that collecting a new character is extra.
 
 ## 3. Type: `mod/types/index.d.ts`
 

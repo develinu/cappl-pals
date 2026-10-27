@@ -782,7 +782,7 @@ export const register: Register = (on, options) => {
     return { text: opened.isPlaced ? w.opened : w.waiting }
   })
 
-  // /cappl-pick cappl picks at once; /cappl-pick alone opens the picker in the pane.
+  // /cappl-pick caro picks at once; /cappl-pick alone opens the picker in the pane.
   on('command.run', { command: 'cappl-pick' }, async ($, e) => {
     const w = words()
     const wanted = e.args.trim().toLowerCase()
