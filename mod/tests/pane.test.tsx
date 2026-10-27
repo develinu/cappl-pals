@@ -9,7 +9,7 @@ const PANE = {
   component: 'Pane',
   requestId: 'cappl-pals',
   props: {
-    title: 'CAPPL',
+    title: 'SUNDUST',
     isFocused: false,
     bodyColumns: 40,
     placement: 'dock',
@@ -290,7 +290,7 @@ function paneEngine(on: On, state: { isOpen: boolean; opens: number; closes: str
     return { value: undefined }
   })
   on('ui.panes', () => ({
-    value: state.isOpen ? [{ id: 'cappl-pals', title: 'CAPPL', isShown: true, isFocused: false, isPlaced: true }] : [],
+    value: state.isOpen ? [{ id: 'cappl-pals', title: 'SUNDUST', isShown: true, isFocused: false, isPlaced: true }] : [],
   }))
 }
 

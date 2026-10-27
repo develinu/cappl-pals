@@ -519,7 +519,7 @@ async function showPane($: EngineInterface) {
   void play($, 'open', (await currentCharacter($)).id)
   void sync($)
 
-  return $.ui.open({ id: PANE, title: 'CAPPL', rows: INLINE_ROWS })
+  return $.ui.open({ id: PANE, title: 'SUNDUST', rows: INLINE_ROWS })
 }
 
 async function hidePane($: EngineInterface) {
@@ -749,7 +749,7 @@ export const register: Register = (on, options) => {
     $.clock.every(30_000, () => {
       runtime.svgSeed += 1
     })
-    if ((await $.store.get('hidden')) !== true) void $.ui.open({ id: PANE, title: 'CAPPL' })
+    if ((await $.store.get('hidden')) !== true) void $.ui.open({ id: PANE, title: 'SUNDUST' })
     void compact($).catch(() => undefined)
 
     return next(e)
