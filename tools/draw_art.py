@@ -121,7 +121,7 @@ def cowboy_hat(W, H, main, dark, light, band, top=1, wide=0):
     return hat
 
 
-# ── LOCKI: cream pup, big ears, navy hat with a pink band and a pink star ─────────
+# ── LOCKI (RIKI): cream desert fox, big ears, navy hat with a pink band and a pink star ─────────
 
 
 def locki32():

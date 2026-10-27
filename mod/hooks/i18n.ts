@@ -138,7 +138,7 @@ const EN: Words = {
   broke: 'Not enough gold yet.',
   commands: {
     toggle: 'Open or close the CAPPL pals pane',
-    pick: 'Pick your character (locki or cappl)',
+    pick: 'Pick your character (riki, caro or numo)',
     status: 'Level, rank, rep and gold in one line',
     rules: 'What earns rewards, and how many you got today',
     sound: 'Sound effects: normal → quiet → off',
@@ -264,7 +264,7 @@ const KO: Words = {
   broke: '골드가 아직 모자라요.',
   commands: {
     toggle: 'CAPPL 창 열기·닫기',
-    pick: '캐릭터 고르기(locki 또는 cappl)',
+    pick: '캐릭터 고르기(riki, caro, numo)',
     status: '레벨·계급·명성·골드 한 줄 요약',
     rules: '보상표와 오늘 받은 횟수',
     sound: '효과음 크기: 보통 → 작게 → 끔',

@@ -788,7 +788,7 @@ export const register: Register = (on, options) => {
     const wanted = e.args.trim().toLowerCase()
     if (wanted !== '') {
       const found = CHARACTERS.find(one => one.id === wanted || one.name.toLowerCase() === wanted)
-      if (found === undefined) return { text: w.unknownCharacter(CHARACTERS.map(one => one.id).join(', ')) }
+      if (found === undefined) return { text: w.unknownCharacter(CHARACTERS.map(one => one.name.toLowerCase()).join(', ')) }
       await pick($, found.id)
 
       return { text: w.picked(found.name) }
