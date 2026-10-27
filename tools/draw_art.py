@@ -161,9 +161,9 @@ def locki32():
 def cappl32():
     W, H = 32, 28
     ears = Canvas(W, H)
-    ears.polygon([(7.5, 8), (11, 0), (14.5, 8)], "T")
+    ears.polygon([(7.5, 8), (10.5, 0), (14, 8)], "T")
     ears.outline("t")
-    ears.polygon([(9, 7), (11, 2), (13, 7)], "Q")
+    ears.polygon([(9, 7), (10.5, 2.5), (12.5, 7)], "Q")
     ears.mirror()
 
     head = Canvas(W, H)
@@ -176,7 +176,11 @@ def cappl32():
     face.ellipse(16, 21.5, 9.6, 5, "C", y_max=24)
     head.over(face)
 
-    hat = cowboy_hat(W, H, "B", "b", "R", "b", top=2, wide=1)
+    # CARO's hat is all brim, no crown: the ears stand up through it.
+    hat = Canvas(W, H)
+    hat.spans([(7, 3, 28), (8, 1, 30), (9, 0, 31), (10, 1, 30)], "B")
+    hat.span(11, 5, 26, "b")
+    hat.spans([(8, 2, 7), (9, 1, 4)], "R")
 
     paws = [paw(Canvas(W, H), 5, 23, 8, 5, [7, 10]), paw(Canvas(W, H), 19, 23, 8, 5, [21, 24])]
 
@@ -239,7 +243,10 @@ def cappl16():
     face.ellipse(10.2, 9.2, 2.6, 2.4, "C")
     face.ellipse(8, 11, 4.8, 2.6, "C", y_max=12)
     head.over(face)
-    hat = cowboy_hat16(W, H, "B", "b", "R", "b", top=1)
+    hat = Canvas(W, H)
+    hat.spans([(4, 1, 14), (5, 0, 15)], "B")
+    hat.span(6, 3, 12, "b")
+    hat.spans([(4, 2, 4)], "R")
     paws = [paw(Canvas(W, H), 2, 11, 4, 3, [3]), paw(Canvas(W, H), 10, 11, 4, 3, [12])]
     return {
         "width": W, "height": H, "ears": ears.rows(), "head": head.rows(), "hat": hat.rows(),

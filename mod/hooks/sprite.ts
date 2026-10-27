@@ -276,10 +276,10 @@ export function frame(pose: Pose): string[] {
   const hatX = look.hatDx ?? 0
   const hatY = -(look.hat ?? 0)
   const recolor = Object.assign({}, ...on('hat').map(item => item.recolor ?? {})) as Record<string, string>
+  // Ears over the head but under the brim, so CARO's stand up through its crownless hat.
+  stamp(fig, 0, -(look.ears ?? 0), body.ears)
   stamp(fig, hatX, hatY, body.hat, recolor)
   for (const item of on('hat')) stamp(fig, hatX, hatY, frameOf(item, tick))
-  // Ears after hat so cat ears (CARO) poke visibly through the crown.
-  stamp(fig, 0, -(look.ears ?? 0), body.ears)
 
   const paws = look.paws ?? 'rest'
   if (look.hideHand !== true && look.treat === undefined && paws === 'rest') for (const item of on('hand')) stamp(fig, 0, 0, frameOf(item, tick))
