@@ -238,7 +238,7 @@ SFX = {
     "rank": (tone_seq(["D6", "G6"], 0.06, 0.25, decay=0.08, last_hold=0.12), 0.1),
     "fanfare_end": (tone_seq(["D5", "G5", "B5", "D6"], 0.08, 0.5, decay=0.08, last_hold=1.0), 0.12),
 }
-for character in ("locki", "cappl"):
+for character in ("locki", "cappl", "numo"):
     for name in ("hello", "coin", "buy", "stage", "fanfare", "levelup", "pet", "trick", "treat", "chest", "quest", "lucky", "fail"):
         SFX[f"{name}_{character}"] = (mod_sound(character, name), 5.0 if name == "hello" else 3.2)
 
