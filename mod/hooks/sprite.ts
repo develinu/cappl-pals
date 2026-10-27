@@ -254,7 +254,6 @@ export function frame(pose: Pose): string[] {
 
   // The pal on its own grid first, so the whole of it can hop and sway.
   const fig = blank(body.width, body.height)
-  stamp(fig, 0, -(look.ears ?? 0), body.ears)
   stamp(fig, 0, 0, body.head)
   if (look.blush === true) for (const [x, y] of face.blush.at) stamp(fig, x, y, face.blush.art)
   const eye = face.eyes[look.eyes ?? 'open']
@@ -277,6 +276,8 @@ export function frame(pose: Pose): string[] {
   const hatX = look.hatDx ?? 0
   const hatY = -(look.hat ?? 0)
   const recolor = Object.assign({}, ...on('hat').map(item => item.recolor ?? {})) as Record<string, string>
+  // Ears over the head but under the brim, so CARO's stand up through its crownless hat.
+  stamp(fig, 0, -(look.ears ?? 0), body.ears)
   stamp(fig, hatX, hatY, body.hat, recolor)
   for (const item of on('hat')) stamp(fig, hatX, hatY, frameOf(item, tick))
 

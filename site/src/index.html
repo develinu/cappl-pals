@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>cappl-pals · Cowboy-hat pals for Claude Code</title>
-  <meta name="description" content="LOCKI and CAPPL peek over your Claude Code prompt, react to every moment of your session, and grow with the results you ship. Free, open source and private.">
+  <meta name="description" content="RIKI, CARO and NUMO peek over your Claude Code prompt, react to every moment of your session, and grow with the results you ship. Free, open source and private.">
   <meta name="theme-color" content="#120f2e">
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="canonical" href="https://develinu.github.io/cappl-pals/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="cappl-pals · Cowboy-hat pals for Claude Code">
-  <meta property="og:description" content="LOCKI and CAPPL follow your Claude Code session and grow with the results you ship.">
+  <meta property="og:description" content="RIKI, CARO and NUMO follow your Claude Code session and grow with the results you ship.">
   <meta property="og:image" content="https://develinu.github.io/cappl-pals/og.png">
   <meta property="og:url" content="https://develinu.github.io/cappl-pals/">
   <meta name="twitter:card" content="summary_large_image">
@@ -75,14 +75,21 @@
             <button class="pal-button" type="button" data-pet="hero-locki">
               <canvas class="pal" data-pal="hero-locki" data-size="32"></canvas>
             </button>
-            <span class="name-tag pink">LOCKI</span>
+            <span class="name-tag pink">RIKI</span>
           </div>
           <div class="pal-slot" data-slot="cappl">
             <div class="toast" aria-live="polite"></div>
             <button class="pal-button" type="button" data-pet="hero-cappl">
               <canvas class="pal" data-pal="hero-cappl" data-size="32"></canvas>
             </button>
-            <span class="name-tag teal">CAPPL</span>
+            <span class="name-tag teal">CARO</span>
+          </div>
+          <div class="pal-slot" data-slot="numo">
+            <div class="toast" aria-live="polite"></div>
+            <button class="pal-button" type="button" data-pet="hero-numo">
+              <canvas class="pal" data-pal="hero-numo" data-size="32"></canvas>
+            </button>
+            <span class="name-tag sage">NUMO</span>
           </div>
           <div class="plank" aria-hidden="true"></div>
           <p class="hint" data-t="hero.hint">Click a pal to pet it</p>
@@ -105,8 +112,9 @@
           <div class="mood-stage px-box">
             <div class="mood-top">
               <div class="seg" role="group" data-t-label="moods.who">
-                <button type="button" data-mood-pal="cappl" aria-pressed="true">CAPPL</button>
-                <button type="button" data-mood-pal="locki" aria-pressed="false">LOCKI</button>
+                <button type="button" data-mood-pal="cappl" aria-pressed="true">CARO</button>
+                <button type="button" data-mood-pal="locki" aria-pressed="false">RIKI</button>
+                <button type="button" data-mood-pal="numo" aria-pressed="false">NUMO</button>
               </div>
               <button class="icon-btn small" type="button" data-action="mood-auto" aria-pressed="true">
                 <svg class="ico on" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14"/><path d="M16 5v14"/></svg>
@@ -134,9 +142,10 @@
         </header>
         <div class="play">
           <div class="play-stage px-box">
-            <div class="seg" role="tablist" aria-label="LOCKI / CAPPL">
-              <button type="button" role="tab" data-play-pal="locki" aria-selected="true">LOCKI</button>
-              <button type="button" role="tab" data-play-pal="cappl" aria-selected="false">CAPPL</button>
+            <div class="seg" role="tablist" aria-label="RIKI / CARO / NUMO">
+              <button type="button" role="tab" data-play-pal="locki" aria-selected="true">RIKI</button>
+              <button type="button" role="tab" data-play-pal="cappl" aria-selected="false">CARO</button>
+              <button type="button" role="tab" data-play-pal="numo" aria-selected="false">NUMO</button>
             </div>
             <p class="blurb"></p>
             <div class="stage-floor">
@@ -210,6 +219,7 @@
           <div class="trail-pals">
             <canvas class="pal" data-pal="trail-locki" data-size="32" aria-hidden="true"></canvas>
             <canvas class="pal" data-pal="trail-cappl" data-size="32" aria-hidden="true"></canvas>
+            <canvas class="pal" data-pal="trail-numo" data-size="32" aria-hidden="true"></canvas>
             <div class="plank small" aria-hidden="true"></div>
           </div>
           <div class="trail-info">
@@ -294,19 +304,20 @@
           <div class="app-pals" aria-hidden="true">
             <canvas class="pal" data-pal="app-locki" data-size="32"></canvas>
             <canvas class="pal" data-pal="app-cappl" data-size="32"></canvas>
+            <canvas class="pal" data-pal="app-numo" data-size="32"></canvas>
           </div>
           <div class="app-copy">
-            <p class="eyebrow" data-t="cappl.eyebrow">The CAPPL app</p>
+            <p class="eyebrow" data-t="cappl.eyebrow">The Sundust world</p>
             <h2 id="cappl-title" data-t="cappl.title"></h2>
             <p class="lead" data-t="cappl.lead"></p>
             <div class="cta-row">
               <a class="btn btn-cream" data-store="ios" href="https://apps.apple.com/app/id6761328898" rel="noopener" target="_blank">
                 <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
-                <span data-t="cappl.appStore">App Store</span>
+                <span data-t="cappl.appStore">CAPPL · App Store</span>
               </a>
               <a class="btn btn-cream" data-store="android" href="https://play.google.com/store/apps/details?id=com.ksh.cappl" rel="noopener" target="_blank">
                 <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18l13-9z"/></svg>
-                <span data-t="cappl.googlePlay">Google Play</span>
+                <span data-t="cappl.googlePlay">CAPPL · Google Play</span>
               </a>
             </div>
           </div>

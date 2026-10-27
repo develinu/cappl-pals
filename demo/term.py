@@ -96,7 +96,8 @@ def parse(text: str, cols: int, rows: int):
                 w = width_of(char)
                 if w == 0 or x >= cols:
                     continue
-                f, b = (bg, fg) if inverse else (fg, bg)
+                # Inverse swaps the colours a terminal would show, defaults included (a focused pane button).
+                f, b = (bg or DEFAULT_BG, fg or DEFAULT_FG) if inverse else (fg, bg)
                 grid[y][x] = (char, f, b, bold, dim)
                 if w == 2 and x + 1 < cols:
                     grid[y][x + 1] = ("", f, b, bold, dim)

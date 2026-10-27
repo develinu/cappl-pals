@@ -21,7 +21,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 LANG = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] in ("en", "ko") else "en"
-RENDER = f"/tmp/cappl-demo/render-v2-{LANG}"
+RENDER = f"/tmp/cappl-demo/render-v3-{LANG}"
 W, H, FPS = 1920, 1080, 30
 
 CREAM = (255, 243, 220)
@@ -36,6 +36,10 @@ WHITE = (248, 250, 252)
 MUTED = (203, 213, 225)
 GRAY = (148, 163, 184)
 RED = (229, 72, 77)
+SAGE = (139, 191, 151)
+# The pals in the order the scenes show them, and each one's colour.
+PALS = ("locki", "cappl", "numo")
+ACCENT = {"locki": PINK, "cappl": TEAL, "numo": SAGE}
 
 FONT_DIR = os.path.join(HERE, "assets", "fonts")
 PRE = os.path.expanduser("~/.fonts/Pretendard-{}.otf")
@@ -176,7 +180,9 @@ def plank(canvas, y, height=46):
         d.rectangle([x, y + 12, x + 10, y + 22], fill=(139, 90, 43))
 
 
-FALLBACK = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+# For the few symbols the fonts lack (✕ ✦ ❯ ⏎): DejaVu on Linux, Menlo on macOS.
+FALLBACK = next(path for path in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                                  "/System/Library/Fonts/Menlo.ttc") if os.path.exists(path))
 
 
 @lru_cache(maxsize=None)
@@ -259,7 +265,7 @@ DUSK = ((22, 18, 52), (112, 52, 92))
 # Every word on screen, per language.
 TEXT = {
     "en": {
-        "tagline_title": "LOCKI & CAPPL  ·  a Claude Code mod",
+        "tagline_title": "RIKI, CARO & NUMO  ·  a Claude Code mod",
         "tagline": "Cowboy-hat pals that follow your session and grow with your results",
         "moods": "Your pal follows the session",
         "moods_sub": "A new face for every moment, in the terminal and the desktop app",
@@ -288,12 +294,12 @@ TEXT = {
         "journey": "About 830 hours to Lv50",
         "journey_sub": "Tuned on 28 days (189 active hours) of real Claude Code history",
         "journey_stats": lambda h, k: f"≈ {h:,} active hours  ·  {k} tricks",
-        "outro_line": "LOCKI & CAPPL grow with your Claude Code work",
+        "outro_line": "RIKI, CARO & NUMO grow with your Claude Code work",
         "outro_repo": "github.com/develinu/cappl-pals  ·  open source (MIT)",
-        "outro_credit": "LOCKI and CAPPL are characters of the CAPPL app, used with permission",
+        "outro_credit": "RIKI, CARO and NUMO are Sundust characters of the LOCKI, CAPPL and TUSMO apps, used with permission",
     },
     "ko": {
-        "tagline_title": "LOCKI & CAPPL  ·  Claude Code mod",
+        "tagline_title": "RIKI, CARO & NUMO  ·  Claude Code mod",
         "tagline": "세션 따라 표정이 바뀌고, 작업 결과로 함께 자라는 카우보이모자 단짝",
         "moods": "세션 따라 바뀌는 표정",
         "moods_sub": "순간마다 다른 얼굴, 터미널과 데스크톱 앱 모두에서",
@@ -322,9 +328,9 @@ TEXT = {
         "journey": "Lv50까지 약 830시간",
         "journey_sub": "실제 Claude Code 기록 28일(활동 189시간)로 맞춘 성장 곡선",
         "journey_stats": lambda h, k: f"활동 ≈ {h:,}시간  ·  재주 {k}개",
-        "outro_line": "Claude Code 작업과 함께 자라는 LOCKI & CAPPL",
+        "outro_line": "Claude Code 작업과 함께 자라는 RIKI, CARO & NUMO",
         "outro_repo": "github.com/develinu/cappl-pals  ·  오픈소스(MIT)",
-        "outro_credit": "LOCKI와 CAPPL은 CAPPL 앱의 캐릭터로, 허가를 받아 사용합니다",
+        "outro_credit": "RIKI·CARO·NUMO는 Sundust 세계관 캐릭터로, 각 앱(LOCKI·CAPPL·TUSMO)의 허가를 받아 사용합니다",
     },
 }[LANG]
 
@@ -343,9 +349,9 @@ def scene_intro(t):
     d.rectangle([0, plank_y + 58, W, H], fill=(48, 26, 40))
     plank(c, plank_y)
     # The pals pop up from behind the plank one after the other, wave, then cheer.
-    scale = 12
+    scale = 11
     h = 28 * scale
-    for i, (who, x) in enumerate((("locki", W / 2 - 260), ("cappl", W / 2 + 260))):
+    for i, (who, x) in enumerate(zip(PALS, (W / 2 - 420, W / 2, W / 2 + 420))):
         rise = ease_out_back(prog(t, 0.3 + i * 0.35, 0.7))
         if rise <= 0:
             continue
@@ -397,8 +403,8 @@ def scene_moods(t):
         pi = prog(lt, start, 0.4)
         if pi <= 0:
             continue
-        who = "cappl" if i % 2 == 0 else "locki"
-        accent = TEAL if who == "cappl" else PINK
+        who = ("cappl", "locki", "numo")[i % 3]
+        accent = ACCENT[who]
         cx = 270 + (i % 4) * 460
         cy = 450 + (i // 4) * 400
         card = Image.new("RGBA", (420, 370), (0, 0, 0, 0))
@@ -450,8 +456,8 @@ def scene_premise(t):
                 rtext(card, (690, y + 38), item[2], font("pixel", 40), GOLD + (a,), anchor="rm")
         place(c, card, x0 + 380, 580 + off, 1, clamp(p * 1.5))
     moment = "celebrate" if lt > 3.2 else "still"
-    paste_sprite(c, pose("locki", "lv5", moment, t, start=P0 + 3.2), 5, W / 2 - 90, 990)
-    paste_sprite(c, pose("cappl", "lv5", moment, t, start=P0 + 3.2), 5, W / 2 + 90, 990)
+    for who, x in zip(PALS, (W / 2 - 180, W / 2, W / 2 + 180)):
+        paste_sprite(c, pose(who, "lv5", moment, t, start=P0 + 3.2), 5, x, 990)
     return c
 
 
@@ -460,20 +466,22 @@ def scene_premise(t):
 TIMES = json.load(open(os.path.join(RENDER, "times.json")))
 SW, SH = 3000, 1680
 CW, CH = 20, 40
-DIV = 114
+DIV = 101
 WIN_W, WIN_H = 1520, 851
 WIN_X, WIN_Y = (W - WIN_W) // 2, 34
 BAR = 44
 CAPTION_Y = 1006
 
 # Moments in each take (source seconds), found in record.py's marks and the frames.
+# The v3 takes were recorded on a day whose pal bounty is "Give a treat", so the bounty
+# lands with the treat.
 ANCHORS = {
-    "en": {"ready": 1.7, "pick": 5.94, "type": 9.95, "submit": 18.87, "saddled": 19.13, "fail": 23.4, "levelup": 29.13,
-           "claim": 33.13, "done": 35.07, "pet": 38.48, "bounty": 40.07, "trick": 45.59, "treat": 49.99, "shop": 54.99,
-           "switch": 58.4, "locki": 60.67, "petlocki": 63.6},
-    "ko": {"ready": 1.3, "pick": 5.5, "type": 9.5, "submit": 15.5, "saddled": 15.67, "fail": 17.93, "levelup": 22.47,
-           "claim": 24.27, "done": 25.67, "pet": 31.0, "bounty": 32.6, "trick": 38.1, "treat": 42.5, "shop": 47.5,
-           "switch": 50.9, "locki": 53.27, "petlocki": 56.2},
+    "en": {"ready": 0.86, "pick": 6.09, "type": 10.12, "submit": 21.27, "saddled": 21.41, "fail": 26.14, "levelup": 30.08,
+           "claim": 33.88, "done": 33.41, "pet": 39.89, "bounty": 52.14, "trick": 47.03, "treat": 52.03, "shop": 59.22,
+           "switch": 64.18, "numo": 67.07, "petnumo": 70.29},
+    "ko": {"ready": 0.86, "pick": 6.07, "type": 10.1, "submit": 17.48, "saddled": 17.61, "fail": 22.8, "levelup": 25.67,
+           "claim": 27.87, "done": 29.34, "pet": 34.57, "bounty": 46.74, "trick": 41.69, "treat": 46.68, "shop": 53.84,
+           "switch": 58.82, "numo": 61.73, "petnumo": 64.92},
 }[LANG]
 A = ANCHORS
 # (name, source start, source end, video length or None for real time)
@@ -492,9 +500,9 @@ PLAN = [
     ("trick", A["trick"] - 0.2, A["trick"] + 3.6, None),
     ("treat", A["treat"] - 0.2, A["treat"] + 3.8, None),
     ("shop", A["shop"] - 0.2, A["shop"] + 2.6, None),
-    ("switch", A["switch"] - 0.2, A["locki"] + 2.0, 3.0),
-    ("petlocki", A["petlocki"] - 0.2, A["petlocki"] + 2.4, None),
-    ("hold", A["petlocki"] + 2.4, A["petlocki"] + 2.4, 1.0),
+    ("switch", A["switch"] - 0.2, A["numo"] + 2.0, 3.0),
+    ("petnumo", A["petnumo"] - 0.2, A["petnumo"] + 2.4, None),
+    ("hold", A["petnumo"] + 2.4, A["petnumo"] + 2.4, 1.0),
 ]
 SEGMENTS = []
 STARTS = {}
@@ -565,7 +573,7 @@ VIEWS = {
 }
 CAMERA = [
     ("intro", "full"), ("picker", "picker"), ("hello", "pal"), ("typing", "prompt"), ("submit", "pal"),
-    ("fixing", "left"), ("levelup", "pal"), ("switch", "picker"), ("petlocki", "pal"), ("hold", "full"),
+    ("fixing", "left"), ("levelup", "pal"), ("switch", "picker"), ("petnumo", "pal"), ("hold", "full"),
 ]
 CAMERA = [(STARTS[name] - (0.0 if name == "levelup" else 0.2), view_name) for name, view_name in CAMERA if name in STARTS]
 MOVE = 0.6
@@ -610,26 +618,26 @@ def window_shadow():
 
 CAPTION_TEXT = {
     "en": [
-        ("picker", "hello", "Pick your pal: LOCKI or CAPPL", "Each has their own wardrobe, sounds and tricks"),
-        ("hello", "typing", "CAPPL rides in: Lv34 Ranger, 1,872 gold saved", "Just 28 gold short of the black hat (1,900 gold)"),
+        ("picker", "hello", "Pick your pal: RIKI, CARO or NUMO", "Each has their own wardrobe, sounds and tricks"),
+        ("hello", "typing", "CARO rides in: Lv34 Ranger, 1,222 gold saved", "Just 28 gold short of the black hat (1,250 gold)"),
         ("typing", "submit", "Ask Claude as usual", "Test → fix → commit"),
         ("submit", "levelup", "The pal follows the session", "Listening… thinking… a failing test makes it flinch… a fix"),
         ("levelup", "pets", "Lv35 Sheriff: a chest of gold and a new trick", "Bullseye +5 · Showdown won +8 · Claim staked +10"),
-        ("pets", "trick", "Pet your pal", "Three pets finish today's bounty: +5 gold"),
+        ("pets", "trick", "Pet your pal", "A happy wiggle for every pet"),
         ("trick", "treat", "Ask for a trick", "The newest first · ten to learn by Lv50"),
-        ("treat", "shop", "Buy a treat for 6 gold", "A blush and extra tricks for ten minutes"),
+        ("treat", "shop", "Buy a treat for 6 gold", "Today's bounty done: +5 gold · a blush and extra tricks"),
         ("shop", "switch", "Saved-up gold buys gear, worn right away", "Game gold only · no real money, no loot boxes, no trading"),
         ("switch", "hold", "Switch pals any time", "Each keeps their own wardrobe · gold is shared"),
     ],
     "ko": [
-        ("picker", "hello", "함께할 친구 고르기: LOCKI 또는 CAPPL", "캐릭터마다 옷장·효과음·재주가 따로 있어요"),
-        ("hello", "typing", "CAPPL 등장: Lv34 레인저 · 모은 골드 1,872", "검은 카우보이모자(1,900 골드)까지 딱 28 골드 모자람"),
+        ("picker", "hello", "함께할 친구 고르기: RIKI, CARO, NUMO", "캐릭터마다 옷장·효과음·재주가 따로 있어요"),
+        ("hello", "typing", "CARO 등장: Lv34 레인저 · 모은 골드 1,222", "검은 카우보이모자(1,250 골드)까지 딱 28 골드 모자람"),
         ("typing", "submit", "평소처럼 Claude에게 일을 시킵니다", "테스트 돌리고 → 고치고 → 커밋"),
         ("submit", "levelup", "세션 따라 표정이 바뀝니다", "듣고… 생각하고… 테스트가 실패하면 움찔… 그리고 수정"),
         ("levelup", "pets", "Lv35 보안관: 골드 상자와 새 재주", "과녁 명중 +5 · 결투 승리 +8 · 말뚝 박기 +10"),
-        ("pets", "trick", "쓰다듬어 주세요", "세 번 쓰다듬으면 오늘의 현상금 완료: +5 골드"),
+        ("pets", "trick", "쓰다듬어 주세요", "쓰다듬을 때마다 좋아서 꼼지락"),
         ("trick", "treat", "재주 부탁하기", "가장 최근에 배운 재주부터 · Lv50까지 열 가지"),
-        ("treat", "shop", "간식 사 주기 (6 골드)", "10분 동안 볼이 발그레하고 재주를 더 자주 부려요"),
+        ("treat", "shop", "간식 사 주기 (6 골드)", "오늘의 현상금 완료 +5 골드 · 볼이 발그레, 재주는 더 자주"),
         ("shop", "switch", "모은 골드로 소품을 사서 바로 착용", "게임 골드로만 · 현금 결제·뽑기·거래 없음"),
         ("switch", "hold", "언제든 친구 바꾸기", "옷장은 캐릭터마다 따로, 골드는 함께"),
     ],
@@ -651,10 +659,10 @@ POPUP_TEXT = {
            ("levelup", 1.8, "+40 gold Level chest", GOLD_SPOT, GOLD, "chest_cappl"),
            ("levelup", 2.9, "New trick: Two-step!", SPRITE_SPOT, (134, 239, 172), "trick_cappl"),
            ("claim", 0.0, "+10 Claim staked", GOLD_SPOT, GOLD, "coin_cappl"),
-           ("bounty", 0.0, "+5 gold Bounty done", GOLD_SPOT, GOLD, "quest_cappl"),
+           ("bounty", 0.8, "+5 gold Bounty done", LOW_SPOT, GOLD, "quest_cappl"),
            ("treat", 0.1, "−6 gold Maple biscuit", GOLD_SPOT, (252, 165, 165), "treat_cappl"),
-           ("shop", 0.1, "−1,900 gold Black hat!", GOLD_SPOT, (252, 165, 165), "buy_cappl"),
-           ("locki", 0.0, "Howdy! LOCKI's on duty", SPRITE_SPOT, PINK, "hello_locki")],
+           ("shop", 0.1, "−1,250 gold Black hat!", GOLD_SPOT, (252, 165, 165), "buy_cappl"),
+           ("numo", 0.0, "NUMO saved your spot", SPRITE_SPOT, SAGE, "hello_numo")],
     "ko": [("pick", 0.1, "반가워, 파트너!", SPRITE_SPOT, TEAL, "hello_cappl"),
            ("saddled", 0.0, "+10 골드 안장 얹기", GOLD_SPOT, GOLD, "coin_cappl"),
            ("fail", 0.0, "1건 실패!", SPRITE_SPOT, (252, 165, 165), "fail_cappl"),
@@ -663,10 +671,10 @@ POPUP_TEXT = {
            ("levelup", 1.8, "+40 골드 레벨 상자", GOLD_SPOT, GOLD, "chest_cappl"),
            ("levelup", 2.9, "새 재주: 투스텝!", SPRITE_SPOT, (134, 239, 172), "trick_cappl"),
            ("claim", 0.0, "+10 말뚝 박기", GOLD_SPOT, GOLD, "coin_cappl"),
-           ("bounty", 0.0, "+5 골드 현상금 완료", GOLD_SPOT, GOLD, "quest_cappl"),
+           ("bounty", 0.8, "+5 골드 현상금 완료", LOW_SPOT, GOLD, "quest_cappl"),
            ("treat", 0.1, "−6 골드 메이플 비스킷", GOLD_SPOT, (252, 165, 165), "treat_cappl"),
-           ("shop", 0.1, "−1,900 골드 검은 모자!", GOLD_SPOT, (252, 165, 165), "buy_cappl"),
-           ("locki", 0.0, "하우디! LOCKI 근무 시작", SPRITE_SPOT, PINK, "hello_locki")],
+           ("shop", 0.1, "−1,250 골드 검은 모자!", GOLD_SPOT, (252, 165, 165), "buy_cappl"),
+           ("numo", 0.0, "NUMO가 자리 맡아 뒀어", SPRITE_SPOT, SAGE, "hello_numo")],
 }[LANG]
 POPUPS = []
 for anchor, delay, label, (sx, sy), color, sound in POPUP_TEXT:
@@ -755,13 +763,13 @@ def keys_at(anchor, keys, step=0.3, delay=0.0):
 
 
 KEYS = [k for k in (
-    keys_at("pick", ["ctrl+x", "Tab", "2"]),
-    keys_at("pet", ["p", "p", "p"], step=0.35, delay=1.4),
-    keys_at("trick", ["t"]),
-    keys_at("treat", ["f"]),
-    keys_at("shop", ["8"]),
-    (STARTS["switch"] + 0.05, ["c", "1"], 0.9) if "switch" in STARTS else None,
-    keys_at("petlocki", ["p"]),
+    keys_at("pick", ["ctrl+x", "Tab", "Enter"]),
+    keys_at("pet", ["Enter", "Enter", "Enter"], step=0.35, delay=1.4),
+    keys_at("trick", ["Tab", "Enter"]),
+    keys_at("treat", ["Tab", "Enter"]),
+    keys_at("shop", ["Tab", "Enter"]),
+    (STARTS["switch"] + 0.05, ["Enter", "Tab", "Enter"], 0.6) if "switch" in STARTS else None,
+    keys_at("petnumo", ["Enter"]),
 ) if k is not None]
 
 PROMPT = {
@@ -878,7 +886,7 @@ def scene_bonus(t):
         pi = prog(lt, start, 0.45)
         if pi <= 0:
             continue
-        who = "cappl" if i % 2 == 0 else "locki"
+        who = ("cappl", "locki", "numo")[i % 3]
         card = Image.new("RGBA", (420, 620), (0, 0, 0, 0))
         cd = ImageDraw.Draw(card)
         rounded(cd, [0, 0, 419, 619], 32, (30, 18, 24, 236), outline=GOLD + (210,), width=4)
@@ -894,17 +902,17 @@ def scene_bonus(t):
 
 # (level, rank, rank in Korean, hours at the median day, look, trick shown, sky)
 RANKS = [
-    (1, "Greenhorn", "새내기", 0, "lv1", ("hello", "hello"), ((40, 30, 62), (226, 150, 120))),
-    (5, "Stable Hand", "마구간지기", 9, "lv5", ("hop", "nod"), ((54, 28, 30), (170, 84, 62))),
-    (10, "Trail Rider", "길잡이 기수", 36, "lv10", ("spin", "hatTip"), ((70, 36, 22), (214, 132, 60))),
-    (15, "Wrangler", "카우보이", 81, "lv15", ("hatToss", "strum"), ((26, 48, 40), (96, 150, 92))),
-    (20, "Rodeo Rookie", "로데오 신인", 142, "lv20", ("salute", "sip"), ((44, 20, 58), (150, 70, 130))),
-    (25, "Deputy", "보안관 보좌관", 219, "lv20", ("peekaboo", "hatPeekaboo"), ((16, 24, 64), (60, 90, 170))),
-    (30, "Ranger", "레인저", 312, "lv30", ("heartBurst", "hum"), ((14, 40, 44), (40, 120, 120))),
-    (35, "Sheriff", "보안관", 420, "lv30", ("starDance", "twoStep"), ((60, 30, 10), (200, 130, 40))),
-    (40, "Marshal", "연방 보안관", 543, "lv40", ("starDance", "twoStep"), ((14, 18, 54), (60, 70, 160))),
-    (45, "Frontier Hero", "개척지 영웅", 681, "lv40", ("cartwheel", "tumble"), ((60, 18, 40), (230, 110, 80))),
-    (50, "Legend of the West", "서부의 전설", 834, "lv50", ("fireworks", "campfireSong"), ((20, 14, 50), (120, 60, 130))),
+    (1, "Greenhorn", "새내기", 0, "lv1", ("hello", "hello", "hello"), ((40, 30, 62), (226, 150, 120))),
+    (5, "Stable Hand", "마구간지기", 9, "lv5", ("hop", "nod", "nod"), ((54, 28, 30), (170, 84, 62))),
+    (10, "Trail Rider", "길잡이 기수", 36, "lv10", ("spin", "hatTip", "hum"), ((70, 36, 22), (214, 132, 60))),
+    (15, "Wrangler", "카우보이", 81, "lv15", ("hatToss", "strum", "hatTip"), ((26, 48, 40), (96, 150, 92))),
+    (20, "Rodeo Rookie", "로데오 신인", 142, "lv20", ("salute", "sip", "water"), ((44, 20, 58), (150, 70, 130))),
+    (25, "Deputy", "보안관 보좌관", 219, "lv20", ("peekaboo", "hatPeekaboo", "peekaboo"), ((16, 24, 64), (60, 90, 170))),
+    (30, "Ranger", "레인저", 312, "lv30", ("heartBurst", "hum", "spin"), ((14, 40, 44), (40, 120, 120))),
+    (35, "Sheriff", "보안관", 420, "lv30", ("starDance", "twoStep", "bloom"), ((60, 30, 10), (200, 130, 40))),
+    (40, "Marshal", "연방 보안관", 543, "lv40", ("starDance", "twoStep", "bloom"), ((14, 18, 54), (60, 70, 160))),
+    (45, "Frontier Hero", "개척지 영웅", 681, "lv40", ("cartwheel", "tumble", "twoStep"), ((60, 18, 40), (230, 110, 80))),
+    (50, "Legend of the West", "서부의 전설", 834, "lv50", ("fireworks", "campfireSong", "campfireSong"), ((20, 14, 50), (120, 60, 130))),
 ]
 MAX_HOURS = RANKS[-1][3]
 TRICK_LEVELS = [2, 4, 7, 12, 17, 23, 29, 35, 42, 50]
@@ -963,8 +971,8 @@ def scene_journey(t):
         return c
     pop = ease_out_back(clamp(since / 0.4)) if since < 0.4 else 1.0
     step_start = J0 + J_HEAD + idx * J_STEP
-    for (who, x), trick in zip((("locki", 380), ("cappl", 760)), tricks):
-        paste_sprite(c, pose(who, look, trick, t, start=step_start), 10, x, 470, pop, pop)
+    for who, x, trick in zip(PALS, (200, 520, 840), tricks):
+        paste_sprite(c, pose(who, look, trick, t, start=step_start), 9, x, 470, pop, pop)
     tx = 1060
     p = ease_out_cubic(clamp(since / 0.35))
     place_left(c, text_layer(f"Lv{level}", font("pixel", 74), GOLD, stroke=6), tx - 40 * (1 - p), 300, p)
@@ -984,8 +992,8 @@ def scene_journey(t):
     d.text((bar_x0, bar_y + 46), "0h", font=font("semi", 28), fill=(226, 232, 240), anchor="lm")
     d.text((bar_x1, bar_y + 46), f"{MAX_HOURS:,}h", font=font("semi", 28), fill=(226, 232, 240), anchor="rm")
     mx = bar_x0 + (bar_x1 - bar_x0) * cur
-    paste_sprite(c, pose("cappl", look, "still", 0), 2, mx + 20, bar_y - 40)
-    paste_sprite(c, pose("locki", look, "still", 0), 2, mx - 20, bar_y - 40)
+    for who, dx in zip(PALS, (-36, 0, 36)):
+        paste_sprite(c, pose(who, look, "still", 0), 2, mx + dx, bar_y - 40)
     return c
 
 
@@ -1001,7 +1009,7 @@ def scene_outro(t):
         burst(c, bx, by, bp, n=16, radius=180, color=[PINK, GOLD, TEAL, CREAM][j], seed=j + 40)
     p = prog(lt, 0.0, 0.8)
     rise = 60 * (1 - ease_out_back(p))
-    for who, x, moment in (("locki", W / 2 - 210, "fireworks"), ("cappl", W / 2 + 210, "campfireSong")):
+    for who, x, moment in (("locki", W / 2 - 400, "fireworks"), ("cappl", W / 2, "campfireSong"), ("numo", W / 2 + 400, "campfireSong")):
         key = pose(who, "lv50", moment if lt < 4.0 else "hello", t, start=O0 if lt < 4.0 else O0 + 4.0)
         paste_sprite(c, key, 10, x, 380 + rise)
     p = prog(lt, 0.6, 0.5)
@@ -1098,16 +1106,16 @@ def events():
     for start, keys, step in KEYS:
         for k in range(len(keys)):
             ev.append((start + 0.25 + k * step, "key_big"))
-    # The pal's own sounds for petting, the trick and petting LOCKI.
+    # The pal's own sounds for petting, the trick and petting NUMO.
     for k in range(3):
         vt = video_time(A["pet"] + k * 0.7)
         if vt is not None:
             ev.append((vt, "pet_cappl"))
-    for anchor, sound in (("trick", "trick_cappl"), ("petlocki", "pet_locki")):
+    for anchor, sound in (("trick", "trick_cappl"), ("petnumo", "pet_numo")):
         vt = video_time(A[anchor])
         if vt is not None:
             ev.append((vt, sound))
-    for i, sound in enumerate(("chest_cappl", "quest_locki", "lucky_cappl", "treat_locki")):
+    for i, sound in enumerate(("chest_cappl", "quest_locki", "lucky_numo", "treat_cappl")):
         ev.append((B0 + 0.5 + i * 0.3, sound))
     for i in range(len(RANKS)):
         ev.append((J0 + J_HEAD + i * J_STEP, "rank" if i < len(RANKS) - 1 else "fanfare_locki"))

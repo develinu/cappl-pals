@@ -16,6 +16,8 @@
   --pink-deep: #c9466a;
   --teal: #55a8ac;
   --teal-deep: #2f7a7e;
+  --sage: #8BBF97;
+  --sage-deep: #5A8C6A;
   --gold: #facc15;
   --gold-deep: #c79a06;
   --sand: #e8c98f;
@@ -64,6 +66,7 @@ button { font: inherit; color: inherit; }
 .skip:focus { top: 16px; }
 .pink { color: var(--pink); }
 .teal { color: var(--teal); }
+.sage { color: var(--sage); }
 .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .ico.big { width: 28px; height: 28px; }
 
@@ -456,7 +459,7 @@ input[type='range']::-moz-range-thumb { width: 28px; height: 28px; border: 0; bo
 .small-label { margin: 22px 0 0; color: var(--dim); font-size: 15px; }
 .tip { margin: 26px 0 0; padding: 14px 16px; background: rgba(85, 168, 172, 0.12); box-shadow: inset 4px 0 0 var(--teal); color: var(--text); font-size: 15px; }
 
-/* CAPPL app */
+/* Sundust world */
 .app-card {
   --frame: #8a4a6a; display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 40px; align-items: center; padding: 44px;
   background: linear-gradient(135deg, #3a1f4a 0%, #26254f 55%, #173b4a 100%);

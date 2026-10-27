@@ -107,20 +107,20 @@ Compared with 0.1, the curve is the same. Clean shot and Poster up add about 8% 
 
 ## Gold and the wardrobes
 
-Each character has ten items in six slots (eyes, mouth, head, hat, hand, stage), one item per slot. Prices are set so that each item is affordable soon after it unlocks. Both wardrobes together cost $23,720, about what the replay earns in 690 hours (34.2 gold per active hour), around when the last items unlock. So dressing up one pal fully comes well before level 50, and finishing both comes near the end. Prices went up in 0.2 because gold per active hour rose from 19.6 to 34.2: the bonuses, the two new rewards and a busier month in the replay.
+Each character has ten items in six slots (eyes, mouth, head, hat, hand, stage), one item per slot. Prices are set so that each item is affordable soon after it unlocks. All three wardrobes together cost $23,430, about what the replay earns in 690 hours (34.2 gold per active hour), around when the last items unlock. So dressing up one pal fully comes well before level 50, and finishing all three comes near the end. Prices went up in 0.2 because gold per active hour rose from 19.6 to 34.2: the bonuses, the two new rewards and a busier month in the replay. In 0.3 NUMO's wardrobe joined and every price came down so that the three together still cost about the same.
 
-| Unlock | LOCKI | CAPPL | Price | Unlocks at |
-|---|---|---|---|---|
-| Lv1 | Aviator shades | Round specs | $50 | 0 h |
-| Lv3 | Pink feather | Wheat straw | $60 | 3 h |
-| Lv6 | Harmonica | Tin cup of coffee | $250 | 13 h |
-| Lv10 | Heart shades | Outlaw bandana | $500 | 36 h |
-| Lv14 | Lasso | Banjo | $800 | 71 h |
-| Lv19 | Gold sheriff star | Sparrow friend | $1,100 | 128 h |
-| Lv24 | Desert noon | Campfire | $1,400 | 202 h |
-| Lv30 | White ten-gallon hat | Black hat | $1,900 | 312 h |
-| Lv38 | Desert sunset | Starry night | $2,500 | 492 h |
-| Lv46 | Starry night hat | Golden banjo | $3,300 | 711 h |
+| Unlock | RIKI | CARO | NUMO | Price | Unlocks at |
+|---|---|---|---|---|---|
+| Lv1 | Aviator shades | Round specs | Reading specs | $30 | 0 h |
+| Lv3 | Pink feather | Wheat straw | Cactus bloom | $40 | 3 h |
+| Lv6 | Harmonica | Tin cup of coffee | Watering can | $160 | 13 h |
+| Lv10 | Heart shades | Outlaw bandana | Sun goggles | $330 | 36 h |
+| Lv14 | Lasso | Banjo | Logbook | $520 | 71 h |
+| Lv19 | Gold sheriff star | Sparrow friend | Moon badge | $720 | 128 h |
+| Lv24 | Desert noon | Campfire | Oasis noon | $920 | 202 h |
+| Lv30 | White ten-gallon hat | Black hat | Camel hat | $1,250 | 312 h |
+| Lv38 | Desert sunset | Starry night | Starry oasis | $1,650 | 492 h |
+| Lv46 | Starry night hat | Golden banjo | Golden watering can | $2,170 | 711 h |
 
 ## Retuning
 

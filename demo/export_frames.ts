@@ -34,6 +34,17 @@ const LOOKS: Record<CharacterId, Record<string, string[]>> = {
     lv50: ['golden-banjo', 'sparrow', 'black-hat'],
     demo: ['sparrow', 'banjo', 'black-hat'],
   },
+  numo: {
+    lv1: [],
+    lv5: ['cactus-bloom'],
+    lv10: ['watering-can'],
+    lv15: ['logbook'],
+    lv20: ['moon-badge', 'logbook'],
+    lv30: ['logbook', 'camel-hat'],
+    lv40: ['reading-specs', 'logbook', 'camel-hat'],
+    lv50: ['golden-can', 'camel-hat'],
+    demo: ['watering-can', 'camel-hat'],
+  },
 }
 const LEVEL_OF: Record<string, number> = { lv1: 1, lv5: 5, lv10: 10, lv15: 15, lv20: 20, lv30: 30, lv40: 40, lv50: 50, demo: 35 }
 const ACTIVITIES: Activity[] = ['idle', 'sleeping', 'thinking', 'reading', 'editing', 'running', 'testing', 'waiting']

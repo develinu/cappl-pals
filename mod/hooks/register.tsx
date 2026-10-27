@@ -519,7 +519,7 @@ async function showPane($: EngineInterface) {
   void play($, 'open', (await currentCharacter($)).id)
   void sync($)
 
-  return $.ui.open({ id: PANE, title: 'CAPPL', rows: INLINE_ROWS })
+  return $.ui.open({ id: PANE, title: 'SUNDUST', rows: INLINE_ROWS })
 }
 
 async function hidePane($: EngineInterface) {
@@ -735,7 +735,7 @@ export const register: Register = (on, options) => {
     runtime.lastActiveAt = await $.clock.now()
     const w = words()
     await $.command.register({ name: 'cappl', description: w.commands.toggle, immediate: true })
-    await $.command.register({ name: 'cappl-pick', description: w.commands.pick, argumentHint: 'locki | cappl', immediate: true })
+    await $.command.register({ name: 'cappl-pick', description: w.commands.pick, argumentHint: 'riki | caro | numo', immediate: true })
     await $.command.register({ name: 'cappl-status', description: w.commands.status })
     await $.command.register({ name: 'cappl-rules', description: w.commands.rules })
     await $.command.register({ name: 'cappl-sound', description: w.commands.sound, immediate: true })
@@ -749,7 +749,7 @@ export const register: Register = (on, options) => {
     $.clock.every(30_000, () => {
       runtime.svgSeed += 1
     })
-    if ((await $.store.get('hidden')) !== true) void $.ui.open({ id: PANE, title: 'CAPPL' })
+    if ((await $.store.get('hidden')) !== true) void $.ui.open({ id: PANE, title: 'SUNDUST' })
     void compact($).catch(() => undefined)
 
     return next(e)
@@ -782,13 +782,13 @@ export const register: Register = (on, options) => {
     return { text: opened.isPlaced ? w.opened : w.waiting }
   })
 
-  // /cappl-pick cappl picks at once; /cappl-pick alone opens the picker in the pane.
+  // /cappl-pick caro picks at once; /cappl-pick alone opens the picker in the pane.
   on('command.run', { command: 'cappl-pick' }, async ($, e) => {
     const w = words()
     const wanted = e.args.trim().toLowerCase()
     if (wanted !== '') {
       const found = CHARACTERS.find(one => one.id === wanted || one.name.toLowerCase() === wanted)
-      if (found === undefined) return { text: w.unknownCharacter(CHARACTERS.map(one => one.id).join(', ')) }
+      if (found === undefined) return { text: w.unknownCharacter(CHARACTERS.map(one => one.name.toLowerCase()).join(', ')) }
       await pick($, found.id)
 
       return { text: w.picked(found.name) }

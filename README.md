@@ -1,6 +1,6 @@
 # cappl-pals
 
-**LOCKI and CAPPL, the cowboy-hat pals of the [CAPPL](#the-cappl-app) app, grow with your Claude Code work.** Pick one. They peek over your prompt and follow your session: a thought bubble while Claude thinks, a busy tongue while it edits, a nervous sweat while tests run, a nap when you step away. They cheer when a test passes, a commit lands or a pull request merges. Pet them, ask for a trick, or buy them a treat. Results earn rep and gold, and level chests, daily bounties and lucky nuggets add more gold. Rep raises your rank from Greenhorn to Legend of the West and teaches new tricks; gold buys hats, shades, banjos and backdrops.
+**RIKI, CARO and NUMO, cowboy-hat pals from the [Sundust](#the-sundust-world) world, grow with your Claude Code work.** Pick one. They peek over your prompt and follow your session: a thought bubble while Claude thinks, a busy tongue while it edits, a nervous sweat while tests run, a nap when you step away. They cheer when a test passes, a commit lands or a pull request merges. Pet them, ask for a trick, or buy them a treat. Results earn rep and gold, and level chests, daily bounties and lucky nuggets add more gold. Rep raises your rank from Greenhorn to Legend of the West and teaches new tricks; gold buys hats, shades, banjos and backdrops.
 
 [![Moods, a failing test, a level-up, petting, a treat and a new hat (12-second highlight)](docs/cappl-pals-demo.gif)](docs/cappl-pals-demo.mp4)
 
@@ -10,7 +10,7 @@
 
 The pane, toasts and commands speak English and Korean.
 
-![LOCKI and CAPPL: idle, petted, thinking, eating a treat, celebrating, asleep and dressed up](docs/cappl-pals-hero.png)
+![RIKI, CARO and NUMO: idle, petted, thinking, eating a treat, celebrating, asleep and dressed up](docs/cappl-pals-hero.png)
 
 [한국어 README](README.ko.md)
 
@@ -53,7 +53,7 @@ Without auto-update, update by hand with `claude plugin update cappl-pals@cappl-
 | | |
 |---|---|
 | `/cappl` | Open or close the pane. It works mid-turn. A closed pane stays closed in later sessions. |
-| `/cappl-pick` | Choose your partner. `/cappl-pick cappl` switches right away; `/cappl-pick` alone opens the picker. |
+| `/cappl-pick` | Choose your partner. `/cappl-pick caro` switches right away; `/cappl-pick` alone opens the picker. |
 | `/cappl-status` | Level, rank, rep and gold in one line. |
 | `/cappl-rules` | The reward table and how many of each you earned today. |
 | `/cappl-sound` | Cycle the sound: normal → quiet → off. |
@@ -86,26 +86,30 @@ The pal changes with what the session is doing.
 |---|---|---|
 | Pet | Free | Heart eyes and hearts. Pet three times quickly for a happy wiggle. |
 | Trick | Free | Your pal's newest trick, then the others in turn. Each pal learns ten, from a wave at Lv2 to a big finale at Lv50. |
-| Treat | $6 | LOCKI eats a star cookie, CAPPL a maple biscuit. Then they blush for 10 minutes and show off tricks twice as often. |
+| Treat | $6 | RIKI eats a star cookie, CARO a maple biscuit, NUMO a dew drop. Then they blush for 10 minutes and show off tricks twice as often. |
 
 Petting and tricks never earn rep. On the desktop app the pal plays the same moves, and waves when you hover over it.
 
 ## The pals
 
-| | LOCKI | CAPPL |
-|---|---|---|
-| Who | Wants to be sheriff. Bright, bouncy, never without the pink star. | A drifter in a wide brown hat. Slow, steady, always humming a tune. |
-| Sound | Square-wave chiptune, a harmonica, quick chirps, jingling spurs | Plucked banjo, a soft hum, hoof clops |
-| Celebrates with | Twinkling pink and gold stars, ears perked | Music notes floating up, a tip of the hat |
-| Wardrobe | Aviator shades, pink feather, harmonica, heart shades, lasso, gold sheriff star, desert noon, white ten-gallon hat, desert sunset, starry night hat | Round specs, wheat straw, tin cup of coffee, outlaw bandana, banjo, sparrow friend, campfire, black hat, starry night, golden banjo |
+| | RIKI | CARO | NUMO |
+|---|---|---|---|
+| Who | A desert fox, the patrol sheriff who links the town's hearts. Greets newcomers first, catches small changes in a face or a voice, learns by seeing and doing, and sometimes jumps into fun and stirs up a little fuss. When a friend is down, sits beside them before saying anything. | A cat, the field sheriff who finds new paths. Meets a case with a stream of questions, prefers a new way to a familiar rule, wakes friends' thinking with jokes and odd ideas, and moves boldly in a pinch, sometimes feet before plan. Happiest when an idea joins up with a friend's. | A cactus, the record-keeping sheriff who keeps a place to come back to. Remembers small promises and keeps them quietly, notices when someone's habits change, and feels calm putting the case log in order. Tends to put their own troubles last, and shows care through small things prepared ahead rather than big words. |
+| Says | "Let's go together — it's more fun that way!" | "Wait — does it have to be that way?" | "Take your time. Your spot is ready." |
+| Gift | A sound map: big ears turn wind and footsteps into a map. Too much noise at once tangles it. | Whisker compass: whiskers twitch toward a new clue, and a purr calms friends. Too many thoughts at once send the whiskers every which way. | A heart flower: on calm, happy days a cream flower blooms by the cheek. It can't be forced, and closes on days without rest. |
+| Sound | Square-wave chiptune, a harmonica, quick chirps, jingling spurs | Plucked banjo, a soft hum, hoof clops | CARO's sounds for now; a voice of its own is to come |
+| Celebrates with | Twinkling pink and gold stars, ears perked | Music notes floating up, a tip of the hat | Twinkling sage and cream stars |
+| Wardrobe | Aviator shades, pink feather, harmonica, heart shades, lasso, gold sheriff star, desert noon, white ten-gallon hat, desert sunset, starry night hat | Round specs, wheat straw, tin cup of coffee, outlaw bandana, banjo, sparrow friend, campfire, black hat, starry night, golden banjo | Reading specs, cactus bloom, watering can, sun goggles, logbook, moon badge, oasis noon, camel hat, starry oasis, golden watering can |
 
 Each character keeps their own wardrobe; gold is shared. Every item has art at both sprite sizes ([sprite sheet](docs/cappl-pals-sheet.png)).
 
-## The CAPPL app
+## The Sundust world
 
-LOCKI and CAPPL come from **CAPPL**, a planning and reflection app. It looks at how you like to plan, how you get things done and how your energy runs through the day, then suggests a schedule template that fits you. cappl-pals cheers for the work you finish; CAPPL helps you plan it and look back on it.
+RIKI, CARO and NUMO are characters of **Sundust**, a world shared by three apps. Sundust is a small oasis town in the far West, where the sandy wind redraws the roads by day and starlight shows the old ones at night. Its sheriffs don't chase anyone; they bring lost things, lost residents and days gone astray back where they belong, and every entry in their case log ends with everyone home safe. Each pal is the face of one: CARO of **CAPPL**, a planning app; RIKI of **LOCKI**, a screen lock app; and NUMO of **TUSMO**, which is not out yet.
 
-Get CAPPL on the [App Store](https://apps.apple.com/app/id6761328898) or [Google Play](https://play.google.com/store/apps/details?id=com.ksh.cappl). The characters appear here with the app's permission.
+CAPPL looks at how you like to plan, how you get things done and how your energy runs through the day, then suggests a schedule template that fits you. cappl-pals cheers for the work you finish; CAPPL helps you plan it and look back on it.
+
+Get CAPPL on the [App Store](https://apps.apple.com/app/id6761328898) or [Google Play](https://play.google.com/store/apps/details?id=com.ksh.cappl). The characters appear here with the apps' permission.
 
 ## What earns rewards
 
@@ -180,4 +184,4 @@ To release, raise `version` in both `mod/.claude-plugin/plugin.json` and `.claud
 
 ## License
 
-The code is under the [MIT License](LICENSE). The LOCKI and CAPPL characters and their art may be used as part of cappl-pals and its forks; any other use needs the CAPPL app's permission. See [ART-LICENSE.md](ART-LICENSE.md).
+The code is under the [MIT License](LICENSE). The RIKI, CARO and NUMO characters and their art may be used as part of cappl-pals and its forks; any other use needs permission from their apps (CAPPL, LOCKI and TUSMO). See [ART-LICENSE.md](ART-LICENSE.md).
