@@ -5,8 +5,9 @@
 import { ACTS, lookAt, loopTicks, type Moment } from '../mod/hooks/animations'
 import { PALETTE } from '../mod/hooks/characters/art'
 import { CHARACTERS, learnedTricks } from '../mod/hooks/characters'
+import { KID_COLORS, kidFrame, kidLook } from '../mod/hooks/kids'
 import { frame } from '../mod/hooks/sprite'
-import type { Activity, CharacterId } from '../mod/types'
+import type { Activity, CharacterId, Kid, KidStatus } from '../mod/types'
 
 // What each pal wears at each rank in the journey scene, and in the other scenes.
 // Few glasses or bandanas, so the faces show. Backdrops are left out: the video
@@ -72,5 +73,32 @@ for (const [character, looks] of Object.entries(LOOKS) as [CharacterId, Record<s
     }
   }
 }
-const palette = Object.fromEntries(Object.entries(PALETTE).map(([k, v]) => [k, `#${v.toString(16).padStart(6, '0')}`]))
-process.stdout.write(JSON.stringify({ palette, ticks: ticksOf, frames: out }))
+// The deputies (the pal's kids in the mod's code), for the deputies scene: each state over
+// 16 ticks, keyed `kid:<character>:<state>:<tick>`. The bandana stays in roles '1' '2' '3';
+// `kidColors` has each slot's colours for them.
+const NOW = 1_000_000
+const kid = (status: KidStatus, activity: Activity, extra: Partial<Kid> = {}): Kid => ({
+  id: 'k', slot: 0, label: '', type: '', status, activity, startedAt: NOW - 60_000, tokens: 0, seenAt: NOW,
+  ...(status === 'working' ? {} : { endedAt: NOW - 30_000 }), ...extra,
+})
+const KID_STATES: Record<string, Kid> = {
+  born: kid('working', 'thinking', { startedAt: NOW - 200 }),
+  thinking: kid('working', 'thinking'),
+  reading: kid('working', 'reading'),
+  editing: kid('working', 'editing'),
+  running: kid('working', 'running'),
+  testing: kid('working', 'testing'),
+  cheer: kid('done', 'thinking', { endedAt: NOW - 200 }),
+  done: kid('done', 'thinking'),
+}
+for (const pal of CHARACTERS) {
+  for (const [state, one] of Object.entries(KID_STATES)) {
+    ticksOf[`kid:${pal.id}:${state}`] = 16
+    for (let tick = 0; tick < 16; tick += 1) out[`kid:${pal.id}:${state}:${tick}`] = kidFrame(pal.id, kidLook(one, NOW, tick, 0), tick)
+  }
+}
+const hex = (v: number) => `#${v.toString(16).padStart(6, '0')}`
+const kidColors = KID_COLORS.map(color => ({ 1: hex(color.main), 2: hex(color.shade), 3: hex(color.light), text: color.text }))
+
+const palette = Object.fromEntries(Object.entries(PALETTE).map(([k, v]) => [k, hex(v)]))
+process.stdout.write(JSON.stringify({ palette, ticks: ticksOf, frames: out, kidColors }))

@@ -173,7 +173,7 @@ const EN: Copy = {
   demo: {
     eyebrow: 'Demo',
     title: 'See it in a real session',
-    lead: 'A real Claude Code session in a terminal, with sound. About a minute and a half.',
+    lead: 'A real Claude Code session in a terminal, then the deputies at work, with sound. About a minute and forty seconds.',
     fallback: 'Your browser cannot play this video.',
   },
   fair: {
@@ -354,7 +354,7 @@ const KO: Copy = {
   demo: {
     eyebrow: '데모',
     title: '실제 세션에서 보기',
-    lead: '터미널에서 실제로 돌린 Claude Code 세션을 소리와 함께 담았어요. 1분 30초 정도예요.',
+    lead: '터미널에서 실제로 돌린 Claude Code 세션과 일하는 부보안관을 소리와 함께 담았어요. 1분 40초 정도예요.',
     fallback: '이 브라우저에서는 영상을 재생할 수 없어요.',
   },
   fair: {

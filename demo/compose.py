@@ -4,6 +4,8 @@ Usage:
   .venv/bin/python compose.py video en                # out/video-en.mp4 (no sound) + out/events-en.json
   .venv/bin/python compose.py video ko                # the Korean cut, from the Korean take
   .venv/bin/python compose.py stills ko 3.0 27.8 50   # PNGs of those moments
+  .venv/bin/python compose.py splice en ../docs/cappl-pals-demo.mp4
+      # without the take: the session copied from an earlier cut, the rest drawn anew
 """
 
 import json
@@ -285,6 +287,18 @@ TEXT = {
         "prompt": "Prompt",
         "sent": "Enter ⏎ sent",
         "level_sub": "Lv35 · new rank: Sheriff",
+        "deputies": "A deputy for every subagent",
+        "deputies_sub": "Each one rides out in its own bandana. The pane shows the request, its time, tokens and cost.",
+        "dep_request": "Fix the login test and tidy the auth docs",
+        "dep_labels": ["Find the failing test", "Read the auth docs", "Check the API client", "Fix the token refresh"],
+        "dep_doing": {"thinking": "Thinking", "reading": "Reading", "editing": "Editing", "running": "Running", "testing": "Testing"},
+        "dep_done": "Done",
+        "dep_finished": "Done",
+        "dep_out": "Deputies out",
+        "dep_tokens": "Tokens",
+        "dep_api": "API value",
+        "dep_count": lambda n, w: f"{n} deputies" + (f" ∙ {w} working" if w else ""),
+        "dep_time": lambda s: f"{s}s",
         "bonus": "Gold, all day long",
         "bonus_sub": "Game gold, earned from your results. No real money, ever.",
         "bonus_cards": [("bigCelebrate", "Level chest", "5 + Lv gold", "every level"),
@@ -319,6 +333,18 @@ TEXT = {
         "prompt": "프롬프트",
         "sent": "Enter ⏎ 보냄",
         "level_sub": "Lv35 · 새 계급: 보안관",
+        "deputies": "하위 에이전트마다 부보안관",
+        "deputies_sub": "자기 색 반다나를 두르고 출동해요. 창에는 요청과 시간, 토큰, 비용이 나와요",
+        "dep_request": "로그인 테스트 고치고 인증 문서 정리해 줘",
+        "dep_labels": ["실패하는 테스트 찾기", "인증 문서 읽기", "API 클라이언트 확인", "토큰 갱신 고치기"],
+        "dep_doing": {"thinking": "생각 중", "reading": "읽는 중", "editing": "고치는 중", "running": "실행 중", "testing": "테스트 중"},
+        "dep_done": "끝",
+        "dep_finished": "끝남",
+        "dep_out": "부보안관 출동 중",
+        "dep_tokens": "토큰",
+        "dep_api": "API 환산",
+        "dep_count": lambda n, w: f"부보안관 {n}명" + (f" ∙ {w}명 일하는 중" if w else ""),
+        "dep_time": lambda s: f"{s}초",
         "bonus": "골드는 하루 종일",
         "bonus_sub": "골드는 작업 결과로 모으는 게임 재화예요. 현금 결제는 없습니다",
         "bonus_cards": [("bigCelebrate", "레벨 상자", "5+레벨 골드", "레벨이 오를 때마다"),
@@ -434,7 +460,7 @@ def scene_premise(t):
         if p <= 0:
             continue
         off = 40 * (1 - ease_out_cubic(p))
-        card = Image.new("RGBA", (760, 560), (0, 0, 0, 0))
+        card = Image.new("RGBA", (740, 560), (0, 0, 0, 0))
         cd = ImageDraw.Draw(card)
         rounded(cd, [0, 0, 759, 559], 32, (20, 18, 44, 238), outline=accent + (255,), width=4)
         mark = "✕" if col == 0 else "✦"
@@ -463,7 +489,13 @@ def scene_premise(t):
 
 # ── Scene 4: the real session ──────────────────────────────────────────────
 
-TIMES = json.load(open(os.path.join(RENDER, "times.json")))
+
+
+@lru_cache(maxsize=1)
+def times():
+    # Read only when the session is drawn: the other scenes need no take.
+    return json.load(open(os.path.join(RENDER, "times.json")))
+
 SW, SH = 3000, 1680
 CW, CH = 20, 40
 DIV = 101
@@ -516,7 +548,10 @@ for name, s0, s1, dur in PLAN:
     SEGMENTS.append((_v, _v + length, s0, s1))
     _v += length
 D1 = _v
-B0 = D1
+# The deputies scene: a request played out with the pal's deputies (subagents).
+K0 = D1
+K_LEN = 8.0
+B0 = K0 + K_LEN
 J0 = B0 + 6.0
 J_HEAD = 1.5
 J_STEP = 1.15
@@ -541,7 +576,7 @@ def video_time(st):
 
 def frame_index(st):
     lo = 0
-    for i, ft in enumerate(TIMES):
+    for i, ft in enumerate(times()):
         if ft <= st:
             lo = i
     return lo
@@ -872,7 +907,128 @@ def scene_demo(t):
     return c
 
 
-# ── Scene 5: bonus gold ────────────────────────────────────────────────────
+# ── Scene 5: the deputies ──────────────────────────────────────────────────
+# NUMO, last seen in the session, sends four subagents off: each rides out as a deputy in
+# a bandana of its own colour, works, and comes home; the pane's work lines follow.
+
+KID_COLORS = [{k: tuple(int(v[i:i + 2], 16) for i in (1, 3, 5)) for k, v in c.items() if k != "text"} for c in POSES["kidColors"]]
+KID_TEXT = [tuple(int(c["text"][i:i + 2], 16) for i in (1, 3, 5)) for c in POSES["kidColors"]]
+# (arrives, what it does after arriving, comes home), in scene seconds.
+DEPUTY_PLAN = [(0.9, ("reading", "testing"), 4.9), (1.3, ("reading", "editing"), 4.3),
+               (1.7, ("editing", "running"), 5.8), (2.1, ("reading", "testing"), 5.3)]
+DEPUTIES_DONE = 6.2
+
+
+@lru_cache(maxsize=256)
+def kid_sprite(key: str, slot: int, scale: int) -> Image.Image:
+    rows = POSES["frames"][key]
+    colors = dict(PAL, **KID_COLORS[slot])
+    h, w = len(rows), len(rows[0])
+    arr = np.zeros((h, w, 4), dtype=np.uint8)
+    for y, line in enumerate(rows):
+        for x, ch in enumerate(line):
+            if ch in colors:
+                arr[y, x, :3] = colors[ch]
+                arr[y, x, 3] = 255
+    return Image.fromarray(arr, "RGBA").resize((w * scale, h * scale), Image.NEAREST)
+
+
+def deputy_state(i, lt):
+    arrive, (first, then), home = DEPUTY_PLAN[i]
+    if lt < arrive + 0.7:
+        return "born"
+    if lt >= home:
+        return "cheer" if lt < home + 1.6 else "done"
+    return first if lt < (arrive + home) / 2 else then
+
+
+def short_tokens(n):
+    if LANG == "ko":
+        return f"{n:,}" if n < 10_000 else f"{n / 10_000:.1f}만".replace(".0만", "만")
+    return str(n) if n < 1000 else f"{n / 1000:.1f}k".replace(".0k", "k")
+
+
+def scene_deputies(t):
+    lt = t - K0
+    c = gradient((14, 26, 44), (34, 78, 86)).copy()
+    starfield(c, t, density=0.45, color=(190, 236, 238))
+    mesas(c, t, color=(20, 44, 54), base=H, drift=8.0)
+    p = prog(lt, 0.1, 0.5)
+    place(c, text_layer(TEXT["deputies"], font("xbold", 74), WHITE), W / 2, 112 - 30 * (1 - ease_out_cubic(p)), 1, p)
+    place(c, text_layer(TEXT["deputies_sub"], font("semi", 34), (190, 236, 238)), W / 2, 190, 1, p)
+    ground = 800
+    plank(c, ground)
+    # The sheriff: thinking while its deputies are out, a big cheer when they are all home.
+    done = lt >= DEPUTIES_DONE
+    moment = "bigCelebrate" if done else ("thinking" if lt >= 0.6 else "still")
+    key = pose("numo", "demo", moment, t, start=K0 + (DEPUTIES_DONE if done else 0.6), once=done)
+    paste_sprite(c, key, 9, 270, ground - 126)
+    if done:
+        burst(c, 270, ground - 300, prog(lt, DEPUTIES_DONE, 1.2), n=16, radius=300, color=SAGE, seed=5)
+    working = 0
+    for i, (arrive, _plan, home) in enumerate(DEPUTY_PLAN):
+        pi = prog(lt, arrive, 0.45)
+        if pi <= 0:
+            continue
+        state = deputy_state(i, lt)
+        working += state not in ("cheer", "done")
+        tick = int(max(0.0, lt - arrive) / TICK) + i * 5
+        img = kid_sprite(f"kid:numo:{state}:{tick % 16}", i, 9)
+        pop = ease_out_back(pi)
+        if pop != 1.0:
+            img = img.resize((max(1, int(img.width * pop)), max(1, int(img.height * pop))), Image.NEAREST)
+        x = 500 + i * 140
+        c.alpha_composite(img, (int(x - img.width / 2), int(ground + 4 - img.height)))
+        badge = Image.new("RGBA", (64, 46), (0, 0, 0, 0))
+        bd = ImageDraw.Draw(badge)
+        rounded(bd, [0, 0, 63, 45], 8, KID_COLORS[i]["1"] + (255,))
+        bd.text((32, 24), str(i + 1), font=font("monob", 32), fill=KID_TEXT[i], anchor="mm")
+        place(c, badge, x, ground + 46, 1, clamp(pi * 2))
+    # The pane's lines for the request, as the mod draws them.
+    pc = prog(lt, 0.5, 0.5)
+    if pc > 0:
+        card = Image.new("RGBA", (760, 560), (0, 0, 0, 0))
+        cd = ImageDraw.Draw(card)
+        rounded(cd, [0, 0, 739, 559], 24, (12, 14, 30, 238), outline=(74, 151, 155, 210), width=3)
+        mono, monob = font("mono", 30), font("monob", 30)
+        y = 40
+        status = TEXT["dep_finished"] if done else (TEXT["dep_out"] if lt >= 2.2 else TEXT["dep_doing"]["thinking"])
+        chip = text_layer(f" {status} ", monob, INK, pad=0)
+        cd.rounded_rectangle([34, y - 4, 34 + chip.width + 4, y + 40], 6, fill=(134, 239, 172) if done else SAGE)
+        card.alpha_composite(chip, (36, y))
+        took = min(lt, DEPUTIES_DONE) - 0.5
+        rtext(card, (706, y + 20), TEXT["dep_time"](max(0, int(took * 4))), mono, GRAY, anchor="rm", pad=4)
+        y += 62
+        rtext(card, (36, y), TEXT["dep_request"], monob, WHITE, pad=4)
+        y += 52
+        finished = sum(1 for _a, _p, home in DEPUTY_PLAN if lt >= home)
+        bar = "▰" * (finished * 2) + "▱" * (8 - finished * 2)
+        rtext(card, (36, y), bar[: finished * 2], mono, SAGE, pad=4)
+        bw = mono.getlength(bar[: finished * 2])
+        rtext(card, (36 + bw, y), bar[finished * 2:] + f"  {finished}/4", mono, GRAY, pad=4)
+        y += 52
+        tokens = int(clamp((min(lt, DEPUTIES_DONE) - 0.5) / 5.7) * 186_000)
+        line = f"{TEXT['dep_tokens']} {short_tokens(tokens)} ∙ {TEXT['dep_api']} US${tokens * 0.0000011:.2f}"
+        rtext(card, (36, y), line, mono, MUTED, pad=4)
+        y += 56
+        for i, (arrive, _plan, home) in enumerate(DEPUTY_PLAN):
+            if lt < arrive:
+                continue
+            state = deputy_state(i, lt)
+            cd.rounded_rectangle([36, y + 2, 76, y + 40], 6, fill=KID_COLORS[i]["1"])
+            cd.text((56, y + 22), str(i + 1), font=monob, fill=KID_TEXT[i], anchor="mm")
+            rtext(card, (92, y + 4), TEXT["dep_labels"][i], mono, WHITE, pad=4)
+            is_home = state in ("cheer", "done")
+            word = TEXT["dep_done"] if is_home else TEXT["dep_doing"].get(state, TEXT["dep_doing"]["thinking"])
+            took = (min(lt, home) - arrive) * 4
+            rtext(card, (706, y + 22), f"{word} {TEXT['dep_time'](max(0, int(took)))}", mono, (134, 239, 172) if is_home else MUTED, anchor="rm", pad=4)
+            y += 52
+        rtext(card, (36, y + 8), TEXT["dep_count"](4, working), mono, GRAY, pad=4)
+        place(c, card, 1450, 560 + 40 * (1 - ease_out_cubic(pc)), 1, clamp(pc * 2))
+    return c
+
+
+# ── Scene 6: bonus gold ────────────────────────────────────────────────────
 
 def scene_bonus(t):
     lt = t - B0
@@ -898,7 +1054,7 @@ def scene_bonus(t):
     return c
 
 
-# ── Scene 6: the trail to Lv50 ─────────────────────────────────────────────
+# ── Scene 7: the trail to Lv50 ─────────────────────────────────────────────
 
 # (level, rank, rank in Korean, hours at the median day, look, trick shown, sky)
 RANKS = [
@@ -997,7 +1153,7 @@ def scene_journey(t):
     return c
 
 
-# ── Scene 7: the end ───────────────────────────────────────────────────────
+# ── Scene 8: the end ───────────────────────────────────────────────────────
 
 def scene_outro(t):
     lt = t - O0
@@ -1041,7 +1197,7 @@ def scene_outro(t):
 # ── Transitions: a star opens the next scene ───────────────────────────────
 
 SCENES = [(0.0, M0, scene_intro), (M0, P0, scene_moods), (P0, D0, scene_premise), (D0, D1, scene_demo),
-          (B0, J0, scene_bonus), (J0, O0, scene_journey), (O0, TOTAL, scene_outro)]
+          (K0, B0, scene_deputies), (B0, J0, scene_bonus), (J0, O0, scene_journey), (O0, TOTAL, scene_outro)]
 WIPE = 0.6
 
 
@@ -1084,7 +1240,7 @@ def wipe(a, b, p):
 # ── Sound cues ─────────────────────────────────────────────────────────────
 
 def events():
-    ev = [(0.3, "pop"), (0.65, "pop"), (M0 - 0.3, "wipe"), (P0 - 0.3, "wipe"), (D0 - 0.3, "wipe"), (B0 - 0.3, "wipe"),
+    ev = [(0.3, "pop"), (0.65, "pop"), (M0 - 0.3, "wipe"), (P0 - 0.3, "wipe"), (D0 - 0.3, "wipe"), (K0 - 0.3, "wipe"), (B0 - 0.3, "wipe"),
           (J0 - 0.3, "wipe"), (O0 - 0.3, "wipe")]
     for i in range(10):
         ev.append((1.4 + i * 0.06, "blip"))
@@ -1115,6 +1271,10 @@ def events():
         vt = video_time(A[anchor])
         if vt is not None:
             ev.append((vt, sound))
+    for i, (arrive, _state, done) in enumerate(DEPUTY_PLAN):
+        ev.append((K0 + arrive, "pop"))
+        ev.append((K0 + done, "coin_small"))
+    ev.append((K0 + DEPUTIES_DONE, "stage_numo"))
     for i, sound in enumerate(("chest_cappl", "quest_locki", "lucky_numo", "treat_cappl")):
         ev.append((B0 + 0.5 + i * 0.3, sound))
     for i in range(len(RANKS)):
@@ -1123,7 +1283,47 @@ def events():
     return sorted(ev)
 
 
-SECTIONS = [(0.0, "intro"), (M0, "moods"), (P0, "premise"), (D0, "demo"), (B0, "bonus"), (J0, "journey"), (O0, "outro")]
+SECTIONS = [(0.0, "intro"), (M0, "moods"), (P0, "premise"), (D0, "demo"), (K0, "deputies"), (B0, "bonus"), (J0, "journey"), (O0, "outro")]
+
+
+def ffmpeg():
+    return subprocess.run([os.path.join(HERE, ".venv/bin/python"), "-c", "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())"],
+                          capture_output=True, text=True).stdout.strip()
+
+
+def splice(earlier):
+    """Re-render without the take: the session is copied frame by frame from an earlier cut
+    with the same timeline up to it (the session ends on a held frame, so that frame stands
+    in for it through the wipe), and every scene after it is drawn anew."""
+    global SCENES
+    cut = int((D1 - WIPE / 2) * FPS)
+    json.dump({"events": events(), "sections": SECTIONS, "total": TOTAL}, open(os.path.join(OUT, f"events-{LANG}.json"), "w"), indent=1)
+    ff = ffmpeg()
+    src = subprocess.Popen([ff, "-loglevel", "error", "-i", earlier, "-frames:v", str(cut), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                           stdout=subprocess.PIPE)
+    out = subprocess.Popen([ff, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
+                            "-i", "-", "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p",
+                            os.path.join(OUT, f"video-{LANG}.mp4")], stdin=subprocess.PIPE)
+    size = W * H * 3
+    last = None
+    for k in range(cut):
+        raw = src.stdout.read(size)
+        if len(raw) < size:
+            raise SystemExit(f"{earlier} ends at frame {k}, before the cut at {cut}")
+        out.stdin.write(raw)
+        last = raw
+    src.stdout.close()
+    src.wait()
+    held = Image.frombytes("RGB", (W, H), last).convert("RGBA")
+    SCENES = [(a, b, (lambda _t: held) if fn is scene_demo else fn) for a, b, fn in SCENES]
+    n = int(TOTAL * FPS)
+    for k in range(cut, n):
+        out.stdin.write(render_frame(k / FPS).convert("RGB").tobytes())
+        if k % 150 == 0:
+            print(f"{k}/{n}", flush=True)
+    out.stdin.close()
+    out.wait()
+    print("done", os.path.join(OUT, f"video-{LANG}.mp4"))
 
 
 def main():
@@ -1135,9 +1335,12 @@ def main():
             render_frame(t).convert("RGB").save(os.path.join(OUT, f"still-{LANG}-{t:05.1f}.png"))
         return
     if mode == "plan":
-        print(f"total {TOTAL:.2f}  demo {D0:.1f}–{D1:.2f}  bonus {B0:.2f}  journey {J0:.2f}  outro {O0:.2f}")
+        print(f"total {TOTAL:.2f}  demo {D0:.1f}–{D1:.2f}  deputies {K0:.2f}  bonus {B0:.2f}  journey {J0:.2f}  outro {O0:.2f}")
         for name, start in STARTS.items():
             print(f"  {start:6.2f} {name}")
+        return
+    if mode == "splice":
+        splice(sys.argv[3])
         return
     json.dump({"events": events(), "sections": SECTIONS, "total": TOTAL}, open(os.path.join(OUT, f"events-{LANG}.json"), "w"), indent=1)
     ff = subprocess.run([os.path.join(HERE, ".venv/bin/python"), "-c", "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())"],
