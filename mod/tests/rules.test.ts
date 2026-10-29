@@ -1,5 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
+import type { CharacterId } from '../types'
+
 import { ACTS, DANCES, busySlot, idleGap, lookAt, loopTicks, type Moment } from '../hooks/animations'
 import { CHARACTERS, learnedTricks } from '../hooks/characters'
 import { ITEM_ART } from '../hooks/characters/art'
@@ -190,7 +192,7 @@ test('wardrobes: ten items and ten tricks each, rising in level, the shop sized 
   expect(total).toBeLessThan(25_000)
 })
 
-const still = (character: 'locki' | 'cappl', size: 32 | 16, extra: Partial<Parameters<typeof frame>[0]> = {}) =>
+const still = (character: CharacterId, size: 32 | 16, extra: Partial<Parameters<typeof frame>[0]> = {}) =>
   frame({ character, look: {}, tick: 0, equipped: [], size, ...extra }).join('')
 
 test('sprites: 32 px is 32 × 14 cells, 16 px is 16 × 7; every item shows at both sizes', async () => {
