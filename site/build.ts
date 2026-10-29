@@ -32,7 +32,7 @@ await Bun.write(join(OUT, 'index.html'), html)
 await Bun.write(join(OUT, 'favicon.svg'), svgOf(frame({ character: 'cappl', look: { eyes: 'happy', blush: true }, tick: 0, equipped: [], size: 16 })))
 
 // The mod's own sounds (the normal set) and the demo videos and posters.
-for (const character of ['locki', 'cappl']) {
+for (const character of ['locki', 'cappl', 'numo']) {
   await mkdir(join(OUT, 'sfx', character), { recursive: true })
   for (const file of await readdir(join(ROOT, 'mod/assets/sfx', character))) {
     if (file.endsWith('.wav')) await cp(join(ROOT, 'mod/assets/sfx', character, file), join(OUT, 'sfx', character, file))

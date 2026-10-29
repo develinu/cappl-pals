@@ -8,9 +8,14 @@ export type Card = { title: string; body: string }
 export type Copy = {
   skip: string
   meta: { title: string; description: string }
-  nav: { moods: string; play: string; rewards: string; trail: string; install: string; cta: string; lang: string; soundOn: string; soundOff: string; menu: string }
+  nav: { moods: string; work: string; play: string; rewards: string; trail: string; install: string; cta: string; lang: string; soundOn: string; soundOff: string; menu: string }
   hero: { kicker: string; title: string; lead: string; install: string; demo: string; hint: string; badges: string[]; pet: (name: string) => string }
   moods: { eyebrow: string; title: string; lead: string; steps: Step[]; pause: string; resume: string; who: string }
+  // The work view: a request played out with its plan and deputies (subagents).
+  work: {
+    eyebrow: string; title: string; lead: string; points: Card[]
+    request: string; plan: string[]; deputies: string[]; caption: string
+  }
   play: {
     eyebrow: string; title: string; lead: string
     pet: string; trick: string; treat: string
@@ -50,7 +55,7 @@ const EN: Copy = {
       'RIKI, CARO and NUMO peek over your Claude Code prompt, react to every moment of your session, and grow with the results you ship. Free, open source and private.',
   },
   nav: {
-    moods: 'Moods', play: 'Play', rewards: 'Rewards', trail: 'The trail', install: 'Install', cta: 'Install',
+    moods: 'Moods', work: 'Work', play: 'Play', rewards: 'Rewards', trail: 'The trail', install: 'Install', cta: 'Install',
     lang: '한국어', soundOn: 'Sound on', soundOff: 'Sound off', menu: 'Menu',
   },
   hero: {
@@ -83,6 +88,20 @@ const EN: Copy = {
     pause: 'Pause',
     resume: 'Play',
     who: 'Switch pal',
+  },
+  work: {
+    eyebrow: 'Work',
+    title: 'Watch the work, deputies and all',
+    lead: 'When Claude sends off subagents, each one rides out as your pal’s deputy, in a bandana of its own colour and with its own number. The pane shows what each one is doing, how long the request has run, its tokens and what it cost.',
+    points: [
+      { title: 'A deputy for every subagent', body: 'Deputies arrive with sparkles, then read, tap away and sweat as their sheriff does. They cheer when they finish, look dizzy when they fail and doze off when stopped. Every one is drawn, in number order, however narrow the pane.' },
+      { title: 'The request at a glance', body: 'A chip says what the pal is doing, beside the time since you asked. When Claude keeps a task list, a bar counts the steps, and each deputy gets a line of its own.' },
+      { title: 'What it costs', body: 'The request’s tokens and API value, the session’s total and your 5-hour limit. It is shown, never paid: more deputies earn no rep or gold.' },
+    ],
+    request: 'Fix the login test and tidy the auth docs',
+    plan: ['Find why the test fails', 'Fix the token refresh', 'Run the tests', 'Tidy the auth docs'],
+    deputies: ['Find the failing test', 'Read the auth docs', 'Check the API client', 'Fix the token refresh'],
+    caption: 'A request played out with the mod’s own drawing. The numbers are made up.',
   },
   play: {
     eyebrow: 'Play',
@@ -217,7 +236,7 @@ const KO: Copy = {
       'RIKI, CARO, NUMO가 Claude Code 프롬프트 위로 고개를 내밀고, 세션의 순간마다 표정을 바꾸며, 작업 결과와 함께 자라요. 무료 오픈소스이고, 개인정보를 모으지 않아요.',
   },
   nav: {
-    moods: '표정', play: '놀이', rewards: '보상', trail: '여정', install: '설치', cta: '설치하기',
+    moods: '표정', work: '작업', play: '놀이', rewards: '보상', trail: '여정', install: '설치', cta: '설치하기',
     lang: 'English', soundOn: '소리 켜짐', soundOff: '소리 꺼짐', menu: '메뉴',
   },
   hero: {
@@ -250,6 +269,20 @@ const KO: Copy = {
     pause: '멈춤',
     resume: '재생',
     who: '친구 바꾸기',
+  },
+  work: {
+    eyebrow: '작업',
+    title: '부보안관과 함께 보는 작업',
+    lead: 'Claude가 하위 에이전트를 띄우면 하나하나가 친구의 부보안관이 되어 출동해요. 자기 색 반다나를 두르고 번호를 달아요. 창에는 부보안관마다 지금 하는 일과 요청이 걸린 시간, 토큰과 비용이 나와요.',
+    points: [
+      { title: '하위 에이전트마다 부보안관', body: '반짝이며 도착해서 보안관처럼 읽고, 두드리고, 땀을 흘려요. 일을 마치면 기뻐하고, 실패하면 어지러워하고, 멈추면 잠들어요. 창이 좁아도 번호 순서대로 모두 그려요.' },
+      { title: '요청을 한눈에', body: '친구가 지금 하는 일을 표시로, 그 옆에 요청한 뒤 지난 시간을 보여 줘요. Claude가 할 일 목록을 쓰면 끝낸 단계를 막대로 세고, 부보안관마다 한 줄씩 나와요.' },
+      { title: '얼마나 드는지', body: '요청의 토큰과 API 환산 비용, 세션 합계, 5시간 한도를 보여 줘요. 보여 주기만 하고 보상은 없어요. 부보안관을 많이 띄운다고 명성이나 골드를 더 받지 않아요.' },
+    ],
+    request: '로그인 테스트 고치고 인증 문서 정리해 줘',
+    plan: ['테스트가 실패하는 이유 찾기', '토큰 갱신 고치기', '테스트 돌리기', '인증 문서 정리하기'],
+    deputies: ['실패하는 테스트 찾기', '인증 문서 읽기', 'API 클라이언트 확인', '토큰 갱신 고치기'],
+    caption: '모드가 그리는 그림 그대로 요청 하나를 재생해요. 숫자는 예시예요.',
   },
   play: {
     eyebrow: '놀이',
