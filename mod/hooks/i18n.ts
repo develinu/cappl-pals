@@ -1,4 +1,4 @@
-import type { Language, ResultKind, RewardKind } from '../types'
+import type { Activity, KidStatus, Language, Outcome, ResultKind, RewardKind } from '../types'
 
 // Every word the pane, the toasts and the commands show. Item names and character
 // lines live with each character (characters/index.ts).
@@ -89,7 +89,43 @@ type Words = {
     allLearned: string
     allUnlocked: string
   }
+  // The session's work: the request, its plan, the deputies (subagents) and what it all cost.
+  work: {
+    title: string
+    idle: string
+    doing: Record<Activity, string>
+    outcome: Record<Outcome, string>
+    waitingKids: string
+    kid: Record<Exclude<KidStatus, 'working'>, string>
+    plan: (done: number, total: number) => string
+    kids: (n: number, working: number) => string
+    more: (n: number) => string
+    tokensLabel: string
+    cost: string
+    apiCost: string
+    session: string
+    limits: Readonly<Record<string, string>>
+    resets: (left: string) => string
+    tokens: (n: number) => string
+    tokensOf: (n: number) => string
+    time: (ms: number) => string
+    // How long until a limit resets, roughly: minutes, hours or days.
+    soon: (ms: number) => string
+    usd: (n: number) => string
+  }
 }
+
+// 1.2 and 18 from 1.234 and 18.04: as many decimals as keep about three digits.
+function short(n: number, digits: number): string {
+  return String(Number(n.toFixed(n < 10 ? digits : n < 100 ? digits - 1 : 0)))
+}
+
+function commaed(n: number): string {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+// Under a cent reads as such, not as nothing.
+const usd = (n: number) => (n > 0 && n < 0.005 ? '<US$0.01' : `US$${n.toFixed(2)}`)
 
 const EN: Words = {
   ranks: [
@@ -215,6 +251,36 @@ const EN: Words = {
     allLearned: 'Every trick learned',
     allUnlocked: 'Every item unlocked',
   },
+  work: {
+    title: 'Work',
+    idle: 'Progress shows here when you ask',
+    doing: {
+      idle: 'Idle', sleeping: 'Napping', thinking: 'Thinking', reading: 'Reading', editing: 'Editing',
+      running: 'Running', testing: 'Testing', waiting: 'Needs you',
+    },
+    outcome: { answer: 'Done', aborted: 'Stopped', error: 'Error', refusal: 'Refused' },
+    waitingKids: 'Deputies out',
+    kid: { done: 'Done', failed: 'Failed', stopped: 'Stopped' },
+    plan: (done, total) => `${done}/${total}`,
+    kids: (n, working) => `${n} ${n === 1 ? 'deputy' : 'deputies'}${working > 0 ? ` ∙ ${working} working` : ''}`,
+    more: n => `+${n} more`,
+    tokensLabel: 'Tokens',
+    cost: 'Cost',
+    apiCost: 'API value',
+    session: 'This session',
+    limits: { five_hour: '5-hour limit', seven_day: 'Weekly limit', spend_limit: 'Spend limit' },
+    resets: left => `resets in ${left}`,
+    tokens: n => (n < 1_000 ? String(n) : n < 999_500 ? `${short(n / 1_000, 2)}k` : `${short(n / 1_000_000, 2)}M`),
+    tokensOf: n => `${EN.work.tokens(n)} tokens`,
+    time: ms => {
+      const s = Math.floor(ms / 1000)
+      if (s < 60) return `${s}s`
+      if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`
+      return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`
+    },
+    soon: ms => (ms < 3600_000 ? `${Math.max(1, Math.round(ms / 60_000))}m` : ms < 86_400_000 ? `${Math.round(ms / 3600_000)}h` : `${Math.round(ms / 86_400_000)}d`),
+    usd,
+  },
 }
 
 const KO: Words = {
@@ -339,6 +405,36 @@ const KO: Words = {
     items: (have, all) => `▸ 옷장 ${have}/${all}`,
     allLearned: '재주를 모두 배웠어요',
     allUnlocked: '소품이 모두 열렸어요',
+  },
+  work: {
+    title: '작업',
+    idle: '일을 맡기면 진행 상황이 여기 나와요',
+    doing: {
+      idle: '쉬는 중', sleeping: '낮잠', thinking: '생각 중', reading: '읽는 중', editing: '고치는 중',
+      running: '실행 중', testing: '테스트 중', waiting: '허락 기다림',
+    },
+    outcome: { answer: '끝남', aborted: '멈춤', error: '오류', refusal: '거절됨' },
+    waitingKids: '부보안관 출동 중',
+    kid: { done: '끝', failed: '실패', stopped: '멈춤' },
+    plan: (done, total) => `${done}/${total}`,
+    kids: (n, working) => `부보안관 ${n}명${working > 0 ? ` ∙ ${working}명 일하는 중` : ''}`,
+    more: n => `외 ${n}명`,
+    tokensLabel: '토큰',
+    cost: '비용',
+    apiCost: 'API 환산',
+    session: '이 세션',
+    limits: { five_hour: '5시간 한도', seven_day: '주간 한도', spend_limit: '지출 한도' },
+    resets: left => `${left} 뒤 초기화`,
+    tokens: n => (n < 10_000 ? commaed(n) : n < 1_000_000 ? `${Number((n / 10_000).toFixed(1))}만` : n < 100_000_000 ? `${Math.round(n / 10_000)}만` : `${Number((n / 100_000_000).toFixed(1))}억`),
+    tokensOf: n => `토큰 ${KO.work.tokens(n)}`,
+    time: ms => {
+      const s = Math.floor(ms / 1000)
+      if (s < 60) return `${s}초`
+      if (s < 3600) return `${Math.floor(s / 60)}분 ${s % 60}초`
+      return `${Math.floor(s / 3600)}시간 ${Math.floor((s % 3600) / 60)}분`
+    },
+    soon: ms => (ms < 3600_000 ? `${Math.max(1, Math.round(ms / 60_000))}분` : ms < 86_400_000 ? `${Math.round(ms / 3600_000)}시간` : `${Math.round(ms / 86_400_000)}일`),
+    usd,
   },
 }
 

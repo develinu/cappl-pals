@@ -6,9 +6,9 @@
     {
       "name": "cappl-pals",
       "source": "./mod",
-      "description": "RIKI, CARO and NUMO, cowboy-hat sheriffs of the Sundust world, peek over your Claude Code prompt, react to what your session is doing and grow with your work: passing tests, commits and merged PRs earn rep, tricks and gold for treats, hats, shades and banjos.",
+      "description": "RIKI, CARO and NUMO, cowboy-hat sheriffs of the Sundust world, peek over your Claude Code prompt, react to what your session is doing, send each subagent out as one of their deputies, show the request's plan, time, tokens and cost, and grow with your work: passing tests, commits and merged PRs earn rep, tricks and gold for treats, hats, shades and banjos.",
       "author": { "name": "develinu" },
-      "version": "0.3.0"
+      "version": "0.4.0"
     }
   ]
 }

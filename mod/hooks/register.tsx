@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, Register, RenderChildren } from 'claude-code'
 
-import type { Act, Activity, CareKind, CharacterId, Fx, FxKind, Language, Ledger, PaneView, ResultKind, Reward, RewardKind, Totals, Wallet } from '../types'
+import type { Act, Activity, CareKind, CharacterId, Fx, FxKind, Kid, Language, Ledger, PaneView, ResultKind, Reward, RewardKind, Totals, Wallet, Work } from '../types'
 import { ACTS, DANCES, actTicks, busySlot, idleGap, lookAt, loopTicks, type Moment } from './animations'
 import { CHARACTERS, characterOf, fullId, isCharacterId, learnedTricks, type Character } from './characters'
 import { WORDS, languageOf } from './i18n'
@@ -49,7 +49,25 @@ import {
   type Signal,
 } from './rules'
 import { SOUND_LEVELS, play, soundLevel, type Sfx, type SoundLevel } from './sound'
+import { KID_WIDTH, hex, kidColor, kidColors, kidFrame, kidLook } from './kids'
 import { animatedSvgOf, encode, frame, type Size } from './sprite'
+import {
+  emptyWork,
+  endRequest,
+  kidEnd,
+  kidStart,
+  kidStatuses,
+  kidTool,
+  kidToolDone,
+  measure,
+  planFrom,
+  requestCost,
+  requestEnd,
+  spawnKid,
+  startRequest,
+  drawnKids,
+  withTokens,
+} from './work'
 
 const PANE = 'cappl-pals'
 const SPRITE = 'sprite'
@@ -75,6 +93,16 @@ const PROGRESS_ROWS = 22
 const INLINE_ROWS = 30
 // How often other sessions' rewards and purchases are read back; the store sends no change events.
 const SYNC_MS = 1500
+// How soon after a prompt is sent its turn starts; a later turn is not that prompt's.
+const PROMPT_MS = 10_000
+// The text a turn starts with when a background agent or task reports back.
+const REPORT = /^\s*<(agent-message|task-notification)\b/
+// A kid's tokens join its line from this width on; a dock (about 40 columns) shows its time.
+const WIDE_COLUMNS = 52
+// The header column beside the small pal when deputies stand past it.
+const BESIDE_HEADER = 34
+// A deputy's rows: its seven of pixels and its number.
+const KID_ROWS = 8
 // Latest rewards kept per session ledger (the pane shows four, all sessions merged).
 const RECENT = 8
 const FX_MS: Record<FxKind, number> = { reward: 1200, comeback: 1600, merge: 2000, level: 2600, stage: 3200, buy: 1500 }
@@ -93,6 +121,8 @@ const fxAtom = atom({ plugin: 'cappl-pals', key: 'fx' } as const, null as Fx | n
 const characterAtom = atom({ plugin: 'cappl-pals', key: 'character' } as const, null as CharacterId | null)
 const pickingAtom = atom({ plugin: 'cappl-pals', key: 'picking' } as const, false)
 const viewAtom = atom({ plugin: 'cappl-pals', key: 'view' } as const, 'main' as PaneView)
+const workAtom = atom({ plugin: 'cappl-pals', key: 'work' } as const, emptyWork())
+const beatAtom = atom({ plugin: 'cappl-pals', key: 'beat' } as const, 0)
 
 // Module variables start over on a hot reload: what the pane reads lives in $.state,
 // what must last lives in $.store.
@@ -118,6 +148,14 @@ const runtime = {
   tricks: 0,
   // Which idle stretch a desktop loop shows; moves on with each redraw for variety.
   svgSeed: 0,
+  // The kids drawn in the terminal and the frame each shows, blitted like the pal.
+  kidsDrawn: new Map<string, string>(),
+  // When the session began, and when its cost was last read.
+  startedAt: 0,
+  usageAt: 0,
+  // The prompt the person just sent: the next main turn starts a request with it. A turn
+  // without one (a background agent's report waking the loop) carries the request on.
+  prompt: null as { text: string; at: number } | null,
   // Serializes this session's writes. Each session writes its own ledger; the few shared
   // keys (wallet, chestLevel, bounty:<day>) are each read and written straight back,
   // which keeps the window for two sessions to collide to a few milliseconds.
@@ -195,6 +233,56 @@ function enqueue($: EngineInterface, job: () => Promise<unknown>): Promise<unkno
   runtime.queue = runtime.queue.then(job).catch(() => undefined)
 
   return runtime.queue
+}
+
+// ── Work: the request, its plan and the kids (subagents) ─────────────────────
+
+function activityOf(tool: string, command: string): Activity {
+  if (EDIT_TOOLS.has(tool)) return 'editing'
+  if (READ_TOOLS.has(tool)) return 'reading'
+  if (isTestCommand(command) || /\btest\b/.test(command)) return 'testing'
+
+  return 'running'
+}
+
+// Kids start and report side by side, so each change is applied to the value as written
+// (update retries on a race); a change that changes nothing writes nothing.
+// A failed write is let go: the pal's own moods, rewards and the session's tools never wait
+// on the work view.
+async function changeWork($: EngineInterface, fn: (work: Work) => Work) {
+  try {
+    const work = await read($, workAtom)
+    if (fn(work) !== work) await update($, workAtom, fn)
+  } catch {
+    // The next event writes again.
+  }
+}
+
+const isBusy = (work: Work) => (work.request !== null && work.request.endedAt === undefined) || work.kids.some(kid => kid.status === 'working')
+
+// The cost and the limits as the status line has them; read after model requests, at
+// most once a second (the call itself is free).
+async function refreshUsage($: EngineInterface, isForced = false) {
+  const now = await $.clock.now().catch(() => 0)
+  if (!isForced && now - runtime.usageAt < 1000) return
+  runtime.usageAt = now
+  const usage = await $.session.usage().catch(() => undefined)
+  if (usage === undefined) return
+  runtime.startedAt = usage.startedAt
+  await changeWork($, work => measure(work, { ...(usage.cost === undefined ? {} : { usd: usage.cost.usd }), limits: usage.rateLimits }))
+}
+
+// Once a second while something runs, so the times on screen count up; and the agent
+// list, for kids whose end no event told (stopped from the task list, killed).
+async function heartbeat($: EngineInterface) {
+  const work = await read($, workAtom)
+  if (!isBusy(work)) return
+  const now = await $.clock.now()
+  await update($, beatAtom, () => now)
+  if (work.kids.some(kid => kid.status === 'working') && Math.floor(now / 1000) % 2 === 0) {
+    const list = await $.agent.list().catch(() => [])
+    await changeWork($, current => kidStatuses(current, list, now))
+  }
 }
 
 // ── Moods and acts ──────────────────────────────────────────────────────────
@@ -632,10 +720,33 @@ async function animate($: EngineInterface) {
   const moment = await momentNow($, character, runtime.tick)
   const rows = frame({ character: id, look: lookAt(moment), tick: runtime.tick, equipped: wornBy(wallet, id), size: runtime.size, fx: fx?.kind })
   const signature = rows.join('')
-  if (signature === runtime.drawn) return
-  runtime.drawn = signature
-  const done = await $.ui.blit({ requestId: PANE, key: SPRITE, cells: encode(rows).cells })
-  if (done.deny !== undefined) runtime.isDrawn = false
+  if (signature !== runtime.drawn) {
+    runtime.drawn = signature
+    const done = await $.ui.blit({ requestId: PANE, key: SPRITE, cells: encode(rows).cells })
+    if (done.deny !== undefined) runtime.isDrawn = false
+  }
+  if (runtime.kidsDrawn.size === 0) return
+  const work = await read($, workAtom)
+  const now = await $.clock.now()
+  for (const kid of work.kids) {
+    const drawn = runtime.kidsDrawn.get(kid.id)
+    if (drawn === undefined) continue
+    const kidRows = kidFrame(id, kidLook(kid, now, runtime.tick, kid.slot), runtime.tick)
+    const kidSignature = kidRows.join('')
+    if (kidSignature === drawn) continue
+    runtime.kidsDrawn.set(kid.id, kidSignature)
+    const done = await $.ui.blit({ requestId: PANE, key: `kid-${kid.id}`, cells: encode(kidRows, kidColors(kid.slot)).cells })
+    if (done.deny !== undefined) runtime.kidsDrawn.delete(kid.id)
+  }
+}
+
+// A kid's loop as an animated SVG for the desktop: its look over a few seconds.
+function kidSvg(character: CharacterId, kid: Kid): string {
+  // Long after it started or ended, so the loop shows how it works, not the pop-in.
+  const later = Math.max(kid.startedAt, kid.endedAt ?? 0) + 60_000
+  const frames = Array.from({ length: 16 }, (_, tick) => kidFrame(character, kidLook(kid, later, tick, kid.slot), tick))
+
+  return animatedSvgOf(frames, TICK_MS, undefined, kidColors(kid.slot))
 }
 
 // One loop of the moment as an animated SVG, waving back when pointed at.
@@ -653,6 +764,14 @@ function loopSvg(moment: Moment, equipped: readonly string[], fx: FxKind | undef
   )
 
   return animatedSvgOf(frames, TICK_MS, hover)
+}
+
+// Terminal cells a text takes: Hangul and other wide letters take two.
+function cellsOf(text: string): number {
+  let n = 0
+  for (const char of text) n += /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]/.test(char) ? 2 : 1
+
+  return n
 }
 
 function commas(n: number): string {
@@ -744,6 +863,8 @@ export const register: Register = (on, options) => {
     if ((await $.store.get('chestLevel')) === undefined) await $.store.set('chestLevel', levelOf(totals.fame).level)
     $.clock.every(TICK_MS, () => void animate($).catch(() => undefined))
     $.clock.every(SYNC_MS, () => void sync($))
+    $.clock.every(1000, () => void heartbeat($).catch(() => undefined))
+    void refreshUsage($, true)
     $.clock.every(15_000, () => void checkSleep($).catch(() => undefined))
     // Desktop loops show a different idle stretch now and then.
     $.clock.every(30_000, () => {
@@ -814,6 +935,11 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'cappl-sound' }, async $ => ({ text: await cycleSound($) }))
 
   on('prompt.submit', async ($, e, next) => {
+    // Sent while idle it is a new request; typed over a running turn it steers that one,
+    // and a background task's notice only reports back to it.
+    if (e.isMeta !== true && e.turnId === undefined && e.origin.kind !== 'task-notification') {
+      runtime.prompt = { text: e.text, at: await $.clock.now() }
+    }
     await arrive($)
     if ((await read($, activityAtom)) === 'sleeping') await setActivity($, 'idle')
     await playAct($, 'listen')
@@ -822,17 +948,69 @@ export const register: Register = (on, options) => {
   })
 
   on('turn.start', async ($, e, next) => {
+    const now = await $.clock.now()
     if (e.agentId === undefined) {
       runtime.isTurn = true
       await setActivity($, 'thinking')
       await update($, turnFameAtom, () => 0)
+      // The cost when the request starts, so the pane can tell what it cost.
+      await refreshUsage($, true)
+      // A report (a background agent's, a task's) carries the request on; so does a turn
+      // with no text. Otherwise it is a new request, named as the person typed it (a slash
+      // command as typed, not its expanded prompt), or by the turn's own text when it was
+      // queued over a running turn.
+      const isReport = REPORT.test(e.text)
+      const typed = runtime.prompt !== null && now - runtime.prompt.at < PROMPT_MS ? runtime.prompt.text : ''
+      runtime.prompt = null
+      const title = isReport ? '' : typed !== '' ? typed : e.text
+      await changeWork($, work => startRequest(work, { text: title, at: now }))
+    } else {
+      const id = e.agentId
+      await changeWork($, work => kidStart(work, id, now))
     }
+
+    return next(e)
+  })
+
+  // Every model request, the main loop's and each kid's: what it cost in tokens.
+  on('turn.step', async function* ($, e, next) {
+    const response = yield* next(e)
+    if (response.usage !== null) {
+      const usage = response.usage
+      const at = await $.clock.now()
+      await changeWork($, work => withTokens(work, e.agentId, usage, at))
+      await refreshUsage($)
+    }
+
+    return response
+  })
+
+  // The Agent tool (or a workflow) sends off a subagent: a kid is born.
+  on('agent.spawn', async ($, e, next) => {
+    const spawned = await next(e)
+    if (spawned.deny === undefined && spawned.agentId !== undefined) {
+      const id = spawned.agentId
+      const at = await $.clock.now()
+      await changeWork($, work => spawnKid(work, { id, label: e.description, type: e.subagentType, at, isWorkflow: e.workflow !== undefined }))
+    }
+
+    return spawned
+  })
+
+  on('session.measure', async ($, e, next) => {
+    await changeWork($, work => measure(work, { ...(e.cost === undefined ? {} : { usd: e.cost.usd }), limits: e.rateLimits }))
 
     return next(e)
   })
 
   on('turn.complete', async ($, e, next) => {
     const done = await next(e)
+    const at = await $.clock.now()
+    if (e.agentId === undefined) await changeWork($, work => endRequest(work, { at, reason: e.reason }))
+    else {
+      const id = e.agentId
+      await changeWork($, work => kidEnd(work, id, { at, reason: e.reason }))
+    }
     if (e.agentId === undefined) {
       runtime.isTurn = false
       runtime.turns += 1
@@ -860,22 +1038,24 @@ export const register: Register = (on, options) => {
   })
 
   on('tool.call', async ($, e, next) => {
-    const isMain = !('agentId' in e) || e.agentId === undefined
+    const agentId = 'agentId' in e ? e.agentId : undefined
+    const isMain = agentId === undefined
     const tool = String(e.tool)
     const command = e.tool === 'Bash' ? e.command : ''
-    if (isMain) {
-      const doing: Activity = EDIT_TOOLS.has(tool)
-        ? 'editing'
-        : READ_TOOLS.has(tool)
-          ? 'reading'
-          : isTestCommand(command) || /\btest\b/.test(command)
-            ? 'testing'
-            : 'running'
-      await setActivity($, doing)
+    const doing = activityOf(tool, command)
+    if (isMain) await setActivity($, doing)
+    else {
+      const at = await $.clock.now()
+      await changeWork($, work => kidTool(work, agentId, doing, at))
     }
     const ran = await next(e)
     if (isMain) await setActivity($, runtime.isTurn ? 'thinking' : 'idle')
+    else await changeWork($, work => kidToolDone(work, agentId))
     if (ran.deny !== undefined) return ran
+    // The plan the main loop keeps; a kid's own to-do list stays its own.
+    if (isMain && ran.isError !== true && (tool === 'TodoWrite' || tool === 'TaskCreate' || tool === 'TaskUpdate')) {
+      await changeWork($, work => planFrom(work, { tool, input: e, result: ran.result }))
+    }
     const isError = ran.isError === true
     // One command can do several things (`npm test && git commit && gh pr create`),
     // taken in the order they happen.
@@ -1106,14 +1286,170 @@ export const register: Register = (on, options) => {
     const bounty = readBounty(await $.store.get(`bounty:${day}`))
     const lines = bountyLines(quests, world.ledgers, day, bounty.done)
     const recent = log.slice(-3)
+
+    // ── The session's work: what was asked, the plan, the kids, what it cost ──
+    const work = await read($, workAtom)
+    // Moves once a second while something runs, so this drawing's times count up.
+    await read($, beatAtom)
+    const wk = w.work
+    const activity = await read($, activityAtom)
+    const request = work.request
+    const isRunning = request !== null && request.endedAt === undefined
+    const workingKids = work.kids.filter(kid => kid.status === 'working').length
+    const isWorking = isRunning || workingKids > 0
+    const lineBox = isTerminal ? { width: columns } : {}
+    const workLines: RenderChildren[] = []
+    // The status chip and the time, which a low pane puts beside the small pal.
+    let statusLine: RenderChildren = null
+    let statusOf: (width?: number) => RenderChildren = () => null
+    if (request === null) {
+      workLines.push(<Text key="work-idle" dimColor>{wk.idle}</Text>)
+    } else {
+      const doing: Activity = activity === 'idle' || activity === 'sleeping' ? 'thinking' : activity
+      // The pal's answer is in but kids still work: the request is not over until they report.
+      const isWaitingKids = !isRunning && workingKids > 0
+      const chip = isRunning
+        ? { label: wk.doing[doing], color: doing === 'waiting' ? 'permission' : character.color }
+        : isWaitingKids
+          ? { label: wk.waitingKids, color: character.color }
+          : {
+              label: wk.outcome[request.outcome ?? 'answer'],
+              color: request.outcome === 'aborted' ? 'warning' : request.outcome === 'error' || request.outcome === 'refusal' ? 'error' : 'success',
+            }
+      const took = (requestEnd(work) ?? now) - request.startedAt
+      const chipText = ` ${chip.label} `
+      const timeText = ` ${wk.time(took)}`
+      // A status too wide for its row keeps the chip and drops the time rather than wrap.
+      statusOf = width => (
+        <Box key="work-status" flexDirection="row" justifyContent="space-between" {...(width === undefined ? {} : { width })}>
+          <Text backgroundColor={chip.color} color="inverseText" bold>{chipText}</Text>
+          {(width === undefined || cellsOf(chipText) + cellsOf(timeText) <= width) && (
+            <Box key="work-time">
+              <Text dimColor>{timeText}</Text>
+            </Box>
+          )}
+        </Box>
+      )
+      statusLine = statusOf(isTerminal ? columns : undefined)
+      workLines.push(
+        statusLine,
+        <Box key="work-title" {...lineBox}>
+          <Text bold wrap="truncate-end">{request.title}</Text>
+        </Box>,
+      )
+      if (work.plan.length > 0) {
+        const finished = work.plan.filter(item => item.status === 'completed').length
+        const filled = Math.round((finished / work.plan.length) * 8)
+        const current = work.plan.find(item => item.status === 'in_progress')
+        workLines.push(
+          <Box key="work-plan" flexDirection="row" {...lineBox}>
+            <Text>
+              <Text color={character.color}>{'▰'.repeat(filled)}</Text>
+              <Text dimColor>{'▱'.repeat(8 - filled)}</Text> {wk.plan(finished, work.plan.length)}{' '}
+            </Text>
+            {current !== undefined && (
+              <Box flexGrow={1} flexShrink={1}>
+                <Text dimColor wrap="truncate-end">{current.active ?? current.subject}</Text>
+              </Box>
+            )}
+          </Box>,
+        )
+      }
+      const cost = requestCost(work)
+      workLines.push(
+        <Text key="work-cost" wrap="truncate-end">
+          <Text dimColor>{wk.tokensLabel} </Text>
+          {wk.tokens(request.tokens)}
+          {cost !== undefined && <Text dimColor> ∙ {work.limits.length > 0 ? wk.apiCost : wk.cost} </Text>}
+          {cost !== undefined && wk.usd(cost)}
+        </Text>,
+      )
+    }
+    // The deputies with a colour, in number order, as the picture shows them.
+    const listed = drawnKids(work)
+    for (const kid of listed) {
+      const color = kidColor(kid.slot)
+      const took = (kid.endedAt ?? now) - kid.startedAt
+      const state =
+        kid.status === 'working'
+          ? { text: wk.doing[kid.activity], props: {} }
+          : { text: wk.kid[kid.status], props: { color: kid.status === 'done' ? 'success' : kid.status === 'failed' ? 'error' : 'warning' } }
+      workLines.push(
+        <Box key={`kidline-${kid.id}`} flexDirection="row" {...lineBox}>
+          <Text backgroundColor={hex(color.main)} color={color.text} bold>{` ${kid.slot + 1} `}</Text>
+          <Box flexGrow={1} flexShrink={1} marginLeft={1}>
+            <Text wrap="truncate-end">{kid.label}</Text>
+          </Box>
+          <Box flexShrink={0}>
+            <Text>
+              {' '}
+              <Text {...state.props}>{state.text}</Text>
+              <Text dimColor> {wk.time(took)}</Text>
+              {kid.tokens > 0 && columns >= WIDE_COLUMNS && <Text dimColor> ∙ {wk.tokens(kid.tokens)}</Text>}
+            </Text>
+          </Box>
+        </Box>,
+      )
+    }
+    const unlisted = work.kids.length - listed.length
+    if (work.kids.length > 1 || unlisted > 0) {
+      workLines.push(
+        <Text key="work-kids" dimColor>
+          {wk.kids(work.kids.length, workingKids)}
+          {unlisted > 0 ? ` ∙ ${wk.more(unlisted)}` : ''}
+        </Text>,
+      )
+    }
+    // A dock keeps the counts; a wider pane adds how long the session has run.
+    const sessionBits = [
+      runtime.startedAt > 0 && columns >= WIDE_COLUMNS ? wk.time(now - runtime.startedAt) : '',
+      work.tokens > 0 ? wk.tokensOf(work.tokens) : '',
+      work.usd !== undefined ? wk.usd(work.usd) : '',
+    ].filter(bit => bit !== '')
+    if (sessionBits.length > 0) {
+      workLines.push(
+        <Text key="work-session" dimColor wrap="truncate-end">
+          {wk.session} {sessionBits.join(' ∙ ')}
+        </Text>,
+      )
+    }
+    // A line per limit window: the 5-hour one always, the others on a wide pane or once
+    // half used; when a window resets, once half of it is gone.
+    const first = work.limits.find(one => one.kind === 'five_hour') ?? work.limits[0]
+    const shown = work.limits.filter(one => one === first || columns >= WIDE_COLUMNS || one.percent >= 50)
+    for (const limit of [...shown].sort((a, b) => (a === first ? -1 : b === first ? 1 : 0))) {
+      const filled = Math.min(10, Math.round(limit.percent / 10))
+      const resets =
+        limit.percent >= 50 && limit.resetsAt !== undefined && limit.resetsAt > now ? wk.resets(wk.soon(limit.resetsAt - now)) : ''
+      workLines.push(
+        <Text key={`work-limit-${limit.kind}`} wrap="truncate-end">
+          <Text dimColor>{wk.limits[limit.kind] ?? limit.kind} </Text>
+          <Text color={limit.percent >= 90 ? 'error' : limit.percent >= 70 ? 'warning' : 'success'}>{'▰'.repeat(filled)}</Text>
+          <Text dimColor>{'▱'.repeat(10 - filled)}</Text> {Math.round(limit.percent)}%
+          {resets !== '' && <Text dimColor> ∙ {resets}</Text>}
+        </Text>,
+      )
+    }
+    // While idle the work sits under the pal's own lines with a heading, like the shop.
+    if (!isWorking) workLines.unshift(<Text key="work-title-idle" dimColor>{`▸ ${wk.title}`}</Text>)
+
     // Rows below the header: the hint, the actions, the bounties, recent rewards, the
-    // shop, what's next and the menu.
+    // shop, what's next and the menu; and the work.
     const below =
-      (isTerminal ? 1 : 0) + 3 + 1 + lines.length + 1 + 1 + Math.max(1, recent.length) + 1 + visible.length + (nextLocked ? 1 : 0) + (nextTrick ? 1 : 0) + 1 + 4
+      (isTerminal ? 1 : 0) + 3 + 1 + lines.length + 1 + 1 + Math.max(1, recent.length) + 1 + visible.length + (nextLocked ? 1 : 0) + (nextTrick ? 1 : 0) + 1 + 4 +
+      workLines.length
 
     let sprite
     let isBeside = false
     let isOverflowing = false
+    // The kids drawn beside the pal (a family photo) when the pane is wide enough, else in
+    // a row under it; each with its number on its colour, as in the list.
+    let family: RenderChildren = null
+    // Deputies that stand under a low pane's beside row because they do not all fit in it.
+    let kidsBelow: RenderChildren = null
+    let lowKids = 0
+    const drawn = listed
+    runtime.kidsDrawn.clear()
     if (isTerminal) {
       const { Raster } = $.ui.resolve(e)
       // bodyRows is the most the pane can show at once; rows past it need focus and scrolling.
@@ -1124,15 +1460,73 @@ export const register: Register = (on, options) => {
       runtime.drawn = rows.join('')
       runtime.isDrawn = true
       sprite = <Raster key={SPRITE} columns={art.columns} rows={art.rows} cells={art.cells} />
+      // Every deputy is drawn, in number order: beside the pal when they all fit there
+      // (a family photo), else in rows under it that wrap, never some of them.
+      const perRow = Math.max(1, Math.floor((columns + 1) / (KID_WIDTH + 1)))
+      const rowsOf = (n: number) => (n === 0 ? 0 : Math.ceil(n / perRow) * KID_ROWS)
+      const fitBeside = Math.max(0, Math.floor((columns - art.columns - 1) / (KID_WIDTH + 1)))
+      const isKidsBeside = drawn.length > 0 && drawn.length <= fitBeside
       // When the stack does not fit, put the header beside the small sprite if there is room.
-      const stacked = art.rows + HEADER_ROWS + below
+      const stacked = art.rows + (isKidsBeside ? 0 : rowsOf(drawn.length)) + HEADER_ROWS + below
       isBeside = runtime.size === 16 && stacked > bodyRows && columns >= art.columns + 2 + HEADER_COLUMNS
-      isOverflowing = (isBeside ? Math.max(art.rows, HEADER_ROWS + 3) + below - 1 : stacked) > bodyRows
+      // A low pane keeps them past the header column when all of them fit there.
+      const fitLow = Math.max(0, Math.floor((columns - art.columns - 2 - BESIDE_HEADER - 1) / (KID_WIDTH + 1)))
+      lowKids = isBeside && drawn.length > 0 && drawn.length <= fitLow ? drawn.length : 0
+      // Beside the small pal: its seven rows, the header column, or a deputy and its number.
+      const besideRows = Math.max(art.rows, HEADER_ROWS + 3, lowKids > 0 ? KID_ROWS : 0)
+      const kidsUnder = isBeside ? (lowKids > 0 ? 0 : rowsOf(drawn.length)) : 0
+      isOverflowing = (isBeside ? besideRows + kidsUnder + below - 1 : stacked) > bodyRows
+      const columnsOf = drawn.map(kid => {
+        const color = kidColor(kid.slot)
+        const kidRowsNow = kidFrame(character.id, kidLook(kid, now, runtime.tick, kid.slot), runtime.tick)
+        const cells = encode(kidRowsNow, kidColors(kid.slot))
+        runtime.kidsDrawn.set(kid.id, kidRowsNow.join(''))
+
+        return (
+          <Box key={`kid-col-${kid.id}`} flexDirection="column" alignItems="center" width={KID_WIDTH} marginLeft={1}>
+            <Raster key={`kid-${kid.id}`} columns={cells.columns} rows={cells.rows} cells={cells.cells} />
+            <Text backgroundColor={hex(color.main)} color={color.text} bold>{` ${kid.slot + 1} `}</Text>
+          </Box>
+        )
+      })
+      // Each column brings its own left margin; the row takes the first one back.
+      const kidsRow =
+        columnsOf.length === 0 ? null : (
+          <Box key="kids" flexDirection="row" flexWrap="wrap" marginLeft={-1} width={columns + 1}>
+            {columnsOf}
+          </Box>
+        )
+      if (isBeside) {
+        if (lowKids > 0) family = columnsOf
+        else kidsBelow = kidsRow
+      } else if (isKidsBeside) {
+        family = (
+          <Box key="family" flexDirection="row" alignItems="flex-end">
+            {sprite}
+            {columnsOf}
+          </Box>
+        )
+      } else if (kidsRow !== null) {
+        family = [sprite, kidsRow]
+      }
     } else if (e.surface === 'desktop' || e.surface === 'vscode' || e.surface === 'mobile') {
       const { Svg } = $.ui.resolve(e)
       const moment = await momentNow($, character, 0, 0)
       const source = loopSvg(moment, worn, fx?.kind)
       sprite = <Svg source={source} alt={`${character.name} Lv${level}`} width={128} height={112} isInteractive />
+      if (listed.length > 0) {
+        family = (
+          <Box key="family" flexDirection="row" alignItems="flex-end" flexWrap="wrap">
+            {sprite}
+            {listed.map(kid => (
+              <Box key={`kid-col-${kid.id}`} flexDirection="column" alignItems="center" marginLeft={1}>
+                <Svg source={kidSvg(character.id, kid)} alt={kid.label} width={48} height={56} isInteractive />
+                <Text backgroundColor={hex(kidColor(kid.slot).main)} color={kidColor(kid.slot).text} bold>{` ${kid.slot + 1} `}</Text>
+              </Box>
+            ))}
+          </Box>
+        )
+      }
     }
 
     // Ambiguous-width glyphs (■ □ · — ★ ×) take two cells on CJK terminals and push
@@ -1148,20 +1542,32 @@ export const register: Register = (on, options) => {
     // The hint, and that there is more below: beside the small sprite there is room for
     // them next to the header, so a pane of seven rows still says how to use it.
     const guide = [hintFor(isOverflowing), isOverflowing ? <Text key="more" dimColor>{w.scrollHint}</Text> : null]
+    // Beside the small pal the status takes the reward line's place while work runs,
+    // unless a reward is showing there.
+    const isStatusBeside = isBeside && isWorking && statusLine !== null && fx === null
+    const workBlock = (
+      <Box key="work" flexDirection="column">
+        {isStatusBeside ? workLines.filter(line => line !== statusLine) : workLines}
+      </Box>
+    )
 
     return (
       <Box flexDirection="column">
         {isBeside ? (
-          <Box key="beside" flexDirection="row">
+          <Box key="beside" flexDirection="row" alignItems="flex-end">
             {sprite}
-            <Box flexDirection="column" marginLeft={2}>
-              {header}
+            <Box flexDirection="column" marginLeft={2} {...(lowKids > 0 ? { width: BESIDE_HEADER } : {})}>
+              {isStatusBeside ? [statusOf(lowKids > 0 ? BESIDE_HEADER : Math.max(HEADER_COLUMNS, columns - 18)), ...header.slice(1)] : header}
               {guide}
             </Box>
+            {lowKids > 0 && family}
           </Box>
         ) : (
-          [sprite, ...header, ...guide]
+          [family ?? sprite, ...(isWorking ? [workBlock] : []), ...header, ...guide]
         )}
+        {isBeside && kidsBelow}
+        {isBeside && isWorking && workBlock}
+        {!isWorking && workBlock}
         {menuButton('pet', w.pet, () => pet($))}
         {menuButton('trick', w.trick, () => trick($))}
         {menuButton('treat', w.treat(character.treat.name[lang], character.treat.price), () => treat($))}

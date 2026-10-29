@@ -49,6 +49,53 @@ export type Act = { name: string; at: number }
 export type FxKind = 'reward' | 'comeback' | 'merge' | 'level' | 'stage' | 'buy'
 export type Fx = { kind: FxKind; label: string; at: number }
 
+// What this session is working on (hooks/work.ts): the request typed last, the plan the
+// model keeps, and the subagents it sent off, drawn as the pal's deputies. Kept per session
+// ($.state), never shared: every pane shows its own session's work.
+export type Outcome = 'answer' | 'aborted' | 'error' | 'refusal'
+export type Request = {
+  title: string
+  startedAt: number
+  endedAt?: number
+  outcome?: Outcome
+  // Every model request made while this one was the latest, its kids' included.
+  tokens: number
+  // The session's cost when it started, to tell what it cost.
+  usdAtStart?: number
+}
+export type PlanStatus = 'pending' | 'in_progress' | 'completed'
+export type PlanItem = { id: string; subject: string; active?: string; status: PlanStatus }
+export type KidStatus = 'working' | 'done' | 'failed' | 'stopped'
+export type Kid = {
+  // The agent id its loop's events carry.
+  id: string
+  // Its colour for its whole life, 0 to KID_SLOTS - 1; -1 when every colour was taken.
+  slot: number
+  label: string
+  type: string
+  status: KidStatus
+  activity: Activity
+  startedAt: number
+  endedAt?: number
+  tokens: number
+  // When its loop last did something; a kid silent for an hour is taken as stopped.
+  seenAt: number
+  // Agent-list polls in a row it was missing from (hooks/work.ts kidStatuses).
+  missing?: number
+  // A workflow's agents are never in the agent list, so missing from it means nothing.
+  isWorkflow?: boolean
+}
+export type Limit = { kind: string; percent: number; resetsAt?: number }
+export type Work = {
+  request: Request | null
+  plan: PlanItem[]
+  kids: Kid[]
+  // The session's cost so far, where the host keeps a ledger.
+  usd?: number
+  tokens: number
+  limits: Limit[]
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'cappl-pals': {
@@ -65,6 +112,9 @@ declare module 'claude-code' {
       picking: boolean
       // What the pane shows besides the picker: the pal, the rules or my progress.
       view: PaneView
+      work: Work
+      // Moves every second while something runs, so the times on screen count up.
+      beat: number
     }
   }
 }
