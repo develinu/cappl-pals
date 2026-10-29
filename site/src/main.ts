@@ -5,8 +5,10 @@ import { CHARACTERS, characterOf, learnedTricks, type Character, type Item } fro
 import { PALETTE } from '../../mod/hooks/characters/art'
 import { WORDS } from '../../mod/hooks/i18n'
 import { BOUNTY_BONUS, RANK_LEVELS, RULES, dayOf, fameFor, questsOf, rankOf } from '../../mod/hooks/rules'
+import { KID_HEIGHT, KID_WIDTH, hex, kidColor, kidColors, kidFrame, kidLook } from '../../mod/hooks/kids'
 import { frame } from '../../mod/hooks/sprite'
-import type { Activity, CharacterId, Language, ResultKind } from '../../mod/types'
+import { drawnKids, emptyWork, endRequest, kidEnd, kidTool, measure, planFrom, requestCost, requestEnd, spawnKid, startRequest, withTokens } from '../../mod/hooks/work'
+import type { Activity, CharacterId, Language, ResultKind, Work } from '../../mod/types'
 import { COPY, type Copy } from './copy'
 
 const TICK_MS = 250
@@ -312,6 +314,259 @@ new IntersectionObserver(([entry]) => {
   isMoodVisible = entry!.isIntersecting
   scheduleMood()
 }, { threshold: 0.35 }).observe($('#moods'))
+
+// ── Work: a request played out, with its plan and deputies ─────────────────
+// The mod's own work functions (mod/hooks/work.ts) run on a made-up script, and its
+// own drawing (mod/hooks/kids.ts) and words draw the result, as the pane would.
+
+type Beat = { at: number; run?: (w: Work, now: number) => Work; activity?: Activity; act?: string }
+
+const workPal = palAt('work', 'locki')
+workPal.level = 35
+const WORK_LOOP_MS = 23_000
+const WORK_START_TOKENS = 1_240_000
+const WORK_START_USD = 0.42
+// Paused, the page shows the request this far in: deputies at work, one already home.
+const WORK_STILL_MS = 8_000
+let work: Work = emptyWork()
+let workClock = 0
+let workBeat = 0
+let isWorkAuto = !REDUCED
+let isWorkVisible = false
+let workTimer = 0
+const workBase = Date.now()
+
+const deputy = (i: number) => copy().work.deputies[i] ?? ''
+const usage = (n: number) => ({
+  input_tokens: Math.round(n * 0.08), output_tokens: Math.round(n * 0.04),
+  cache_read_input_tokens: Math.round(n * 0.83), cache_creation_input_tokens: Math.round(n * 0.05),
+})
+const todo = (done: number) => ({
+  tool: 'TodoWrite',
+  input: {
+    todos: copy().work.plan.map((content, i) => ({
+      content, activeForm: content, status: i < done ? 'completed' : i === done ? 'in_progress' : 'pending',
+    })),
+  },
+})
+const send = (id: string, i: number, type: string) => (w: Work, now: number) => spawnKid(w, { id, label: deputy(i), type, at: now })
+
+const BEATS: Beat[] = [
+  {
+    at: 0,
+    run: (_, now) =>
+      startRequest(
+        { ...measure(emptyWork(), { usd: WORK_START_USD, limits: [{ kind: 'five_hour', percentUsed: 23 }] }), tokens: WORK_START_TOKENS },
+        { text: copy().work.request, at: now },
+      ),
+    activity: 'thinking',
+    act: 'listen',
+  },
+  { at: 800, run: w => planFrom(w, todo(0)) },
+  { at: 1_600, run: send('d1', 0, 'Explore') },
+  { at: 2_000, run: send('d2', 1, 'Explore') },
+  { at: 2_400, run: send('d3', 2, 'general-purpose') },
+  { at: 3_200, run: w => kidTool(kidTool(kidTool(w, 'd1', 'reading'), 'd2', 'reading'), 'd3', 'reading') },
+  { at: 4_600, run: w => kidTool(kidTool(w, 'd1', 'running'), 'd3', 'editing') },
+  { at: 5_800, run: (w, now) => kidEnd(w, 'd2', { at: now, reason: 'answer' }) },
+  { at: 6_800, run: w => kidTool(w, 'd1', 'testing') },
+  { at: 7_800, run: (w, now) => kidEnd(w, 'd3', { at: now, reason: 'error' }) },
+  { at: 8_800, run: (w, now) => planFrom(kidEnd(w, 'd1', { at: now, reason: 'answer' }), todo(1)), activity: 'editing' },
+  { at: 9_800, run: send('d4', 3, 'general-purpose'), activity: 'thinking' },
+  { at: 10_800, run: w => kidTool(w, 'd4', 'editing') },
+  { at: 12_600, run: w => kidTool(w, 'd4', 'testing') },
+  { at: 14_000, run: (w, now) => planFrom(kidEnd(w, 'd4', { at: now, reason: 'answer' }), todo(2)), activity: 'testing' },
+  { at: 15_800, run: w => planFrom(w, todo(3)), activity: 'editing' },
+  { at: 17_400, run: (w, now) => endRequest(planFrom(w, todo(4)), { at: now, reason: 'answer' }), activity: 'idle', act: 'dance1' },
+]
+
+// One step of the script: what happens at this moment, then what it costs.
+function workStep() {
+  const now = workBase + workClock
+  while (workBeat < BEATS.length && BEATS[workBeat]!.at <= workClock) {
+    const beat = BEATS[workBeat]!
+    if (beat.run !== undefined) work = beat.run(work, now)
+    if (beat.activity !== undefined) workPal.activity = beat.activity
+    if (beat.act !== undefined) workPal.play(beat.act)
+    workBeat += 1
+  }
+  const before = work.tokens
+  if (work.request !== null && work.request.endedAt === undefined) work = withTokens(work, undefined, usage(900), now)
+  for (const kid of work.kids) if (kid.status === 'working') work = withTokens(work, kid.id, usage(650), now)
+  const spent = work.tokens - before
+  if (spent > 0) {
+    const percent = 23 + (work.tokens - WORK_START_TOKENS) / 400_000
+    work = measure(work, { usd: (work.usd ?? 0) + spent * 0.0000011, limits: [{ kind: 'five_hour', percentUsed: Math.round(percent * 10) / 10 }] })
+  }
+}
+
+function restartWork(at = 0) {
+  work = emptyWork()
+  workClock = 0
+  workBeat = 0
+  while (workClock < at) {
+    workStep()
+    workClock += TICK_MS
+  }
+  workStep()
+  drawWork()
+}
+
+const kidCanvases = new Map<string, HTMLCanvasElement>()
+
+function drawWork() {
+  const now = workBase + workClock
+  const tick = Math.floor(workClock / TICK_MS)
+  const wk = words().work
+  const character = workPal.character
+  // The deputies beside the pal, every one, in number order.
+  const kids = drawnKids(work)
+  const holder = $('.work-kids')
+  const wanted = kids.map(kid => kid.id).join(',')
+  if (holder.dataset.kids !== wanted) {
+    holder.dataset.kids = wanted
+    kidCanvases.clear()
+    holder.replaceChildren(
+      ...kids.map(kid => {
+        const box = el('div', 'kid')
+        const canvas = document.createElement('canvas')
+        canvas.width = KID_WIDTH
+        canvas.height = KID_HEIGHT
+        const color = kidColor(kid.slot)
+        const badge = el('b', 'badge')
+        badge.textContent = String(kid.slot + 1)
+        badge.style.setProperty('--badge', hex(color.main))
+        badge.style.setProperty('--badge-text', color.text)
+        box.append(canvas, badge)
+        kidCanvases.set(kid.id, canvas)
+        return box
+      }),
+    )
+  }
+  for (const kid of kids) {
+    const canvas = kidCanvases.get(kid.id)
+    if (canvas === undefined) continue
+    const rows = kidFrame(character, kidLook(kid, now, tick, kid.slot), tick)
+    const extra = kidColors(kid.slot)
+    const ctx = canvas.getContext('2d')!
+    const image = ctx.createImageData(KID_WIDTH, KID_HEIGHT)
+    rows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x += 1) {
+        const key = row[x]!
+        const value = PALETTE[key] ?? extra[key]
+        if (value === undefined) continue
+        const p = (y * KID_WIDTH + x) * 4
+        image.data[p] = (value >> 16) & 255
+        image.data[p + 1] = (value >> 8) & 255
+        image.data[p + 2] = value & 255
+        image.data[p + 3] = 255
+      }
+    })
+    ctx.putImageData(image, 0, 0)
+  }
+
+  // The lines under them, worded and coloured as in the pane.
+  const card = $('.work-card')
+  const lines: HTMLElement[] = []
+  const line = (className: string, html: string) => {
+    const node = el('div', `line ${className}`, html)
+    lines.push(node)
+    return node
+  }
+  const request = work.request
+  if (request !== null) {
+    const working = work.kids.filter(kid => kid.status === 'working').length
+    const isRunning = request.endedAt === undefined
+    const status = isRunning
+      ? { label: wk.doing[workPal.activity === 'idle' || workPal.activity === 'sleeping' ? 'thinking' : workPal.activity], color: characterOf(character).color }
+      : working > 0
+        ? { label: wk.waitingKids, color: characterOf(character).color }
+        : { label: wk.outcome[request.outcome ?? 'answer'], color: '#86EFAC' }
+    const took = (requestEnd(work) ?? now) - request.startedAt
+    line('status', `<span class="chip" style="--chip:${status.color}">${escapeHtml(status.label)}</span><span class="dim">${wk.time(took)}</span>`)
+    line('title', `<strong>${escapeHtml(request.title)}</strong>`)
+    if (work.plan.length > 0) {
+      const done = work.plan.filter(item => item.status === 'completed').length
+      const filled = Math.round((done / work.plan.length) * 8)
+      const current = work.plan.find(item => item.status === 'in_progress')
+      line(
+        'plan',
+        `<span><span class="bar" style="--bar:${characterOf(character).color}">${'▰'.repeat(filled)}</span><span class="dim">${'▱'.repeat(8 - filled)}</span></span><span>${wk.plan(done, work.plan.length)}</span>` +
+          (current === undefined ? '' : `<span class="dim cut">${escapeHtml(current.active ?? current.subject)}</span>`),
+      )
+    }
+    const cost = requestCost(work)
+    line('cost', `<span class="dim">${wk.tokensLabel}</span> ${wk.tokens(request.tokens)}${cost === undefined ? '' : ` <span class="dim">∙ ${wk.apiCost}</span> ${wk.usd(cost)}`}`)
+    for (const kid of kids) {
+      const color = kidColor(kid.slot)
+      const state =
+        kid.status === 'working'
+          ? `<span>${escapeHtml(wk.doing[kid.activity])}</span>`
+          : `<span class="${kid.status === 'done' ? 'ok' : kid.status === 'failed' ? 'bad' : 'warn'}">${escapeHtml(wk.kid[kid.status])}</span>`
+      line(
+        'kid-line',
+        `<b class="badge" style="--badge:${hex(color.main)};--badge-text:${color.text}">${kid.slot + 1}</b><span class="cut">${escapeHtml(kid.label)}</span>` +
+          `<span class="right">${state} <span class="dim">${wk.time((kid.endedAt ?? now) - kid.startedAt)} ∙ ${wk.tokens(kid.tokens)}</span></span>`,
+      )
+    }
+    if (work.kids.length > 1) line('dim', escapeHtml(wk.kids(work.kids.length, working)))
+  }
+  line('dim', `${escapeHtml(wk.session)} ${escapeHtml(wk.tokensOf(work.tokens))} ∙ ${wk.usd(work.usd ?? 0)}`)
+  const limit = work.limits[0]
+  if (limit !== undefined) {
+    const filled = Math.min(10, Math.round(limit.percent / 10))
+    line(
+      'limit',
+      `<span class="dim">${escapeHtml(wk.limits[limit.kind] ?? limit.kind)}</span><span><span class="ok">${'▰'.repeat(filled)}</span><span class="dim">${'▱'.repeat(10 - filled)}</span></span><span>${Math.round(limit.percent)}%</span>`,
+    )
+  }
+  card.replaceChildren(...lines)
+}
+
+function scheduleWork() {
+  clearInterval(workTimer)
+  if (!isWorkAuto || !isWorkVisible) return
+  workTimer = window.setInterval(() => {
+    workClock += TICK_MS
+    if (workClock >= WORK_LOOP_MS) restartWork()
+    else {
+      workStep()
+      drawWork()
+    }
+  }, TICK_MS)
+}
+
+$$('[data-work-pal]').forEach(button =>
+  button.addEventListener('click', () => {
+    workPal.character = button.dataset.workPal as CharacterId
+    $$('[data-work-pal]').forEach(other => other.setAttribute('aria-pressed', String(other === button)))
+    drawWork()
+  }),
+)
+const workButton = $('[data-action="work-auto"]')
+function setWorkAuto(isOn: boolean) {
+  isWorkAuto = isOn
+  workButton.setAttribute('aria-pressed', String(isOn))
+  workButton.querySelector('.sr')!.textContent = isOn ? copy().moods.pause : copy().moods.resume
+  scheduleWork()
+}
+workButton.addEventListener('click', () => setWorkAuto(!isWorkAuto))
+new IntersectionObserver(([entry]) => {
+  isWorkVisible = entry!.isIntersecting
+  scheduleWork()
+}, { threshold: 0.25 }).observe($('#work'))
+
+function renderWork() {
+  $('[data-list="work.points"]').replaceChildren(
+    ...copy().work.points.map(point => {
+      const item = el('li', 'px-box')
+      item.append(el('h3', '', escapeHtml(point.title)), el('p', '', escapeHtml(point.body)))
+      return item
+    }),
+  )
+  // The script's words are in the language of the page: play it again from where it was.
+  restartWork(REDUCED ? WORK_STILL_MS : workClock)
+}
 
 // ── Play: pet, trick, treat and the wardrobe ───────────────────────────────
 
@@ -756,6 +1011,7 @@ function render() {
   $$('[data-pet]').forEach((button, i) => button.setAttribute('aria-label', copy().hero.pet(heroPalNames[i] ?? '')))
   renderLists()
   renderSteps()
+  renderWork()
   renderRewards()
   renderGold()
   renderFair()
@@ -764,6 +1020,7 @@ function render() {
   setPlayCharacter(playPal.character)
   renderSound()
   autoButton.querySelector('.sr')!.textContent = isMoodAuto ? copy().moods.pause : copy().moods.resume
+  workButton.querySelector('.sr')!.textContent = isWorkAuto ? copy().moods.pause : copy().moods.resume
   const video = $<HTMLVideoElement>('video')
   if (video.paused) {
     const suffix = lang === 'ko' ? 'ko' : 'en'
@@ -786,6 +1043,7 @@ function escapeHtml(text: string) {
 sky()
 render()
 setMoodAuto(isMoodAuto)
+setWorkAuto(isWorkAuto)
 
 // A hello from both pals as the page opens.
 setTimeout(() => {

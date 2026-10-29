@@ -38,6 +38,16 @@ export type Face = {
   treatAt: readonly [number, number]
 }
 export type ItemArt = { layer: ItemLayer; frames: readonly Layer[]; recolor?: Readonly<Record<string, string>> }
+// A kid (a deputy in the pane): its body with the bandana in roles '1' '2' '3' (hooks/kids.ts colours them), and
+// where its eyes, nose, blush and sweat go. `ink` is the colour of its eyes and nose.
+export type KidArt = {
+  body: Layer
+  ink: string
+  eyeAt: readonly (readonly [number, number])[]
+  noseAt: readonly [number, number]
+  blushAt: readonly (readonly [number, number])[]
+  sweatAt: readonly [number, number]
+}
 
 export const PALETTE: Readonly<Record<string, number>> = {
   "N": 0x2b4a8b,
@@ -2530,3 +2540,5 @@ export const ITEM_ART: Readonly<Record<string, Readonly<Record<string, Record<32
     },
   },
 }
+
+export const KID_ART: Readonly<Record<string, KidArt>> = {"locki": {"body": ["o...NNNN...o", "oo..NHNN..oo", "oioNPPPPNoio", "oiNNNNNNNNio", ".ooCCCCCCoo.", "oCCCCCCCCCCo", "oCCCCCCCCCCo", "oCCCCCCCCCCo", "oCCCCCCCCCCo", ".o11111111o.", "..o311111o..", "....1221...."], "ink": "K", "eyeAt": [[3, 6], [8, 6]], "noseAt": [5, 8], "blushAt": [[2, 8], [9, 8]], "sweatAt": [10, 4]}, "cappl": {"body": ["..t......t..", ".tTt....tTt.", ".tTt....tTt.", "BRRBBBBBBBBB", ".bbbbbbbbbb.", "tTTCCCCCCTTt", "tTCCCCCCCCTt", "tTCCCCCCCCTt", "tTCCCCCCCCTt", ".t11111111t.", "..t311111t..", "....1221...."], "ink": "t", "eyeAt": [[3, 6], [8, 6]], "noseAt": [5, 8], "blushAt": [[2, 8], [9, 8]], "sweatAt": [10, 4]}, "numo": {"body": ["....BBBB....", "...BRBWBB...", "...WWWWWW...", ".BBBBBBBBBB.", "..bbbbbbbb..", ".LffffffffL.", "LffffffffffL", "LffffffffffL", "LffffffffffL", ".L11111111L.", "..L311111L..", "....1221...."], "ink": "X", "eyeAt": [[3, 6], [8, 6]], "noseAt": [5, 8], "blushAt": [[2, 8], [9, 8]], "sweatAt": [10, 4]}}

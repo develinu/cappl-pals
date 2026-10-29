@@ -1,6 +1,6 @@
 # cappl-pals
 
-**RIKI, CARO and NUMO, cowboy-hat pals from the [Sundust](#the-sundust-world) world, grow with your Claude Code work.** Pick one. They peek over your prompt and follow your session: a thought bubble while Claude thinks, a busy tongue while it edits, a nervous sweat while tests run, a nap when you step away. They cheer when a test passes, a commit lands or a pull request merges. Pet them, ask for a trick, or buy them a treat. Results earn rep and gold, and level chests, daily bounties and lucky nuggets add more gold. Rep raises your rank from Greenhorn to Legend of the West and teaches new tricks; gold buys hats, shades, banjos and backdrops.
+**RIKI, CARO and NUMO, cowboy-hat pals from the [Sundust](#the-sundust-world) world, grow with your Claude Code work.** Pick one. They peek over your prompt and follow your session: a thought bubble while Claude thinks, a busy tongue while it edits, a nervous sweat while tests run, a nap when you step away. They cheer when a test passes, a commit lands or a pull request merges. Every subagent Claude sends off becomes one of their deputies, in a bandana of its own colour, and the pane follows the request: its plan, its deputies, its time, tokens and cost. Pet them, ask for a trick, or buy them a treat. Results earn rep and gold, and level chests, daily bounties and lucky nuggets add more gold. Rep raises your rank from Greenhorn to Legend of the West and teaches new tricks; gold buys hats, shades, banjos and backdrops.
 
 [![Moods, a failing test, a level-up, petting, a treat and a new hat (12-second highlight)](docs/cappl-pals-demo.gif)](docs/cappl-pals-demo.mp4)
 
@@ -90,6 +90,23 @@ The pal changes with what the session is doing.
 
 Petting and tricks never earn rep. On the desktop app the pal plays the same moves, and waves when you hover over it.
 
+## Work and the deputies
+
+While Claude works, the pane shows what your session is doing and what it costs.
+
+![RIKI cheering with three deputies in blue, orange and green bandanas, each numbered](docs/cappl-pals-family.png)
+
+<img src="docs/cappl-pals-work.png" width="393" alt="The dock while three subagents run: the deputies under the pal, the status chip with the time, the request, its tokens and API value, one line per deputy and the session total">
+
+| | |
+|---|---|
+| The request | A chip says what the pal is doing (Thinking, Reading, Editing, Running, Testing, Needs you), beside the time since you sent the prompt, with its first line under it. When the answer is in, it says Done, Stopped or Error. |
+| The plan | When Claude keeps a task list (TaskCreate and TaskUpdate, or TodoWrite), a bar shows how many steps are done and the one in hand. |
+| The deputies | Every subagent Claude sends off is one of your sheriff's deputies: a little RIKI, CARO or NUMO in a bandana of its own colour, with its number. Deputies arrive with sparkles, then read, tap away and sweat as their sheriff does. They cheer when they finish, look dizzy when they fail and doze off when stopped. One line per deputy gives its task, what it is doing, its time and, on a wide pane, its tokens. While the sheriff waits on them, the chip says Deputies out. Every deputy is drawn, in number order, wrapping to more rows on a narrow pane. There are six colours; a seventh deputy at once is counted, not drawn, and later ones take the colour of the first to finish. |
+| What it cost | The request's tokens (its deputies' included) and what the session's cost grew by while it ran, as `/cost` counts it. On a subscription that is the API value, not a bill. Under it, this session's tokens and cost, and your 5-hour limit, with the weekly one on a wide pane or once half of it is used; once half is used, when it resets. |
+
+On a wide pane the deputies stand beside the pal. In a dock they line up under it. A low pane keeps the status beside the small pal, and the deputies too when they all fit there. While work runs it sits right under the pal; once it is done it moves below your stats. Each pane shows its own session's work, while the pal, rep and gold are shared. Deputies earn no rep or gold: rewards stay on results, so sending off more helpers pays nothing.
+
 ## The pals
 
 | | RIKI | CARO | NUMO |
@@ -139,7 +156,7 @@ If you earn many rewards of one kind in a day, each new one is worth half, then 
 
 ## Privacy
 
-cappl-pals has no server and makes no network calls. It reads no files, and the validator's report (`claude plugin validate ./mod`) lists no `$.http` and no `$.fs`. It runs outside processes only to play sounds: `uname`, `wslpath`, `powershell.exe`, `paplay`, `pw-play` or `aplay`. It reads one setting, `language`. Progress stays in `~/.claude/plugins/store/cappl-pals_*.json` on your machine. There are no leaderboards.
+cappl-pals has no server and makes no network calls. It reads no files, and the validator's report (`claude plugin validate ./mod`) lists no `$.http` and no `$.fs`. It runs outside processes only to play sounds: `uname`, `wslpath`, `powershell.exe`, `paplay`, `pw-play` or `aplay`. It reads one setting, `language`, and from the session itself its cost, its rate limits and its list of subagents, which stay in the session's memory. Progress stays in `~/.claude/plugins/store/cappl-pals_*.json` on your machine. There are no leaderboards.
 
 ## Tune the pace to your own history
 

@@ -307,16 +307,21 @@ export function frame(pose: Pose): string[] {
   return grid.map(line => line.join(''))
 }
 
+type Colors = Readonly<Record<string, number>>
+
 // Raster `cells`: row-major, three little-endian u32 per cell [code point, fg, bg].
-export function encode(rows: readonly string[]): { cells: string; columns: number; rows: number } {
+// `extra` colours keys PALETTE has not (a deputy's bandana, hooks/kids.ts).
+export function encode(rows: readonly string[], extra: Colors = {}): { cells: string; columns: number; rows: number } {
   const columns = rows[0]?.length ?? 0
   const height = Math.ceil(rows.length / 2)
   const words = new Uint32Array(columns * height * 3)
 
   for (let cy = 0; cy < height; cy += 1) {
     for (let cx = 0; cx < columns; cx += 1) {
-      const top = PALETTE[rows[cy * 2]?.[cx] ?? '.']
-      const bottom = PALETTE[rows[cy * 2 + 1]?.[cx] ?? '.']
+      const topKey = rows[cy * 2]?.[cx] ?? '.'
+      const bottomKey = rows[cy * 2 + 1]?.[cx] ?? '.'
+      const top = PALETTE[topKey] ?? extra[topKey]
+      const bottom = PALETTE[bottomKey] ?? extra[bottomKey]
       const at = (cy * columns + cx) * 3
 
       if (top !== undefined) {
@@ -358,7 +363,7 @@ function base64(bytes: Uint8Array): string {
 
 // Desktop, VS Code and mobile: the grid as SVG paths, one per colour, each a list
 // of horizontal runs (much shorter than a <rect> per pixel).
-function pathsOf(rows: readonly string[]): string {
+function pathsOf(rows: readonly string[], extra: Colors = {}): string {
   const runs = new Map<string, string[]>()
   rows.forEach((line, y) => {
     let x = 0
@@ -366,7 +371,7 @@ function pathsOf(rows: readonly string[]): string {
       const key = line[x]!
       let end = x + 1
       while (end < line.length && line[end] === key) end += 1
-      if (PALETTE[key] !== undefined) {
+      if ((PALETTE[key] ?? extra[key]) !== undefined) {
         const list = runs.get(key) ?? []
         list.push(`M${x} ${y}h${end - x}v1h-${end - x}z`)
         runs.set(key, list)
@@ -375,15 +380,15 @@ function pathsOf(rows: readonly string[]): string {
     }
   })
 
-  return [...runs].map(([key, d]) => `<path fill="#${PALETTE[key]!.toString(16).padStart(6, '0')}" d="${d.join('')}"/>`).join('')
+  return [...runs].map(([key, d]) => `<path fill="#${(PALETTE[key] ?? extra[key])!.toString(16).padStart(6, '0')}" d="${d.join('')}"/>`).join('')
 }
 
 function svgFrame(width: number, height: number, body: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges">${body}</svg>`
 }
 
-export function svgOf(rows: readonly string[]): string {
-  return svgFrame(rows[0]?.length ?? 0, rows.length, pathsOf(rows))
+export function svgOf(rows: readonly string[], extra: Colors = {}): string {
+  return svgFrame(rows[0]?.length ?? 0, rows.length, pathsOf(rows, extra))
 }
 
 // The SVG Svg element's 131,072-character limit, with room to spare.
@@ -392,7 +397,7 @@ const SVG_LIMIT = 120_000
 // A looping animation of frames shown `tickMs` apart, as SMIL inside the SVG: each
 // distinct frame is a group whose visibility steps in turn. The desktop draws an
 // interactive Svg in a sandboxed frame, where SMIL runs without any redraws.
-function loopGroups(frames: readonly (readonly string[])[], tickMs: number): string {
+function loopGroups(frames: readonly (readonly string[])[], tickMs: number, extra: Colors = {}): string {
   const distinct: string[] = []
   const order = frames.map(rows => {
     const signature = rows.join('\n')
@@ -400,7 +405,7 @@ function loopGroups(frames: readonly (readonly string[])[], tickMs: number): str
     if (index < 0) index = distinct.push(signature) - 1
     return index
   })
-  if (distinct.length < 2) return pathsOf(frames[0] ?? [])
+  if (distinct.length < 2) return pathsOf(frames[0] ?? [], extra)
   const duration = `${(frames.length * tickMs) / 1000}s`
 
   return distinct
@@ -409,27 +414,32 @@ function loopGroups(frames: readonly (readonly string[])[], tickMs: number): str
       const start = order[0] === index ? 'visible' : 'hidden'
       const animate = `<animate attributeName="visibility" values="${values}" dur="${duration}" calcMode="discrete" repeatCount="indefinite"/>`
 
-      return `<g visibility="${start}">${pathsOf(signature.split('\n'))}${animate}</g>`
+      return `<g visibility="${start}">${pathsOf(signature.split('\n'), extra)}${animate}</g>`
     })
     .join('')
 }
 
 // With `hover` frames, pointing at the picture plays them instead (CSS :hover inside
 // the sandboxed frame), so a desktop pal reacts to the mouse.
-export function animatedSvgOf(frames: readonly (readonly string[])[], tickMs: number, hover?: readonly (readonly string[])[]): string {
+export function animatedSvgOf(
+  frames: readonly (readonly string[])[],
+  tickMs: number,
+  hover?: readonly (readonly string[])[],
+  extra: Colors = {},
+): string {
   const first = frames[0] ?? []
   const width = first[0]?.length ?? 0
-  const main = loopGroups(frames, tickMs)
+  const main = loopGroups(frames, tickMs, extra)
   const body =
     hover === undefined || hover.length === 0
       ? main
-      : `<style>.h{display:none}svg:hover .h{display:inline}svg:hover .m{display:none}</style><g class="m">${main}</g><g class="h">${loopGroups(hover, tickMs)}</g>`
+      : `<style>.h{display:none}svg:hover .h{display:inline}svg:hover .m{display:none}</style><g class="m">${main}</g><g class="h">${loopGroups(hover, tickMs, extra)}</g>`
   const svg = svgFrame(width, first.length, body)
 
   // Too long for the element: drop the hover loop, then every other frame, then to a still.
   if (svg.length <= SVG_LIMIT) return svg
-  if (hover !== undefined) return animatedSvgOf(frames, tickMs)
-  if (frames.length >= 4) return animatedSvgOf(frames.filter((_, i) => i % 2 === 0), tickMs * 2)
+  if (hover !== undefined) return animatedSvgOf(frames, tickMs, undefined, extra)
+  if (frames.length >= 4) return animatedSvgOf(frames.filter((_, i) => i % 2 === 0), tickMs * 2, undefined, extra)
 
-  return svgOf(first)
+  return svgOf(first, extra)
 }

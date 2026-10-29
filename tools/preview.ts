@@ -1,6 +1,7 @@
 // Renders a sprite sheet to a PNG through the mod's own composer: activities, acts,
-// tricks, items and both sizes. Usage: bun tools/preview.ts docs/cappl-pals-sheet.png [--looks | --hero | --acts=wave,nod]
-// (--hero draws the README's strip; --acts draws every tick of the named acts, one row per act and character).
+// tricks, items and both sizes. Usage: bun tools/preview.ts docs/cappl-pals-sheet.png [--looks | --hero | --acts=wave,nod | --kids]
+// (--hero draws the README's strip; --acts draws every tick of the named acts, one row per act and character;
+// --kids draws the kids in every state and colour).
 import { writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 
@@ -8,7 +9,9 @@ import type { CharacterId } from '../mod/types'
 import { ACTS, lookAt, type Activity } from '../mod/hooks/animations'
 import { CHARACTERS } from '../mod/hooks/characters'
 import { PALETTE } from '../mod/hooks/characters/art'
+import { KID_COLORS, kidColors, kidFrame, kidLook } from '../mod/hooks/kids'
 import { frame, type Pose } from '../mod/hooks/sprite'
+import type { Kid, KidStatus } from '../mod/types'
 
 const SCALE = 6
 const BG = 0x1f2430
@@ -16,6 +19,7 @@ const CELL_W = 36 * SCALE
 const CELL_H = 32 * SCALE
 const isLooks = process.argv.includes('--looks')
 const isHero = process.argv.includes('--hero')
+const isKids = process.argv.includes('--kids')
 const actNames = process.argv.find(arg => arg.startsWith('--acts='))?.slice('--acts='.length).split(',')
 
 type Labeled = Pose & { label: string }
@@ -56,7 +60,33 @@ const rowsOf = (id: CharacterId): Labeled[][] => {
   return [activities.slice(0, 11), [...items, at(id, 'full', {}, { equipped: character.items.slice(-5).map(item => item.id) })], mini]
 }
 
-const grid = CHARACTERS.flatMap(one => rowsOf(one.id))
+type Cell = { label: string; rows: string[]; scale: number; extra: Readonly<Record<string, number>> }
+const NOW = 1_000_000
+const kidCells = (id: CharacterId): Cell[][] => {
+  const kid = (status: KidStatus, activity: Activity, extra: Partial<Kid> = {}): Kid => ({
+    id: 'k', slot: 0, label: '', type: '', status, activity, startedAt: NOW - 60_000, tokens: 0, seenAt: NOW,
+    ...(status === 'working' ? {} : { endedAt: NOW - 30_000 }), ...extra,
+  })
+  const states: [string, Kid][] = [
+    ['born', kid('working', 'thinking', { startedAt: NOW - 200 })],
+    ...(['thinking', 'reading', 'editing', 'running', 'testing', 'waiting'] as const).map((a): [string, Kid] => [a, kid('working', a)]),
+    ['cheer', kid('done', 'thinking', { endedAt: NOW - 200 })],
+    ['done', kid('done', 'thinking')],
+    ['failed', kid('failed', 'thinking')],
+    ['stopped', kid('stopped', 'thinking')],
+  ]
+  const cell = (label: string, k: Kid, tick: number, slot: number): Cell =>
+    ({ label, rows: kidFrame(id, kidLook(k, NOW, tick, 0), tick), scale: SCALE * 2, extra: kidColors(slot) })
+  return [
+    states.map(([label, k], i) => cell(label, k, 1, i % KID_COLORS.length)),
+    states.map(([label, k], i) => cell(`${label}+`, k, 6, i % KID_COLORS.length)),
+    KID_COLORS.map((_, slot) => cell(`slot${slot}`, kid('working', 'thinking'), 3, slot)),
+  ]
+}
+const grid: Cell[][] = isKids
+  ? CHARACTERS.flatMap(one => kidCells(one.id))
+  : CHARACTERS.flatMap(one => rowsOf(one.id)).map(row =>
+      row.map(pose => ({ label: pose.label, rows: frame(pose), scale: pose.size === 16 ? SCALE * 2 : SCALE, extra: {} })))
 const perRow = Math.max(...grid.map(row => row.length))
 const width = perRow * CELL_W
 const height = grid.length * CELL_H
@@ -69,14 +99,12 @@ const put = (x: number, y: number, color: number) => {
 }
 for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) put(x, y, BG)
 grid.forEach((row, r) =>
-  row.forEach((pose, c) => {
-    const rows = frame(pose)
-    const scale = pose.size === 16 ? SCALE * 2 : SCALE
+  row.forEach(({ rows, scale, extra }, c) => {
     const ox = c * CELL_W + SCALE * 2
     const oy = r * CELL_H + SCALE * 2
     rows.forEach((line, y) =>
       [...line].forEach((key, x) => {
-        const color = PALETTE[key]
+        const color = PALETTE[key] ?? extra[key]
         if (color === undefined) return
         for (let dy = 0; dy < scale; dy += 1) for (let dx = 0; dx < scale; dx += 1) put(ox + x * scale + dx, oy + y * scale + dy, color)
       }),

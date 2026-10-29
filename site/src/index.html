@@ -32,6 +32,7 @@
       </a>
       <nav class="nav-links" aria-label="Sections">
         <a href="#moods" data-t="nav.moods">Moods</a>
+        <a href="#work" data-t="nav.work">Work</a>
         <a href="#play" data-t="nav.play">Play</a>
         <a href="#rewards" data-t="nav.rewards">Rewards</a>
         <a href="#trail" data-t="nav.trail">The trail</a>
@@ -128,6 +129,42 @@
             </div>
             <p class="mood-label" aria-live="polite"><strong></strong><span></span></p>
             <div class="progress" aria-hidden="true"><i></i></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section work-section" id="work" aria-labelledby="work-title">
+      <div class="wrap">
+        <header class="section-head">
+          <p class="eyebrow" data-t="work.eyebrow">Work</p>
+          <h2 id="work-title" data-t="work.title">Watch the work, deputies and all</h2>
+          <p class="lead" data-t="work.lead"></p>
+        </header>
+        <div class="work">
+          <div class="work-pane px-box">
+            <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>SUNDUST</span></div>
+            <div class="work-family">
+              <canvas class="pal" data-pal="work" data-size="32" aria-hidden="true"></canvas>
+              <div class="work-kids" aria-hidden="true"></div>
+            </div>
+            <div class="work-card"></div>
+          </div>
+          <div class="work-side">
+            <div class="mood-top">
+              <div class="seg" role="group" data-t-label="moods.who">
+                <button type="button" data-work-pal="locki" aria-pressed="true">RIKI</button>
+                <button type="button" data-work-pal="cappl" aria-pressed="false">CARO</button>
+                <button type="button" data-work-pal="numo" aria-pressed="false">NUMO</button>
+              </div>
+              <button class="icon-btn small" type="button" data-action="work-auto" aria-pressed="true">
+                <svg class="ico on" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14"/><path d="M16 5v14"/></svg>
+                <svg class="ico off" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>
+                <span class="sr" data-t="moods.pause">Pause</span>
+              </button>
+            </div>
+            <ul class="work-points" data-list="work.points"></ul>
+            <p class="note" data-t="work.caption"></p>
           </div>
         </div>
       </div>

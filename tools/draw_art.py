@@ -257,6 +257,69 @@ def cappl16():
     }
 
 
+# ── Deputies: the pal's little helpers, one per subagent ─────────────────────
+# A small copy of the parent (its hat, its ears) with a bandana in the deputy's own
+# colour. The bandana is drawn in roles ('1' main, '2' shade, '3' light) that
+# hooks/kids.ts swaps for the deputy's colour; eyes and the nose are stamped per frame
+# like the parent's.
+
+KIDS = {
+    "locki": {
+        "body": [
+            "o...NNNN...o",
+            "oo..NHNN..oo",
+            "oioNPPPPNoio",
+            "oiNNNNNNNNio",
+            ".ooCCCCCCoo.",
+            "oCCCCCCCCCCo",
+            "oCCCCCCCCCCo",
+            "oCCCCCCCCCCo",
+            "oCCCCCCCCCCo",
+            ".o11111111o.",
+            "..o311111o..",
+            "....1221....",
+        ],
+        "ink": "K", "eyeAt": [[3, 6], [8, 6]], "noseAt": [5, 8], "blushAt": [[2, 8], [9, 8]], "sweatAt": [10, 4],
+    },
+    # CARO: pointed ears standing through a crownless brim.
+    "cappl": {
+        "body": [
+            "..t......t..",
+            ".tTt....tTt.",
+            ".tTt....tTt.",
+            "BRRBBBBBBBBB",
+            ".bbbbbbbbbb.",
+            "tTTCCCCCCTTt",
+            "tTCCCCCCCCTt",
+            "tTCCCCCCCCTt",
+            "tTCCCCCCCCTt",
+            ".t11111111t.",
+            "..t311111t..",
+            "....1221....",
+        ],
+        "ink": "t", "eyeAt": [[3, 6], [8, 6]], "noseAt": [5, 8], "blushAt": [[2, 8], [9, 8]], "sweatAt": [10, 4],
+    },
+    # NUMO: a little cactus under a brown hat with a white band.
+    "numo": {
+        "body": [
+            "....BBBB....",
+            "...BRBWBB...",
+            "...WWWWWW...",
+            ".BBBBBBBBBB.",
+            "..bbbbbbbb..",
+            ".LffffffffL.",
+            "LffffffffffL",
+            "LffffffffffL",
+            "LffffffffffL",
+            ".L11111111L.",
+            "..L311111L..",
+            "....1221....",
+        ],
+        "ink": "X", "eyeAt": [[3, 6], [8, 6]], "noseAt": [5, 8], "blushAt": [[2, 8], [9, 8]], "sweatAt": [10, 4],
+    },
+}
+
+
 # ── Faces, bubbles and treats ────────────────────────────────────────────────
 # Expressions are stamps placed relative to each eye (`dx`, `dy` from the eye's
 # anchor), the mouth anchor under the nose, and fixed spots for blush, sweat, the
@@ -899,6 +962,16 @@ export type Face = {
   treatAt: readonly [number, number]
 }
 export type ItemArt = { layer: ItemLayer; frames: readonly Layer[]; recolor?: Readonly<Record<string, string>> }
+// A kid (a deputy in the pane): its body with the bandana in roles '1' '2' '3' (hooks/kids.ts colours them), and
+// where its eyes, nose, blush and sweat go. `ink` is the colour of its eyes and nose.
+export type KidArt = {
+  body: Layer
+  ink: string
+  eyeAt: readonly (readonly [number, number])[]
+  noseAt: readonly [number, number]
+  blushAt: readonly (readonly [number, number])[]
+  sweatAt: readonly [number, number]
+}
 """
 
 
@@ -957,7 +1030,8 @@ def emit(arts, items):
                 out.append(f"      {size}: {ts_item(sizes[size][item_id], 6)},")
             out.append("    },")
         out.append("  },")
-    out.append("}")
+    out.append("}\n")
+    out.append(f"export const KID_ART: Readonly<Record<string, KidArt>> = {json.dumps(KIDS)}")
     with open(OUT, "w") as f:
         f.write("\n".join(out) + "\n")
     print(os.path.relpath(OUT, ROOT))

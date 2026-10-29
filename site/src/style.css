@@ -372,6 +372,41 @@ td.num { font: 700 17px/1.35 var(--pixel); }
 td.rep { color: #8fd5d8; }
 td.gold { color: var(--gold); }
 
+/* Work: the request, its deputies and what it cost, as the pane shows them */
+.work-section { background: linear-gradient(180deg, rgba(47, 122, 126, 0), rgba(47, 122, 126, 0.16) 40%, rgba(47, 122, 126, 0)); }
+.work { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: 40px; align-items: start; }
+.work-pane { background: #0d0b22; padding: 0 0 18px; }
+.work-family { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; padding: 22px 22px 8px; min-height: 182px; }
+.work-family canvas.pal { --s: 4.5; }
+.work-kids { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; }
+.kid { display: flex; flex-direction: column; align-items: center; gap: 6px; animation: kid-in 320ms var(--ease) both; }
+.kid canvas { width: calc(12px * 4.5); height: calc(14px * 4.5); image-rendering: pixelated; image-rendering: crisp-edges; }
+@keyframes kid-in { from { opacity: 0; transform: translateY(8px) scale(0.85); } to { opacity: 1; transform: none; } }
+.badge {
+  display: inline-grid; place-items: center; min-width: 26px; padding: 3px 6px;
+  font: 700 14px/1 var(--mono); color: var(--badge-text, #fff); background: var(--badge, #6b7280);
+}
+.work-card { display: grid; gap: 4px; padding: 6px 22px 0; font: 15px/1.55 var(--mono); color: var(--text); }
+.work-card .line { display: flex; align-items: baseline; gap: 10px; min-width: 0; white-space: nowrap; }
+.work-card .status { justify-content: space-between; }
+.work-card .chip { padding: 1px 10px; font-weight: 700; color: var(--ink); background: var(--chip); }
+.work-card .title strong { overflow: hidden; text-overflow: ellipsis; }
+.work-card .dim { color: var(--dim); }
+.work-card .cut { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.work-card .kid-line .cut { flex: 1; }
+.work-card .right { margin-left: auto; flex: none; }
+.work-card .bar { color: var(--bar); }
+.work-card .ok { color: #86efac; }
+.work-card .bad { color: #fca5a5; }
+.work-card .warn { color: #fcd34d; }
+.work-card .line.dim { color: var(--dim); }
+.work-side .mood-top { margin-bottom: 22px; }
+.work-points { display: grid; gap: 18px; margin: 0; padding: 0; list-style: none; }
+.work-points li { padding: 20px 22px; }
+.work-points h3 { margin: 0; font: 700 19px/1.3 var(--pixel); color: var(--cream); }
+.work-points p { margin: 10px 0 0; color: var(--muted); font-size: 16px; }
+.work-side .note { margin: 18px 0 0; color: var(--dim); font-size: 14px; }
+
 /* Gold */
 .gold-section { background: linear-gradient(180deg, rgba(88, 52, 20, 0.0), rgba(88, 52, 20, 0.28) 40%, rgba(88, 52, 20, 0)); }
 .gold-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; margin: 0; padding: 0; list-style: none; }
@@ -484,6 +519,7 @@ input[type='range']::-moz-range-thumb { width: 28px; height: 28px; border: 0; bo
   .bounties ul { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 920px) {
+  .work { grid-template-columns: 1fr; }
   .hero-inner { grid-template-columns: 1fr; min-height: 0; padding-bottom: 120px; }
   .hero-stage { min-height: 300px; padding-top: 40px; }
   .hero-stage canvas.pal { --s: 6; }
