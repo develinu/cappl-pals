@@ -2,9 +2,9 @@
 
 **RIKI, CARO and NUMO, cowboy-hat pals from the [Sundust](#the-sundust-world) world, grow with your Claude Code work.** Pick one. They peek over your prompt and follow your session: a thought bubble while Claude thinks, a busy tongue while it edits, a nervous sweat while tests run, a nap when you step away. They cheer when a test passes, a commit lands or a pull request merges. Every subagent Claude sends off becomes one of their deputies, in a bandana of its own colour, and the pane follows the request: its plan, its deputies, its time, tokens and cost. Pet them, ask for a trick, or buy them a treat. Results earn rep and gold, and level chests, daily bounties and lucky nuggets add more gold. Rep raises your rank from Greenhorn to Legend of the West and teaches new tricks; gold buys hats, shades, banjos and backdrops.
 
-[![Moods, a failing test, a level-up, petting, a treat and a new hat (12-second highlight)](docs/cappl-pals-demo.gif)](docs/cappl-pals-demo.mp4)
+[![Moods, a failing test, a level-up, petting, a treat, a new hat and the deputies (14-second highlight)](docs/cappl-pals-demo.gif)](docs/cappl-pals-demo.mp4)
 
-▶ Full demo with sound (1.5 min): [English](docs/cappl-pals-demo.mp4) · [한국어](docs/cappl-pals-demo.ko.mp4)
+▶ Full demo with sound (1 min 40 s): [English](docs/cappl-pals-demo.mp4) · [한국어](docs/cappl-pals-demo.ko.mp4)
 
 **Website:** [develinu.github.io/cappl-pals](https://develinu.github.io/cappl-pals/). Pet the pals, try on the wardrobe and walk the trail to Lv50 in your browser.
 

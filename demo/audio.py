@@ -134,7 +134,7 @@ CHORDS = {"G": ["G3", "B3", "D4"], "C": ["C4", "E4", "G4"], "D": ["D4", "F#4", "
 FIFTH = {"G": "D3", "C": "G2", "D": "A2"}
 ROLL = {"G": ["G4", "B4", "D5", "G5"], "C": ["G4", "C5", "E5", "G5"], "D": ["F#4", "A4", "D5", "F#5"]}
 LEAD = ["D5", "E5", "G5", "A5", "G5", "E5", "D5", "B4", "D5", "E5", "G5", "B5", "A5", "G5", "E5", "G5"]
-LEVEL = {"intro": 0.85, "moods": 0.75, "premise": 0.7, "demo": 0.4, "bonus": 0.8, "journey": 1.0, "outro": 0.9}
+LEVEL = {"intro": 0.85, "moods": 0.75, "premise": 0.7, "demo": 0.4, "deputies": 0.75, "bonus": 0.8, "journey": 1.0, "outro": 0.9}
 sections = spec["sections"]
 
 
@@ -164,7 +164,7 @@ while t < TOTAL - 0.2:
                 sig = sum(square(note_hz(n), BEAT * 0.3, 0.25) for n in tones)
                 add(music, at, lowpass(sig * env(int(BEAT * 0.3 * SR), decay=0.06, release=0.02), 0.22), 0.035 * gain, pan=0.2)
     # Banjo roll in the bright sections.
-    if sec in ("intro", "moods", "premise", "bonus", "journey", "outro"):
+    if sec in ("intro", "moods", "premise", "deputies", "bonus", "journey", "outro"):
         notes = ROLL[chord]
         for k in range(8):
             name = notes[[0, 1, 2, 3, 2, 1, 2, 3][k]]
