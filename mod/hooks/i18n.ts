@@ -19,6 +19,8 @@ type Words = {
   close: string
   switchCharacter: string
   scrollHint: string
+  // The same, while the keyboard is still at the prompt (Esc means nothing to the pane yet).
+  moreHint: string
   pickTitle: string
   pick: (name: string) => string
   current: string
@@ -57,7 +59,8 @@ type Words = {
   sound: Record<'normal' | 'quiet' | 'off', string>
   soundSet: (now: string, next: string) => string
   // How to drive the pane from the keyboard: before and after it takes the focus.
-  hint: { idle: string; focused: string; scroll: string }
+  // idle: the fullscreen terminal, where a click works; keys: the main screen, which reports no clicks.
+  hint: { idle: string; keys: string; focused: string; scroll: string }
   bountyHeader: (done: number, total: number) => string
   menu: { rules: string; status: string; back: string }
   rules: {
@@ -159,6 +162,7 @@ const EN: Words = {
   close: 'Close (/cappl)',
   switchCharacter: 'Switch character',
   scrollHint: '▾ More below ∙ Esc: leave',
+  moreHint: '▾ More below',
   pickTitle: 'Pick your partner',
   pick: name => `Pick ${name}`,
   current: ' (riding now)',
@@ -209,7 +213,7 @@ const EN: Words = {
   bonusToast: gold => `All of today's bounties done! +$${gold}`,
   sound: { normal: 'normal', quiet: 'quiet', off: 'off' },
   soundSet: (now, next) => `Sound effects: ${now}. Run /cappl-sound again for ${next}.`,
-  hint: { idle: 'Click, or ctrl+x Tab for the keyboard', focused: '⇅ move ∙ Enter select ∙ Esc leave', scroll: 'Tab move ∙ ⇅ scroll ∙ Enter select' },
+  hint: { idle: 'Click, or ctrl+x Tab for the keyboard', keys: 'ctrl+x then Tab to use it', focused: '⇅ move ∙ Enter select ∙ Esc leave', scroll: 'Tab move ∙ ⇅ scroll ∙ Enter select' },
   bountyHeader: (done, total) => `▸ Today's bounties ${done}/${total}`,
   menu: { rules: 'Rules and bounties', status: 'My progress', back: 'Back' },
   rules: {
@@ -315,6 +319,7 @@ const KO: Words = {
   close: '창 닫기 (/cappl)',
   switchCharacter: '캐릭터 바꾸기',
   scrollHint: '▾ 아래에 더 있어요 ∙ Esc 나가기',
+  moreHint: '▾ 아래에 더 있어요',
   pickTitle: '함께할 친구를 고르세요',
   pick: name => `${name} 고르기`,
   current: ' (지금 함께하는 중)',
@@ -364,7 +369,7 @@ const KO: Words = {
   bonusToast: gold => `오늘 현상금을 모두 마쳤어요! +$${gold}`,
   sound: { normal: '보통', quiet: '작게', off: '끔' },
   soundSet: (now, next) => `효과음: ${now}. /cappl-sound를 한 번 더 입력하면 ${next}`,
-  hint: { idle: '클릭하거나 ctrl+x Tab으로 조작', focused: '⇅ 이동 ∙ Enter 선택 ∙ Esc 나가기', scroll: 'Tab 이동 ∙ ⇅ 스크롤 ∙ Enter 선택' },
+  hint: { idle: '클릭하거나 ctrl+x Tab으로 조작', keys: 'ctrl+x 다음 Tab으로 조작', focused: '⇅ 이동 ∙ Enter 선택 ∙ Esc 나가기', scroll: 'Tab 이동 ∙ ⇅ 스크롤 ∙ Enter 선택' },
   bountyHeader: (done, total) => `▸ 오늘의 현상금 ${done}/${total}`,
   menu: { rules: '규칙과 현상금', status: '내 현황', back: '돌아가기' },
   rules: {

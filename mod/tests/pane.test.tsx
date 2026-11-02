@@ -18,6 +18,10 @@ const PANE = {
   },
 } as const
 
+// The fullscreen layout reports clicks; the main screen (tui default, tmux) does not.
+const FULLSCREEN = { columns: 190, rows: 50, isFullscreen: true } as const
+const MAIN_SCREEN = { columns: 120, rows: 40, isFullscreen: false } as const
+
 const NOW = Date.UTC(2026, 9, 23, 3)
 const RUN = { origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 190 }, args: '' } as const
 const LOCKI = { character: 'locki' }
@@ -135,7 +139,7 @@ test('every control is a button on its own row, driven by click or keyboard; the
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
   await $.tool.call({ tool: 'Edit', file_path: '/a.py', old_string: 'a', new_string: 'b' })
   await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
-  const idle = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const idle = await $.ui.mount({ ...PANE, surface: 'terminal', viewport: FULLSCREEN })
   expect(await text(idle, /^Click, or ctrl\+x Tab/)).toBe('Click, or ctrl+x Tab for the keyboard')
   await idle.unmount()
   const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, isFocused: true }, surface: 'terminal' })
@@ -361,6 +365,93 @@ test('a low pane above the prompt puts the header beside the small sprite', asyn
   ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect((await ui.find({ key: 'sprite' }))?.props.rows).toBe(14)
   expect(await text(ui, /▾/)).toBeUndefined()
+  await ui.unmount()
+})
+
+test('off the fullscreen layout the hint names only the keyboard, and the more line no key the pane cannot take yet', { options: { language: 'ko' } }, async ($, on) => {
+  engine(on)
+  mock.store(on, LOCKI)
+  mock.clock(on, { now: NOW })
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const low = { ...PANE.props, placement: 'inline', bodyColumns: 116, scroll: { offset: 0, bodyRows: 11 } } as const
+  const idle = await $.ui.mount({ ...PANE, props: low, surface: 'terminal', viewport: MAIN_SCREEN })
+  expect(await text(idle, /Tab으로 조작$/)).toBe('ctrl+x 다음 Tab으로 조작')
+  expect(await text(idle, /클릭/)).toBeUndefined()
+  expect(await text(idle, /^▾/)).toBe('▾ 아래에 더 있어요')
+  await idle.unmount()
+  const focused = await $.ui.mount({ ...PANE, props: { ...low, isFocused: true }, surface: 'terminal', viewport: MAIN_SCREEN })
+  expect(await text(focused, /^▾/)).toBe('▾ 아래에 더 있어요 ∙ Esc 나가기')
+  await focused.unmount()
+  // A viewport that does not say keeps to the keyboard too: a click there may go nowhere.
+  const unsaid = await $.ui.mount({ ...PANE, props: low, surface: 'terminal' })
+  expect(await text(unsaid, /클릭/)).toBeUndefined()
+  await unsaid.unmount()
+})
+
+test('above the prompt every control shows without a scroll, however many rows the work takes', async ($, on) => {
+  engine(on)
+  mock.store(on, LOCKI)
+  mock.clock(on, { now: NOW })
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const keys = async (ui: { findAll: (q: object) => Promise<{ key?: string }[]> }) => (await ui.findAll({ type: 'Button' })).map(one => one.key)
+  const controls = ['pet', 'trick', 'treat', 'rules', 'status', 'switch', 'close']
+
+  // A low, wide pane: the seven buttons stand in a column past the header, as tall as the pal.
+  const low = { ...PANE.props, placement: 'inline', bodyColumns: 116, scroll: { offset: 0, bodyRows: 11 } } as const
+  let ui = await $.ui.mount({ ...PANE, props: low, surface: 'terminal', viewport: MAIN_SCREEN })
+  const column = await ui.find({ key: 'controls' })
+  expect(JSON.stringify(column?.children).match(/"key":"(pet|trick|treat|rules|status|switch|close)"/g)?.length).toBe(7)
+  expect(JSON.stringify((await ui.find({ key: 'beside' }))?.children)).toMatch(/"key":"controls"/)
+  expect((await keys(ui)).slice(0, 7)).toEqual(controls)
+  await ui.unmount()
+
+  // Too narrow for that column: the buttons come right under the pal, ahead of the work and the shop.
+  for (const bodyColumns of [64, 48]) {
+    ui = await $.ui.mount({ ...PANE, props: { ...low, bodyColumns }, surface: 'terminal', viewport: MAIN_SCREEN })
+    expect(await ui.find({ key: 'controls' })).toBeUndefined()
+    expect((await keys(ui)).slice(0, 7)).toEqual(controls)
+    const drawn = JSON.stringify(await ui.drawn())
+    expect(drawn.indexOf('"key":"close"')).toBeLessThan(drawn.indexOf("Today's bounties"))
+    expect(drawn.indexOf('"key":"close"')).toBeLessThan(drawn.indexOf('Progress shows here'))
+    await ui.unmount()
+  }
+
+  // A tall inline pane keeps the big pal, with the controls under its header.
+  ui = await $.ui.mount({ ...PANE, props: { ...low, bodyColumns: 116, scroll: { offset: 0, bodyRows: 30 } }, surface: 'terminal', viewport: MAIN_SCREEN })
+  expect((await ui.find({ key: 'sprite' }))?.props.rows).toBe(14)
+  expect((await keys(ui)).slice(0, 7)).toEqual(controls)
+  await ui.unmount()
+
+  // The dock keeps the shop's order: actions above the bounties, the menu at the bottom.
+  ui = await $.ui.mount({ ...PANE, surface: 'terminal', viewport: FULLSCREEN })
+  const docked = await keys(ui)
+  expect(docked.slice(0, 3)).toEqual(['pet', 'trick', 'treat'])
+  expect(docked.slice(-4)).toEqual(['rules', 'status', 'switch', 'close'])
+  await ui.unmount()
+})
+
+test('above the prompt the picker puts its buttons before the cards when they do not all fit, and says its window scrolls', async ($, on) => {
+  engine(on)
+  mock.store(on)
+  mock.clock(on, { now: NOW })
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  const low = { ...PANE.props, placement: 'inline', bodyColumns: 116, scroll: { offset: 0, bodyRows: 11 } } as const
+  let ui = await $.ui.mount({ ...PANE, props: low, surface: 'terminal', viewport: MAIN_SCREEN })
+  let drawn = JSON.stringify(await ui.drawn())
+  expect(drawn.indexOf('"key":"close"')).toBeLessThan(drawn.indexOf('"key":"cards"'))
+  expect(await text(ui, /^ctrl\+x/)).toBe('ctrl+x then Tab to use it')
+  await ui.unmount()
+  // Focused, it says the window scrolls: the arrows move it, Tab walks the buttons.
+  ui = await $.ui.mount({ ...PANE, props: { ...low, isFocused: true }, surface: 'terminal', viewport: MAIN_SCREEN })
+  expect(await text(ui, /^Tab move/)).toBe('Tab move ∙ ⇅ scroll ∙ Enter select')
+  await ui.unmount()
+  // Room for everything: the cards come first, as in the dock.
+  ui = await $.ui.mount({ ...PANE, props: { ...low, scroll: { offset: 0, bodyRows: 40 } }, surface: 'terminal', viewport: MAIN_SCREEN })
+  drawn = JSON.stringify(await ui.drawn())
+  expect(drawn.indexOf('"key":"cards"')).toBeLessThan(drawn.indexOf('"key":"pick-locki"'))
   await ui.unmount()
 })
 

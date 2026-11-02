@@ -99,8 +99,10 @@ const PROMPT_MS = 10_000
 const REPORT = /^\s*<(agent-message|task-notification)\b/
 // A kid's tokens join its line from this width on; a dock (about 40 columns) shows its time.
 const WIDE_COLUMNS = 52
-// The header column beside the small pal when deputies stand past it.
+// The header column beside the small pal when deputies or the controls stand past it;
+// the controls may squeeze it to the narrower width, where the rep line still fits.
 const BESIDE_HEADER = 34
+const BESIDE_HEADER_MIN = 24
 // A deputy's rows: its seven of pixels and its number.
 const KID_ROWS = 8
 // Latest rewards kept per session ledger (the pane shows four, all sessions merged).
@@ -1109,13 +1111,22 @@ export const register: Register = (on, options) => {
     const isTerminal = e.surface === 'terminal'
     const columns = isTerminal ? e.props.bodyColumns : 80
     const bodyRows = isTerminal ? e.props.scroll.bodyRows : 60
+    // Above the prompt the pane is short and, off the fullscreen layout, nothing scrolls it
+    // but the keyboard: the controls go first so they show without a scroll.
+    const isInline = isTerminal && e.props.placement === 'inline'
+    // Only the fullscreen layout reports clicks; the main screen leaves the mouse to the terminal.
+    const canClick = e.viewport?.isFullscreen === true
     // Driven by a click, or from the keyboard: the focus walks the controls top to
     // bottom (Tab, and ⇅ while the tree fits; ⇅ scrolls a taller one), Enter presses.
     // So every control gets its own row: a row of buttons would look like left and
     // right work too. No hotkeys: a Korean layout never sends the Latin letter one needs.
     const menuButton = (key: string, label: string, onPress: () => unknown) => <Button key={key} label={label} onPress={onPress} />
     const hintFor = (isLong: boolean) =>
-      isTerminal ? <Text key="hint" dimColor>{!e.props.isFocused ? w.hint.idle : isLong ? w.hint.scroll : w.hint.focused}</Text> : null
+      isTerminal ? (
+        <Text key="hint" dimColor>
+          {!e.props.isFocused ? (canClick ? w.hint.idle : w.hint.keys) : isLong ? w.hint.scroll : w.hint.focused}
+        </Text>
+      ) : null
     const back = () => menuButton('back', w.menu.back, () => showView($, 'main', view))
     const close = () => menuButton('close', w.close, () => hidePane($))
 
@@ -1124,12 +1135,15 @@ export const register: Register = (on, options) => {
       const size: Size = columns >= 70 && bodyRows >= 14 + 6 ? 32 : 16
       // Two cards side by side fit a 40-column dock with the small sprites.
       const cardWidth = size === 32 ? 34 : 18
+      const isCardsInRow = columns >= cardWidth * 2 + 2
+      let artRows = 0
       const cards = CHARACTERS.map((character, index) => {
         let art
         if (isTerminal) {
           const { Raster } = $.ui.resolve(e)
           const look = ACTS.hello!.at(1, character.id)
           const cells = encode(frame({ character: character.id, look, tick: 0, equipped: [], size }))
+          artRows = cells.rows
           art = <Raster key={`art-${character.id}`} columns={cells.columns} rows={cells.rows} cells={cells.cells} />
         } else {
           const { Svg } = $.ui.resolve(e)
@@ -1149,16 +1163,27 @@ export const register: Register = (on, options) => {
         )
       })
 
+      // A card is the sprite, its name and its blurb wrapped to the card's width.
+      const cardRows = CHARACTERS.map(character => artRows + 1 + Math.ceil(cellsOf(character.blurb[lang]) / cardWidth))
+      const cardsHeight = isCardsInRow ? Math.max(...cardRows) : cardRows.reduce((sum, rows) => sum + rows, 0)
+      const isLong = 2 + cardsHeight + 1 + CHARACTERS.length + 1 > bodyRows
+      const picks = [
+        ...CHARACTERS.map(character => menuButton(`pick-${character.id}`, w.pick(character.name), () => pick($, character.id))),
+        close(),
+      ]
+      // Above the prompt the buttons come before the cards, so a short pane shows them.
+      const isPicksFirst = isInline && isLong
+
       return (
         <Box flexDirection="column">
           <Text bold>{w.pickTitle}</Text>
-          {hintFor(false)}
-          <Box flexDirection={columns >= cardWidth * 2 + 2 ? 'row' : 'column'}>{cards}</Box>
-          <Text> </Text>
-          {CHARACTERS.map((character, index) =>
-            menuButton(`pick-${character.id}`, w.pick(character.name), () => pick($, character.id)),
-          )}
-          {close()}
+          {hintFor(isLong)}
+          {isPicksFirst && picks}
+          <Box key="cards" flexDirection={isCardsInRow ? 'row' : 'column'}>
+            {cards}
+          </Box>
+          {!isPicksFirst && <Text> </Text>}
+          {!isPicksFirst && picks}
         </Box>
       )
     }
@@ -1439,9 +1464,31 @@ export const register: Register = (on, options) => {
       (isTerminal ? 1 : 0) + 3 + 1 + lines.length + 1 + 1 + Math.max(1, recent.length) + 1 + visible.length + (nextLocked ? 1 : 0) + (nextTrick ? 1 : 0) + 1 + 4 +
       workLines.length
 
+    // The controls: the pal's three actions, then the menu.
+    const actions = [
+      menuButton('pet', w.pet, () => pet($)),
+      menuButton('trick', w.trick, () => trick($)),
+      menuButton('treat', w.treat(character.treat.name[lang], character.treat.price), () => treat($)),
+    ]
+    const menu = [
+      menuButton('rules', w.menu.rules, () => showView($, 'rules')),
+      menuButton('status', w.menu.status, () => showView($, 'progress')),
+      menuButton('switch', w.switchCharacter, () => openPicker($)),
+      close(),
+    ]
+    // A button is its label in `[ ` and ` ]`.
+    const controlsWidth =
+      Math.max(
+        ...[w.pet, w.trick, w.treat(character.treat.name[lang], character.treat.price), w.menu.rules, w.menu.status, w.switchCharacter, w.close].map(cellsOf),
+      ) + 4
+    const controlRows = actions.length + menu.length
+
     let sprite
     let isBeside = false
     let isOverflowing = false
+    // A low pane above the prompt puts the controls in a column of their own past the header.
+    let isControlsBeside = false
+    let headerWidth: number | undefined
     // The kids drawn beside the pal (a family photo) when the pane is wide enough, else in
     // a row under it; each with its number on its colour, as in the list.
     let family: RenderChildren = null
@@ -1469,13 +1516,21 @@ export const register: Register = (on, options) => {
       // When the stack does not fit, put the header beside the small sprite if there is room.
       const stacked = art.rows + (isKidsBeside ? 0 : rowsOf(drawn.length)) + HEADER_ROWS + below
       isBeside = runtime.size === 16 && stacked > bodyRows && columns >= art.columns + 2 + HEADER_COLUMNS
-      // A low pane keeps them past the header column when all of them fit there.
-      const fitLow = Math.max(0, Math.floor((columns - art.columns - 2 - BESIDE_HEADER - 1) / (KID_WIDTH + 1)))
+      // Seven buttons stand as tall as the small pal, so all of them show in a low pane.
+      const roomForHeader = columns - art.columns - 2 - 2 - controlsWidth
+      isControlsBeside = isBeside && isInline && roomForHeader >= BESIDE_HEADER_MIN
+      // The header column keeps its narrow width there, so the buttons stand close to the pal.
+      const narrowHeader = isControlsBeside ? Math.min(BESIDE_HEADER, roomForHeader) : BESIDE_HEADER
+      // A low pane keeps the deputies past the header column, and past the controls that keep
+      // their place there, when all of them fit.
+      const besideUsed = art.columns + 2 + narrowHeader + (isControlsBeside ? 2 + controlsWidth : 0)
+      const fitLow = Math.max(0, Math.floor((columns - besideUsed - 1) / (KID_WIDTH + 1)))
       lowKids = isBeside && drawn.length > 0 && drawn.length <= fitLow ? drawn.length : 0
-      // Beside the small pal: its seven rows, the header column, or a deputy and its number.
-      const besideRows = Math.max(art.rows, HEADER_ROWS + 3, lowKids > 0 ? KID_ROWS : 0)
+      headerWidth = isControlsBeside || lowKids > 0 ? narrowHeader : undefined
+      // Beside the small pal: its seven rows, the header column, a deputy and its number, or the controls.
+      const besideRows = Math.max(art.rows, HEADER_ROWS + 3, lowKids > 0 ? KID_ROWS : 0, isControlsBeside ? controlRows : 0)
       const kidsUnder = isBeside ? (lowKids > 0 ? 0 : rowsOf(drawn.length)) : 0
-      isOverflowing = (isBeside ? besideRows + kidsUnder + below - 1 : stacked) > bodyRows
+      isOverflowing = (isBeside ? besideRows + kidsUnder + below - (isControlsBeside ? controlRows : 0) - 1 : stacked) > bodyRows
       const columnsOf = drawn.map(kid => {
         const color = kidColor(kid.slot)
         const kidRowsNow = kidFrame(character.id, kidLook(kid, now, runtime.tick, kid.slot), runtime.tick)
@@ -1541,7 +1596,14 @@ export const register: Register = (on, options) => {
 
     // The hint, and that there is more below: beside the small sprite there is room for
     // them next to the header, so a pane of seven rows still says how to use it.
-    const guide = [hintFor(isOverflowing), isOverflowing ? <Text key="more" dimColor>{w.scrollHint}</Text> : null]
+    const guide = [
+      hintFor(isOverflowing),
+      isOverflowing ? (
+        <Text key="more" dimColor>
+          {isTerminal && e.props.isFocused ? w.scrollHint : w.moreHint}
+        </Text>
+      ) : null,
+    ]
     // Beside the small pal the status takes the reward line's place while work runs,
     // unless a reward is showing there.
     const isStatusBeside = isBeside && isWorking && statusLine !== null && fx === null
@@ -1551,26 +1613,39 @@ export const register: Register = (on, options) => {
       </Box>
     )
 
+    // Above the prompt the controls come right after the pal and its header, ahead of the
+    // work, the bounties and the shop; in the dock they keep their places further down.
+    const isControlsFirst = isInline
+
     return (
       <Box flexDirection="column">
         {isBeside ? (
-          <Box key="beside" flexDirection="row" alignItems="flex-end">
+          // With the controls there the row starts at the top: a header that wraps on a
+          // narrow pane must not push the buttons below a short pane's last row.
+          <Box key="beside" flexDirection="row" alignItems={isControlsBeside ? 'flex-start' : 'flex-end'}>
             {sprite}
-            <Box flexDirection="column" marginLeft={2} {...(lowKids > 0 ? { width: BESIDE_HEADER } : {})}>
-              {isStatusBeside ? [statusOf(lowKids > 0 ? BESIDE_HEADER : Math.max(HEADER_COLUMNS, columns - 18)), ...header.slice(1)] : header}
+            <Box flexDirection="column" marginLeft={2} {...(headerWidth === undefined ? {} : { width: headerWidth })}>
+              {isStatusBeside ? [statusOf(headerWidth ?? Math.max(HEADER_COLUMNS, columns - 18)), ...header.slice(1)] : header}
               {guide}
             </Box>
+            {isControlsBeside && (
+              <Box key="controls" flexDirection="column" marginLeft={2} width={controlsWidth} flexShrink={0}>
+                {actions}
+                {menu}
+              </Box>
+            )}
             {lowKids > 0 && family}
           </Box>
+        ) : isControlsFirst ? (
+          [family ?? sprite, ...header, ...guide]
         ) : (
           [family ?? sprite, ...(isWorking ? [workBlock] : []), ...header, ...guide]
         )}
+        {isControlsFirst && !isControlsBeside && [...actions, ...menu]}
         {isBeside && kidsBelow}
-        {isBeside && isWorking && workBlock}
+        {(isBeside || isControlsFirst) && isWorking && workBlock}
         {!isWorking && workBlock}
-        {menuButton('pet', w.pet, () => pet($))}
-        {menuButton('trick', w.trick, () => trick($))}
-        {menuButton('treat', w.treat(character.treat.name[lang], character.treat.price), () => treat($))}
+        {!isControlsFirst && actions}
         <Text dimColor>{w.bountyHeader(done, lines.length)}</Text>
         {lines.map(line => (
           <Text key={`quest-${line.quest.id}`} {...(line.isDone ? { color: '#86EFAC' } : { dimColor: true })}>
@@ -1600,11 +1675,8 @@ export const register: Register = (on, options) => {
         })}
         {nextLocked !== undefined && <Text dimColor>{w.next(nextLocked.level, nextLocked.name[lang])}</Text>}
         {nextTrick !== undefined && <Text dimColor>{w.nextTrick(nextTrick.level, nextTrick.name[lang])}</Text>}
-        <Text> </Text>
-        {menuButton('rules', w.menu.rules, () => showView($, 'rules'))}
-        {menuButton('status', w.menu.status, () => showView($, 'progress'))}
-        {menuButton('switch', w.switchCharacter, () => openPicker($))}
-        {close()}
+        {!isControlsFirst && <Text> </Text>}
+        {!isControlsFirst && menu}
       </Box>
     )
   })
