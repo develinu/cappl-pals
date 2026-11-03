@@ -62,6 +62,8 @@ Every control in the pane is a button on its own row: pet, trick and treat, the 
 
 Several sessions share one profile. Rep, gold, recent rewards, purchases and your choice of character show up in every open pane within about two seconds.
 
+When another session is waiting for you, every other open pane says so with a toast and a button at its top, one per waiting session, named after its project folder and why it waits: a permission prompt, a question or plan put to you, or a finished answer waiting for your next prompt (so it works with permissions bypassed too). It goes once you type there. Press it to switch to that session's terminal: its tab in Orca, iTerm2 or Terminal, its pane in tmux, WezTerm or kitty (with remote control on), then the terminal app itself. Elsewhere it brings the app to the front, or shows the waiting session without a button.
+
 The language follows Claude Code's `language` setting (Korean or English). To pin it, open `/config` and change **cappl-pals › Language**.
 
 ## Moods and play

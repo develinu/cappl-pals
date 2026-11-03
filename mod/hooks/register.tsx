@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, RenderChildren } from 'claude-code'
 
-import type { Act, Activity, CareKind, CharacterId, Fx, FxKind, Kid, Language, Ledger, PaneView, ResultKind, Reward, RewardKind, Totals, Wallet, Work } from '../types'
+import type { Act, Activity, Call, CareKind, CharacterId, Fx, FxKind, Kid, Language, Ledger, PaneView, Peer, ResultKind, Reward, RewardKind, Spot, Totals, Wallet, Work } from '../types'
 import { ACTS, DANCES, actTicks, busySlot, idleGap, lookAt, loopTicks, type Moment } from './animations'
 import { CHARACTERS, characterOf, fullId, isCharacterId, learnedTricks, type Character } from './characters'
 import { WORDS, languageOf } from './i18n'
@@ -48,6 +48,7 @@ import {
   type Quest,
   type Signal,
 } from './rules'
+import { PEER_PREFIX, PEER_REFRESH_MS, focusSteps, livePeers, readPeer, spotOf, ttyOf } from './peers'
 import { SOUND_LEVELS, play, soundLevel, type Sfx, type SoundLevel } from './sound'
 import { KID_WIDTH, hex, kidColor, kidColors, kidFrame, kidLook } from './kids'
 import { animatedSvgOf, encode, frame, type Size } from './sprite'
@@ -73,6 +74,8 @@ const PANE = 'cappl-pals'
 const SPRITE = 'sprite'
 const TICK_MS = 250
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
+// Tools that put a question or a plan to the person and wait for the answer.
+const ASK_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode'])
 const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'WebFetch', 'WebSearch', 'NotebookRead', 'ToolSearch'])
 const STALE_MS = 2 * 24 * 60 * 60_000
 // Five quiet minutes and the pal dozes off.
@@ -123,6 +126,7 @@ const pickingAtom = atom({ plugin: 'cappl-pals', key: 'picking' } as const, fals
 const viewAtom = atom({ plugin: 'cappl-pals', key: 'view' } as const, 'main' as PaneView)
 const workAtom = atom({ plugin: 'cappl-pals', key: 'work' } as const, emptyWork())
 const beatAtom = atom({ plugin: 'cappl-pals', key: 'beat' } as const, 0)
+const peersAtom = atom({ plugin: 'cappl-pals', key: 'peers' } as const, [] as Peer[])
 
 // Module variables start over on a hot reload: what the pane reads lives in $.state,
 // what must last lives in $.store.
@@ -160,6 +164,16 @@ const runtime = {
   // keys (wallet, chestLevel, bounty:<day>) are each read and written straight back,
   // which keeps the window for two sessions to collide to a few milliseconds.
   queue: Promise.resolve() as Promise<unknown>,
+  // This process's `waiting:<id>` key, kept across /clear: it names the terminal, not the
+  // conversation. Where the session runs, and the folder it was started in.
+  peerKey: '',
+  spot: {} as Spot,
+  project: '',
+  // What this session waits on the person for, and since when; null while it works.
+  call: null as { reason: Call; since: number } | null,
+  // The other sessions' calls already announced with a toast.
+  peersSeen: new Set<string>(),
+  peersSynced: '',
 }
 
 const words = () => WORDS[runtime.language]
@@ -290,6 +304,104 @@ async function heartbeat($: EngineInterface) {
 async function setActivity($: EngineInterface, activity: Activity) {
   runtime.lastActiveAt = await $.clock.now()
   if ((await read($, activityAtom)) !== activity) await update($, activityAtom, () => activity)
+  if (activity === 'waiting') await callPerson($, 'permission')
+  else if (runtime.call?.reason === 'permission') await endCall($)
+}
+
+// ── Other sessions waiting on a permission prompt ───────────────────────────
+
+const ANNOUNCE_MS = 1_500
+
+const TTY_SCRIPT = [
+  'p=$PPID',
+  'for _ in 1 2 3 4 5 6; do',
+  '  t=$(ps -o tty= -p "$p" | tr -d " ")',
+  '  case "$t" in ""|"?"*) ;; *) echo "$t"; exit 0 ;; esac',
+  '  p=$(ps -o ppid= -p "$p" | tr -d " ")',
+  '  [ -z "$p" ] || [ "$p" -le 1 ] && exit 1',
+  'done',
+  'exit 1',
+].join('\n')
+
+// Where this session runs, from what its terminal set; the tty from its own process.
+async function findSpot($: EngineInterface): Promise<Spot> {
+  const env = {
+    __CFBundleIdentifier: await $.env.get('__CFBundleIdentifier'),
+    TERM_PROGRAM: await $.env.get('TERM_PROGRAM'),
+    ORCA_TERMINAL_HANDLE: await $.env.get('ORCA_TERMINAL_HANDLE'),
+    ORCA_CLI_BIN_DIR: await $.env.get('ORCA_CLI_BIN_DIR'),
+    TMUX: await $.env.get('TMUX'),
+    TMUX_PANE: await $.env.get('TMUX_PANE'),
+    WEZTERM_PANE: await $.env.get('WEZTERM_PANE'),
+    KITTY_WINDOW_ID: await $.env.get('KITTY_WINDOW_ID'),
+    KITTY_LISTEN_ON: await $.env.get('KITTY_LISTEN_ON'),
+  }
+  // The nearest ancestor with a terminal: this session's process, or the shell it runs in.
+  const ps = await $.process.run(['sh', '-c', TTY_SCRIPT], { timeoutMs: 5_000 }).catch(() => undefined)
+
+  const spot = spotOf(env, ps?.exitCode === 0 ? ttyOf(ps.stdout) : undefined)
+  $.ui.log(`terminal spot: ${JSON.stringify(spot)}`, { to: 'debug' })
+
+  return spot
+}
+
+// This session waits on the person: a permission prompt, a question or plan put to them,
+// or a finished answer. Told to the other panes only once it lasts, so an ask the
+// auto-mode classifier settles in a moment calls nobody over.
+async function callPerson($: EngineInterface, reason: Call) {
+  if (runtime.call?.reason === reason) return
+  const since = await $.clock.now()
+  const call = { reason, since }
+  runtime.call = call
+  $.clock.after(ANNOUNCE_MS, () => {
+    if (runtime.call === call) void announceWaiting($).catch(() => undefined)
+  })
+}
+
+async function endCall($: EngineInterface) {
+  if (runtime.call === null) return
+  runtime.call = null
+  await $.store.delete(runtime.peerKey).catch(() => undefined)
+}
+
+// Tells the other panes this session waits, and where; again every few seconds, so a
+// session that went away without a word drops out of theirs.
+async function announceWaiting($: EngineInterface) {
+  const call = runtime.call
+  if (call === null || runtime.peerKey === '') return
+  const peer: Omit<Peer, 'id'> = { project: runtime.project, reason: call.reason, since: call.since, seenAt: await $.clock.now(), spot: runtime.spot }
+  await $.store.set(runtime.peerKey, peer)
+}
+
+async function syncPeers($: EngineInterface) {
+  const now = await $.clock.now()
+  const found: Peer[] = []
+  for (const key of await $.store.keys()) {
+    if (!key.startsWith(PEER_PREFIX)) continue
+    const peer = readPeer(key.slice(PEER_PREFIX.length), await $.store.get(key))
+    if (peer !== null) found.push(peer)
+  }
+  const peers = livePeers(found, runtime.peerKey.slice(PEER_PREFIX.length), now)
+  const signature = JSON.stringify(peers.map(peer => [peer.id, peer.since, peer.reason, peer.project]))
+  if (signature === runtime.peersSynced) return
+  runtime.peersSynced = signature
+  await update($, peersAtom, () => peers)
+  const seen = (peer: Peer) => `${peer.id}@${peer.since}`
+  const fresh = peers.filter(peer => !runtime.peersSeen.has(seen(peer)))
+  runtime.peersSeen = new Set(peers.map(seen))
+  for (const peer of fresh) $.ui.toast(words().peers.toast[peer.reason](peer.project))
+}
+
+// Brings the waiting session's terminal forward: its tab or pane, then the app.
+async function goToPeer($: EngineInterface, peer: Peer) {
+  $.ui.log(`switching to ${peer.project}: ${JSON.stringify(peer.spot)}`, { to: 'debug' })
+  let isMoved = false
+  for (const argv of focusSteps(peer.spot)) {
+    const ran = await $.process.run(argv, { timeoutMs: 5_000 }).catch((error: unknown) => ({ exitCode: -1, stdout: '', stderr: String(error) }))
+    $.ui.log(`switch step ${argv[0]} ${argv[1] ?? ''}: exit ${ran.exitCode} ${ran.stderr.trim().slice(0, 200)}`, { to: 'debug' })
+    if (ran.exitCode === 0) isMoved = true
+  }
+  if (!isMoved) $.ui.toast(words().peers.cannot(peer.project))
 }
 
 // Starts a one-off animation; it clears itself when its frames run out.
@@ -852,6 +964,13 @@ export const register: Register = (on, options) => {
     runtime.offset = -new Date().getTimezoneOffset()
     runtime.language = languageOf(options.language, await $.settings.read({ key: 'language' }).catch(() => undefined))
     runtime.lastActiveAt = await $.clock.now()
+    if (runtime.peerKey === '') runtime.peerKey = `${PEER_PREFIX}${await $.session.id()}`
+    runtime.project = e.cwd.split(/[\\/]/).filter(part => part !== '').at(-1) ?? e.cwd
+    void findSpot($)
+      .then(spot => {
+        runtime.spot = spot
+      })
+      .catch(() => undefined)
     const w = words()
     await $.command.register({ name: 'cappl', description: w.commands.toggle, immediate: true })
     await $.command.register({ name: 'cappl-pick', description: w.commands.pick, argumentHint: 'riki | caro | numo', immediate: true })
@@ -863,6 +982,8 @@ export const register: Register = (on, options) => {
     if ((await $.store.get('chestLevel')) === undefined) await $.store.set('chestLevel', levelOf(totals.fame).level)
     $.clock.every(TICK_MS, () => void animate($).catch(() => undefined))
     $.clock.every(SYNC_MS, () => void sync($))
+    $.clock.every(SYNC_MS, () => void syncPeers($).catch(() => undefined))
+    $.clock.every(PEER_REFRESH_MS, () => void announceWaiting($).catch(() => undefined))
     $.clock.every(1000, () => void heartbeat($).catch(() => undefined))
     void refreshUsage($, true)
     $.clock.every(15_000, () => void checkSleep($).catch(() => undefined))
@@ -872,6 +993,13 @@ export const register: Register = (on, options) => {
     })
     if ((await $.store.get('hidden')) !== true) void $.ui.open({ id: PANE, title: 'SUNDUST' })
     void compact($).catch(() => undefined)
+
+    return next(e)
+  })
+
+  // A session that ends while waiting leaves no button behind in the other panes.
+  on('session.end', async ($, e, next) => {
+    if (runtime.call !== null) await $.store.delete(runtime.peerKey).catch(() => undefined)
 
     return next(e)
   })
@@ -889,6 +1017,15 @@ export const register: Register = (on, options) => {
     if (/permission/i.test(e.notification_type)) await setActivity($, 'waiting')
 
     return done
+  })
+
+  // The same from the permission check itself, for a setup where another plugin's
+  // Notification hook answers without passing the event on.
+  on('tool.check', async ($, e, next) => {
+    const checked = await next(e)
+    if (checked.decision === 'ask' && e.approver === 'person' && e.tool_use_id !== undefined) await setActivity($, 'waiting')
+
+    return checked
   })
 
   on('command.run', { command: 'cappl' }, async $ => {
@@ -941,6 +1078,7 @@ export const register: Register = (on, options) => {
       runtime.prompt = { text: e.text, at: await $.clock.now() }
     }
     await arrive($)
+    if (e.origin.kind === 'composer') await endCall($)
     if ((await read($, activityAtom)) === 'sleeping') await setActivity($, 'idle')
     await playAct($, 'listen')
 
@@ -951,6 +1089,7 @@ export const register: Register = (on, options) => {
     const now = await $.clock.now()
     if (e.agentId === undefined) {
       runtime.isTurn = true
+      await endCall($)
       await setActivity($, 'thinking')
       await update($, turnFameAtom, () => 0)
       // The cost when the request starts, so the pane can tell what it cost.
@@ -1015,6 +1154,8 @@ export const register: Register = (on, options) => {
       runtime.isTurn = false
       runtime.turns += 1
       await setActivity($, 'idle')
+      // The answer is in: the session waits on the person's next prompt.
+      await callPerson($, 'done')
       // A dance to end the turn, after whatever cheering is still going.
       const act = await read($, actAtom)
       const now = await $.clock.now()
@@ -1033,6 +1174,7 @@ export const register: Register = (on, options) => {
     const done = await next(e)
     runtime.isTurn = false
     await setActivity($, 'idle')
+    await endCall($)
 
     return done
   })
@@ -1044,11 +1186,14 @@ export const register: Register = (on, options) => {
     const command = e.tool === 'Bash' ? e.command : ''
     const doing = activityOf(tool, command)
     if (isMain) await setActivity($, doing)
-    else {
+    // A question or a plan put to the person holds the turn until they answer, in any mode.
+    if (ASK_TOOLS.has(tool)) await callPerson($, 'question')
+    if (!isMain) {
       const at = await $.clock.now()
       await changeWork($, work => kidTool(work, agentId, doing, at))
     }
     const ran = await next(e)
+    if (ASK_TOOLS.has(tool) && runtime.call?.reason === 'question') await endCall($)
     if (isMain) await setActivity($, runtime.isTurn ? 'thinking' : 'idle')
     else await changeWork($, work => kidToolDone(work, agentId))
     if (ran.deny !== undefined) return ran
@@ -1286,6 +1431,16 @@ export const register: Register = (on, options) => {
     const bounty = readBounty(await $.store.get(`bounty:${day}`))
     const lines = bountyLines(quests, world.ledgers, day, bounty.done)
     const recent = log.slice(-3)
+    // Other sessions waiting on a permission prompt, on top where they are seen first:
+    // a button each that switches to that terminal, when there is a way to.
+    const peers = await read($, peersAtom)
+    // The whole row is the button, and the first takes the focus ring when the pane takes
+    // the keyboard: ctrl+x Tab, then Enter, goes there.
+    const peerLines: RenderChildren[] = peers.map((peer, index) => (
+      <Button key={`peer-${peer.id}`} onPress={() => goToPeer($, peer)} {...(index === 0 ? { autoFocus: true as const } : {})}>
+        <Text color="permission" bold>!</Text> {w.peers.go(peer.project, w.peers.reason[peer.reason])}
+      </Button>
+    ))
 
     // ── The session's work: what was asked, the plan, the kids, what it cost ──
     const work = await read($, workAtom)
@@ -1437,7 +1592,8 @@ export const register: Register = (on, options) => {
     // shop, what's next and the menu; and the work.
     const below =
       (isTerminal ? 1 : 0) + 3 + 1 + lines.length + 1 + 1 + Math.max(1, recent.length) + 1 + visible.length + (nextLocked ? 1 : 0) + (nextTrick ? 1 : 0) + 1 + 4 +
-      workLines.length
+      workLines.length +
+      peerLines.length
 
     let sprite
     let isBeside = false
@@ -1553,6 +1709,7 @@ export const register: Register = (on, options) => {
 
     return (
       <Box flexDirection="column">
+        {peerLines}
         {isBeside ? (
           <Box key="beside" flexDirection="row" alignItems="flex-end">
             {sprite}
