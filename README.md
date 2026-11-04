@@ -14,6 +14,10 @@ The pane, toasts and commands speak English and Korean.
 
 [한국어 README](README.ko.md)
 
+## Codex port
+
+Codex support reuses the original game rules in a local browser companion or an Orca sidebar panel beside your terminal. See the [English setup guide](codex/README.md) or [한국어 안내](codex/README.ko.md) for installation, hook trust, permissions and limitations.
+
 ## Install
 
 cappl-pals is a Claude Code mod (a plugin with a hooks module). It needs Claude Code 2.1.287 or later.
