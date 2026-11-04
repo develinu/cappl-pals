@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>SUNDUST · cappl-pals</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: ui-monospace, Menlo, monospace;
+      background: #171c25;
+      color: #f9e9c9;
+    }
+    body {
+      max-width: 650px;
+      margin: 24px auto;
+      padding: 0 20px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid #635344;
+      padding-bottom: 16px;
+    }
+    h1 {
+      font-size: 20px;
+      color: #fcd34d;
+    }
+    select,
+    button {
+      font: inherit;
+      color: inherit;
+      background: #2c303a;
+      border: 1px solid #75614e;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: left;
+      cursor: pointer;
+    }
+    button:hover,
+    button:focus-visible {
+      background: #46403a;
+      outline: 2px solid #fcd34d;
+    }
+    main {
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+    .sprite {
+      align-self: center;
+      min-height: 112px;
+    }
+    .sprite svg {
+      width: 192px;
+      height: 168px;
+      image-rendering: pixelated;
+    }
+    #toast {
+      position: sticky;
+      bottom: 12px;
+      background: #3f3828;
+      padding: 10px;
+      border-radius: 6px;
+      display: none;
+    }
+    #status {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+    nav {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    #error {
+      color: #fda4af;
+      white-space: pre-wrap;
+    }
+    span {
+      white-space: pre-wrap;
+    }
+    main > div > span {
+      display: block;
+    }
+  </style>
+  <header>
+    <h1>✦ SUNDUST</h1>
+    <select id="sessions" aria-label="Codex session"></select
+    ><select id="language" aria-label="Language">
+      <option value="ko">한국어</option>
+      <option value="en">English</option></select
+    ><span id="status">Connecting…</span>
+  </header>
+  <nav>
+    <button data-command="cappl">열기 / 닫기</button
+    ><button data-command="cappl-pick">친구 선택</button
+    ><button data-command="cappl-status">내 현황</button
+    ><button data-command="cappl-rules">보상표</button
+    ><button data-command="cappl-sound">효과음</button
+    ><button
+      data-command="cappl-plan-approved"
+      title="Approve the current plan before editing"
+    >
+      계획 승인 / Approve plan
+    </button>
+  </nav>
+  <p id="error" role="alert"></p>
+  <main id="panel" aria-label="Companion"></main>
+  <pre id="reply"></pre>
+  <div id="toast" role="status"></div>
+  <script>
+    const token =
+      new URLSearchParams(location.hash.slice(1)).get("token") ||
+      new URLSearchParams(location.search).get("token");
+    if (!window.orca) history.replaceState(null, "", "/#token=" + encodeURIComponent(token));
+    let session =
+        new URLSearchParams(location.hash.slice(1)).get("session") || "",
+      lastHTML = "",
+      lastToast = 0,
+      busy = false;
+    const $ = (id) => document.getElementById(id);
+    async function api(path, body) {
+      if (window.orca) {
+        return orca.plugin.request("cappl.api", { path, body: body || null, session });
+      }
+      const response = await fetch(
+        path +
+          (path.includes("?") ? "&" : "?") +
+          "token=" +
+          token +
+          (session ? "&session=" + encodeURIComponent(session) : ""),
+        body
+          ? {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...body, session: session || undefined }),
+            }
+          : {},
+      );
+      const value = await response.json();
+      if (!response.ok) throw Error(value.error || "Connection failed");
+      return value;
+    }
+    async function refresh() {
+      if (busy) return;
+      busy = true;
+      try {
+        const view = await api("/view");
+        session = view.session;
+        if (view.html !== lastHTML) {
+          const focus = document.activeElement?.dataset?.key;
+          $("panel").innerHTML = view.html;
+          lastHTML = view.html;
+          if (focus)
+            [...$("panel").querySelectorAll("button")]
+              .find((b) => b.dataset.key === focus)
+              ?.focus();
+        }
+        const select = $("sessions");
+        if (
+          JSON.stringify([...select.options].map((o) => o.value)) !==
+          JSON.stringify(view.sessions)
+        ) {
+          select.replaceChildren(
+            ...view.sessions.map(
+              (id) =>
+                new Option(
+                  id === "companion" ? "Companion" : id.slice(0, 12),
+                  id,
+                ),
+            ),
+          );
+        }
+        select.value = session;
+        $("language").value = view.language;
+        $("status").textContent = "● Connected";
+        const toast = view.toasts.at(-1);
+        if (toast && toast.id > lastToast) {
+          lastToast = toast.id;
+          $("toast").textContent = toast.text;
+          $("toast").style.display = "block";
+          setTimeout(() => ($("toast").style.display = "none"), 4000);
+        }
+        $("error").textContent = "";
+      } catch (e) {
+        $("error").textContent = e.message;
+        $("status").textContent = "Disconnected";
+      } finally {
+        busy = false;
+      }
+    }
+    document.addEventListener("click", async (event) => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      button.disabled = true;
+      try {
+        if (button.dataset.key)
+          await api("/press", { key: button.dataset.key });
+        else if (button.dataset.command) {
+          const result = await api("/command", {
+            command: button.dataset.command,
+          });
+          $("reply").textContent = result.text || "";
+        }
+        await refresh();
+      } catch (e) {
+        $("error").textContent = e.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+    $("sessions").onchange = () => {
+      session = $("sessions").value;
+      lastHTML = "";
+      lastToast = 0;
+      refresh();
+    };
+    $("language").onchange = async () => {
+      try {
+        await api("/language", { language: $("language").value });
+        await refresh();
+      } catch (e) {
+        $("error").textContent = e.message;
+      }
+    };
+    setInterval(refresh, 1000);
+    refresh();
+  </script>
+</html>

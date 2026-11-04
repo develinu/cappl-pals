@@ -1,0 +1,8 @@
+{
+  "name": "cappl-pals-codex",
+  "version": "0.3.0",
+  "description": "SUNDUST companions with original cappl-pals game rules, animations, wardrobe and sounds in a local panel connected to Codex lifecycle hooks.",
+  "author": { "name": "develinu" },
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}
