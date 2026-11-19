@@ -14,6 +14,11 @@
 
 [English README](README.md)
 
+## Codex 이식판
+
+Codex에서는 로컬 브라우저 동반 창 또는 터미널 옆 Orca 플러그인 패널로 사용할 수 있습니다.
+설치·훅 신뢰·권한·검증 안내는 [codex/README.ko.md](codex/README.ko.md)를 참고하세요.
+
 ## 설치
 
 cappl-pals는 Claude Code mod(훅 모듈이 든 플러그인)이고 Claude Code 2.1.287 이상에서 돌아갑니다.

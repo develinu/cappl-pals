@@ -1,0 +1,10 @@
+{
+  "name": "cappl-pals-codex-dev",
+  "interface": {"displayName": "cappl-pals · Codex development"},
+  "plugins": [{
+    "name": "cappl-pals-codex",
+    "source": {"source": "local", "path": "./codex"},
+    "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+    "category": "Productivity"
+  }]
+}

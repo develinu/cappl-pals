@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "jsxFactory": "jsx",
+    "jsxFragmentFactory": "Fragment",
+    "target": "ES2022",
+    "module": "ESNext",
+    "strict": true
+  }
+}

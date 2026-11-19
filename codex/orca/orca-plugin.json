@@ -1,0 +1,25 @@
+{
+  "manifestVersion": 2,
+  "id": "cappl-pals-orca",
+  "name": "cappl-pals",
+  "version": "0.1.0",
+  "description": "SUNDUST companion in the Orca sidebar, connected to the local cappl-pals server.",
+  "engines": {
+    "orca": ">=1.4.246"
+  },
+  "execution": "trusted-worker",
+  "pluginApi": 1,
+  "main": "worker.mjs",
+  "contributes": {
+    "panels": [
+      {
+        "id": "companion",
+        "title": "SUNDUST \u00b7 cappl-pals",
+        "icon": "star",
+        "entry": "panel.html",
+        "ui": "html"
+      }
+    ]
+  },
+  "capabilities": []
+}

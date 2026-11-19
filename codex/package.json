@@ -1,0 +1,10 @@
+{
+  "name": "cappl-pals-codex",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build.ts",
+    "test": "bun test tests",
+    "start": "node dist/cli.mjs open"
+  }
+}
