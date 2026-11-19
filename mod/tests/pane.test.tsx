@@ -727,3 +727,108 @@ test('a failing test makes the pal flinch', async ($, on) => {
   await $.tool.call({ tool: 'Bash', command: 'pytest -q' })
   expect(spy.act()).toBe('fail')
 })
+
+test('a session waiting on a permission prompt shows in the other panes, and its button switches to that terminal', async ($, on) => {
+  on('session.id', () => ({ value: 's1' }))
+  on('command.register', (_, e) => ({ value: { command: e.name } }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('tool.call', () => ({ result: {}, text: '' }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('classic.Notification', () => ({}))
+  const env: Record<string, string> = {
+    __CFBundleIdentifier: 'com.stablyai.orca',
+    TERM_PROGRAM: 'Orca',
+    ORCA_TERMINAL_HANDLE: 'term_mine',
+    ORCA_CLI_BIN_DIR: '/Orca/bin',
+  }
+  on('env.get', (_, e) => ({ value: env[e.name] }))
+  const ran: string[][] = []
+  on('process.run', (_, e) => {
+    ran.push([...e.argv])
+    return { value: { exitCode: 0, stdout: e.argv[0] === 'sh' ? 'ttys004\n' : '', stderr: '' } }
+  })
+  const file = new Map<string, unknown>([['character', 'locki']])
+  sharedStore(on, file)
+  const clock = mock.clock(on, { now: NOW })
+
+  await $.session.start({ cwd: '/Users/me/cappl-pals', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /∙ go/ })).toBeUndefined()
+
+  // Another session, in another Orca tab, waits.
+  const spot = { app: 'com.stablyai.orca', program: 'Orca', orca: { bin: '/Orca/bin/orca', handle: 'term_other' } }
+  file.set('waiting:s2', { project: 'howmuchhome', reason: 'permission', since: NOW, seenAt: NOW, spot })
+  await clock.advance(2_000)
+  expect((await ui.find({ key: 'peer-s2' }))?.text).toMatch(/howmuchhome ∙ needs permission ∙ go/)
+  ran.length = 0
+  await ui.press({ key: 'peer-s2' })
+  expect(ran).toEqual([
+    ['/Orca/bin/orca', 'terminal', 'switch', '--terminal', 'term_other'],
+    ['open', '-b', 'com.stablyai.orca'],
+  ])
+
+  // A session not heard from for a while is gone.
+  await clock.advance(40_000)
+  expect(await ui.find({ key: 'peer-s2' })).toBeUndefined()
+
+  // This session waiting tells the others where it is, and stops once it goes on.
+  await $.turn.start({ text: 'go', turnId: 't1' })
+  await $.classic.Notification({ message: 'Claude needs your permission', notification_type: 'permission_prompt' })
+  // Told to the others once it lasts a moment.
+  expect(file.has('waiting:s1')).toBe(false)
+  await clock.advance(2_000)
+  expect(file.get('waiting:s1')).toMatchObject({
+    project: 'cappl-pals',
+    reason: 'permission',
+    spot: { tty: '/dev/ttys004', orca: { bin: '/Orca/bin/orca', handle: 'term_mine' } },
+  })
+  await $.tool.call({ tool: 'Bash', command: 'ls' } as never)
+  expect(file.has('waiting:s1')).toBe(false)
+  await ui.unmount()
+})
+
+test('a permission check that asks the person makes the pal wait, even with no Notification hook', async ($, on) => {
+  engine(on)
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('tool.check', () => ({ decision: 'ask' }))
+  mock.store(on, LOCKI)
+  mock.clock(on, { now: NOW })
+  const spy = stateSpy(on)
+
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'go', turnId: 't1' })
+  await $.tool.check({ tool: 'Bash', input: { command: 'rm -rf build' }, tool_use_id: 'u1', approver: 'person' } as never)
+  expect(spy.value('activity')).toBe('waiting')
+})
+
+test('in any mode a finished answer or a question calls the person over from the other panes, until they come back', async ($, on) => {
+  engine(on)
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('turn.complete', (_, e) => ({ text: e.answer }))
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+  const file = new Map<string, unknown>([['character', 'locki']])
+  sharedStore(on, file)
+  const clock = mock.clock(on, { now: NOW })
+
+  await $.session.start({ cwd: '/Users/me/howmuchhome', surface: 'terminal', isInteractive: true })
+  await $.turn.start({ text: 'go', turnId: 't1' })
+  await $.tool.call({ tool: 'AskUserQuestion', questions: [] } as never)
+  // Answered at once: nobody was called over.
+  await clock.advance(2_000)
+  expect(file.has('waiting:s1')).toBe(false)
+
+  await $.turn.complete({ turnId: 't1', answer: 'done', durationMs: 1000, reason: 'answer' } as never)
+  await clock.advance(2_000)
+  expect(file.get('waiting:s1')).toMatchObject({ project: 'howmuchhome', reason: 'done' })
+
+  // The other pane names why it waits.
+  file.set('waiting:s2', { project: 'cappl-pals', reason: 'question', since: NOW, seenAt: NOW + 4_000, spot: { app: 'com.stablyai.orca' } })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await clock.advance(2_000)
+  expect((await ui.find({ key: 'peer-s2' }))?.text).toMatch(/cappl-pals ∙ has a question ∙ go/)
+  await ui.unmount()
+
+  await $.prompt.submit({ text: 'next', origin: { kind: 'composer' } } as never)
+  expect(file.has('waiting:s1')).toBe(false)
+})

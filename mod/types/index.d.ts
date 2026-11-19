@@ -96,6 +96,35 @@ export type Work = {
   limits: Limit[]
 }
 
+// Where a session runs: whatever of these its terminal set.
+export type Spot = {
+  // The macOS app the terminal is (__CFBundleIdentifier), brought to the front last.
+  app?: string
+  // TERM_PROGRAM: iTerm.app, Apple_Terminal, WezTerm, Orca, vscode, ghostty, ...
+  program?: string
+  // The session's terminal device, /dev/ttys003.
+  tty?: string
+  orca?: { bin: string; handle: string }
+  // TMUX_PANE, and the server's socket from TMUX (socket,pid,session).
+  tmux?: { pane: string; socket?: string }
+  wezterm?: string
+  kitty?: { window: string; listen?: string }
+}
+
+// What a session waits on the person for: a permission prompt, a question or plan put to
+// them, or its finished answer (their next prompt).
+export type Call = 'permission' | 'question' | 'done'
+
+// A session waiting on the person (hooks/peers.ts), as the shared store holds it.
+export type Peer = {
+  id: string
+  project: string
+  reason: Call
+  since: number
+  seenAt: number
+  spot: Spot
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'cappl-pals': {
@@ -113,6 +142,8 @@ declare module 'claude-code' {
       // What the pane shows besides the picker: the pal, the rules or my progress.
       view: PaneView
       work: Work
+      // Other sessions waiting on the person, the longest waiting first.
+      peers: Peer[]
       // Moves every second while something runs, so the times on screen count up.
       beat: number
     }

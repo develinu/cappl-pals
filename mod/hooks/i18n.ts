@@ -1,4 +1,4 @@
-import type { Activity, KidStatus, Language, Outcome, ResultKind, RewardKind } from '../types'
+import type { Activity, Call, KidStatus, Language, Outcome, ResultKind, RewardKind } from '../types'
 
 // Every word the pane, the toasts and the commands show. Item names and character
 // lines live with each character (characters/index.ts).
@@ -115,6 +115,13 @@ type Words = {
     // How long until a limit resets, roughly: minutes, hours or days.
     soon: (ms: number) => string
     usd: (n: number) => string
+  }
+  // Other sessions waiting on the person.
+  peers: {
+    reason: Record<Call, string>
+    go: (project: string, reason: string) => string
+    toast: Record<Call, (project: string) => string>
+    cannot: (project: string) => string
   }
 }
 
@@ -285,6 +292,16 @@ const EN: Words = {
     soon: ms => (ms < 3600_000 ? `${Math.max(1, Math.round(ms / 60_000))}m` : ms < 86_400_000 ? `${Math.round(ms / 3600_000)}h` : `${Math.round(ms / 86_400_000)}d`),
     usd,
   },
+  peers: {
+    reason: { permission: 'needs permission', question: 'has a question', done: 'done' },
+    go: (project, reason) => `${project} ∙ ${reason} ∙ go`,
+    toast: {
+      permission: project => `${project} is waiting for your permission`,
+      question: project => `${project} has a question for you`,
+      done: project => `${project} is done and waiting for you`,
+    },
+    cannot: project => `Could not switch to ${project}'s terminal`,
+  },
 }
 
 const KO: Words = {
@@ -440,6 +457,16 @@ const KO: Words = {
     },
     soon: ms => (ms < 3600_000 ? `${Math.max(1, Math.round(ms / 60_000))}분` : ms < 86_400_000 ? `${Math.round(ms / 3600_000)}시간` : `${Math.round(ms / 86_400_000)}일`),
     usd,
+  },
+  peers: {
+    reason: { permission: '허락 기다림', question: '질문 있음', done: '끝남' },
+    go: (project, reason) => `${project} ∙ ${reason} ∙ 가기`,
+    toast: {
+      permission: project => `${project}에서 허락을 기다려요`,
+      question: project => `${project}에서 물어볼 게 있어요`,
+      done: project => `${project} 작업이 끝나서 기다려요`,
+    },
+    cannot: project => `${project} 터미널로 옮기지 못했어요`,
   },
 }
 
